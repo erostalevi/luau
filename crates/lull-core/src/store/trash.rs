@@ -7,7 +7,10 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use super::{BoardStore, Changes, list_attachments, load_node_tree, marker_dir, parse_attachment_name, write_json};
+use super::{
+    BoardStore, Changes, list_attachments, load_node_tree, marker_dir, parse_attachment_name,
+    write_json,
+};
 use crate::brand::INDEX_JSON;
 use crate::error::{Error, Result};
 use crate::fsutil::{move_path, remove_path};
@@ -67,7 +70,9 @@ pub(crate) fn trash_node(store: &mut BoardStore, id: &str) -> Result<String> {
     let s = &store.state;
     let n = s.nodes.get(id).ok_or_else(|| Error::not_found(id))?.clone();
     let (parent, index) = s.position_of(id).ok_or_else(|| Error::not_found(id))?;
-    let dir = s.container_dir(&parent).ok_or_else(|| Error::not_found(id))?;
+    let dir = s
+        .container_dir(&parent)
+        .ok_or_else(|| Error::not_found(id))?;
     let descendants = s.descendants(id);
     let root = s.root.clone();
     let tid = new_tid(&root);
@@ -76,7 +81,10 @@ pub(crate) fn trash_node(store: &mut BoardStore, id: &str) -> Result<String> {
     if n.is_group {
         move_path(&dir.join(id), &payload.join(id))?;
     } else {
-        move_path(&dir.join(format!("{id}.md")), &payload.join(format!("{id}.md")))?;
+        move_path(
+            &dir.join(format!("{id}.md")),
+            &payload.join(format!("{id}.md")),
+        )?;
         for a in list_attachments(&dir, id) {
             move_path(&dir.join(&a.file), &payload.join(&a.file))?;
         }
@@ -111,7 +119,11 @@ pub(crate) fn trash_node(store: &mut BoardStore, id: &str) -> Result<String> {
 
 pub(crate) fn trash_lane(store: &mut BoardStore, k: &str) -> Result<String> {
     let s = &store.state;
-    let index = s.lanes.iter().position(|l| l.id == k).ok_or_else(|| Error::not_found(k))?;
+    let index = s
+        .lanes
+        .iter()
+        .position(|l| l.id == k)
+        .ok_or_else(|| Error::not_found(k))?;
     let lane = s.lanes[index].clone();
     let count: usize = lane.order.iter().map(|c| s.descendants(c).len() + 1).sum();
     let root = s.root.clone();
@@ -168,13 +180,22 @@ pub(crate) fn restore(store: &mut BoardStore, tid: &str, ch: &mut Changes) -> Re
             if let Parent::Card(c) = &parent {
                 store.ensure_group(c, ch)?;
             }
-            let dir = store.state.container_dir(&parent).ok_or_else(|| Error::not_found("restore parent"))?;
+            let dir = store
+                .state
+                .container_dir(&parent)
+                .ok_or_else(|| Error::not_found("restore parent"))?;
             fs::create_dir_all(&dir).map_err(|e| Error::io(&dir, e))?;
             if entry.is_group {
                 move_path(&payload.join(&id), &dir.join(&id))?;
             } else {
-                move_path(&payload.join(format!("{id}.md")), &dir.join(format!("{id}.md")))?;
-                for e in fs::read_dir(&payload).map(|r| r.flatten().collect::<Vec<_>>()).unwrap_or_default() {
+                move_path(
+                    &payload.join(format!("{id}.md")),
+                    &dir.join(format!("{id}.md")),
+                )?;
+                for e in fs::read_dir(&payload)
+                    .map(|r| r.flatten().collect::<Vec<_>>())
+                    .unwrap_or_default()
+                {
                     let name = e.file_name().to_string_lossy().into_owned();
                     if parse_attachment_name(&name).is_some_and(|(o, _)| o == id) {
                         move_path(&e.path(), &dir.join(&name))?;
@@ -213,8 +234,10 @@ pub(crate) fn restore(store: &mut BoardStore, tid: &str, ch: &mut Changes) -> Re
             move_path(&payload.join(&k), &root.join(&k))?;
             store.touch(&root.join(&k));
             let idx_path = root.join(&k).join(INDEX_JSON);
-            let idx: ContainerIndex =
-                fs::read_to_string(&idx_path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
+            let idx: ContainerIndex = fs::read_to_string(&idx_path)
+                .ok()
+                .and_then(|t| serde_json::from_str(&t).ok())
+                .unwrap_or_default();
             let (order, nodes) = super::load_lane_children(&root, &k, &idx);
             for (id, n) in nodes {
                 ch.nodes.insert(id.clone());
@@ -269,7 +292,11 @@ fn pick_restore_parent(store: &BoardStore, wanted: Option<&Parent>) -> Result<Pa
 /// All trash entries, newest first.
 pub fn list(root: &Path) -> Vec<TrashEntry> {
     let mut out: Vec<TrashEntry> = fs::read_dir(trash_root(root))
-        .map(|rd| rd.flatten().filter_map(|e| read_entry(root, &e.file_name().to_string_lossy()).ok()).collect())
+        .map(|rd| {
+            rd.flatten()
+                .filter_map(|e| read_entry(root, &e.file_name().to_string_lossy()).ok())
+                .collect()
+        })
         .unwrap_or_default();
     out.sort_by(|a, b| b.deleted_at.cmp(&a.deleted_at));
     out
@@ -281,7 +308,9 @@ pub fn purge(root: &Path, ttl_days: u32, all: bool) -> Result<usize> {
     let cutoff = chrono::Utc::now() - chrono::Duration::days(ttl_days as i64);
     let mut n = 0;
     for e in list(root) {
-        let old = chrono::DateTime::parse_from_rfc3339(&e.deleted_at).map(|d| d < cutoff).unwrap_or(true);
+        let old = chrono::DateTime::parse_from_rfc3339(&e.deleted_at)
+            .map(|d| d < cutoff)
+            .unwrap_or(true);
         if all || old {
             remove_path(&entry_dir(root, &e.id))?;
             n += 1;

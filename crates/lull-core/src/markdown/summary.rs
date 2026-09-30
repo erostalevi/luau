@@ -14,8 +14,7 @@ const STOPWORDS: &[&str] = &[
     // es
     "el", "la", "los", "las", "un", "una", "y", "o", "de", "del", "en", "con", "por", "para", "es",
     "son", "que", "se", "lo", "al", "su", "sus", "como", "pero", "más", "mas", "muy", "ya", "este",
-    "esta", "esto", "hay", "sin", "sobre", "también",
-    // pt
+    "esta", "esto", "hay", "sin", "sobre", "también", // pt
     "o", "os", "as", "um", "uma", "e", "do", "da", "dos", "das", "no", "na", "nos", "nas", "com",
     "em", "é", "são", "não", "mais", "muito", "isso", "esse", "essa",
 ];
@@ -105,7 +104,12 @@ pub fn summarize(text: &str, max: usize, max_chars: usize) -> String {
         *s *= 1.0 + 0.3 / (1.0 + i as f64);
     }
     let mut idx: Vec<usize> = (0..n).collect();
-    idx.sort_by(|&a, &b| score[b].partial_cmp(&score[a]).unwrap_or(std::cmp::Ordering::Equal).then(a.cmp(&b)));
+    idx.sort_by(|&a, &b| {
+        score[b]
+            .partial_cmp(&score[a])
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(a.cmp(&b))
+    });
     let mut pick: Vec<usize> = idx.into_iter().take(max).collect();
     pick.sort_unstable();
     let joined: Vec<&str> = pick.iter().map(|&i| sents[i].as_str()).collect();
@@ -131,12 +135,24 @@ mod tests {
     #[test]
     fn splits_sentences() {
         let s = sentences("Hello world. This is v1.2 of it! Is it? yes\nNew line");
-        assert_eq!(s, vec!["Hello world.", "This is v1.2 of it!", "Is it?", "yes", "New line"]);
+        assert_eq!(
+            s,
+            vec![
+                "Hello world.",
+                "This is v1.2 of it!",
+                "Is it?",
+                "yes",
+                "New line"
+            ]
+        );
     }
 
     #[test]
     fn short_text_returned_whole() {
-        assert_eq!(summarize("Just one sentence.", 2, 200), "Just one sentence.");
+        assert_eq!(
+            summarize("Just one sentence.", 2, 200),
+            "Just one sentence."
+        );
         assert_eq!(summarize("", 2, 200), "");
     }
 

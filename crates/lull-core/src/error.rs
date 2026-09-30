@@ -3,9 +3,15 @@ use std::path::PathBuf;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("io error at {path}: {source}")]
-    Io { path: PathBuf, source: std::io::Error },
+    Io {
+        path: PathBuf,
+        source: std::io::Error,
+    },
     #[error("json error in {path}: {source}")]
-    Json { path: PathBuf, source: serde_json::Error },
+    Json {
+        path: PathBuf,
+        source: serde_json::Error,
+    },
     #[error("not a board: {0}")]
     NotABoard(PathBuf),
     #[error("board is read-only: {0}")]
@@ -22,7 +28,10 @@ pub enum Error {
 
 impl Error {
     pub fn io(path: impl Into<PathBuf>, source: std::io::Error) -> Self {
-        Error::Io { path: path.into(), source }
+        Error::Io {
+            path: path.into(),
+            source,
+        }
     }
     pub fn invalid(msg: impl Into<String>) -> Self {
         Error::Invalid(msg.into())

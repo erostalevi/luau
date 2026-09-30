@@ -5,12 +5,21 @@
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
-fn item<R: Runtime>(app: &AppHandle<R>, id: &str, label: &str, accel: Option<&str>) -> tauri::Result<MenuItem<R>> {
+fn item<R: Runtime>(
+    app: &AppHandle<R>,
+    id: &str,
+    label: &str,
+    accel: Option<&str>,
+) -> tauri::Result<MenuItem<R>> {
     MenuItem::with_id(app, id, label, true, accel)
 }
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
-    let about = AboutMetadata { name: Some("Lull".into()), version: Some(env!("CARGO_PKG_VERSION").into()), ..Default::default() };
+    let about = AboutMetadata {
+        name: Some("Lull".into()),
+        version: Some(env!("CARGO_PKG_VERSION").into()),
+        ..Default::default()
+    };
     let app_menu = Submenu::with_items(
         app,
         "Lull",
@@ -80,7 +89,12 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &item(app, "panel.integrations", "Integrations", None)?,
             &item(app, "panel.extensions", "Extensions", None)?,
             &PredefinedMenuItem::separator(app)?,
-            &item(app, "board.toggleOrientation", "Toggle Rows / Columns", None)?,
+            &item(
+                app,
+                "board.toggleOrientation",
+                "Toggle Rows / Columns",
+                None,
+            )?,
             &item(app, "board.toggleArchived", "Toggle Show Archived", None)?,
             &item(app, "view.zoomIn", "Zoom In", None)?,
             &item(app, "view.zoomOut", "Zoom Out", None)?,
@@ -118,7 +132,11 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
 pub fn on_event<R: Runtime>(app: &AppHandle<R>, id: &str) {
     // Deliver to the focused window only.
-    let target = app.webview_windows().into_iter().find(|(_, w)| w.is_focused().unwrap_or(false)).map(|(l, _)| l);
+    let target = app
+        .webview_windows()
+        .into_iter()
+        .find(|(_, w)| w.is_focused().unwrap_or(false))
+        .map(|(l, _)| l);
     match target {
         Some(label) => {
             let _ = app.emit_to(label.as_str(), "lull://menu", id);

@@ -47,8 +47,26 @@ pub struct Query {
 }
 
 pub const KEYS: &[&str] = &[
-    "tag", "label", "board", "lane", "is", "has", "status", "priority", "assignee", "mention", "due", "updated",
-    "created", "links", "linkedfrom", "type", "in", "case", "id", "key",
+    "tag",
+    "label",
+    "board",
+    "lane",
+    "is",
+    "has",
+    "status",
+    "priority",
+    "assignee",
+    "mention",
+    "due",
+    "updated",
+    "created",
+    "links",
+    "linkedfrom",
+    "type",
+    "in",
+    "case",
+    "id",
+    "key",
 ];
 
 fn tokenize(s: &str) -> Vec<String> {
@@ -106,7 +124,10 @@ pub fn parse(input: &str) -> Query {
                 };
                 let (value, _) = unquote(rest);
                 match key.as_str() {
-                    "case" => q.case_sensitive = matches!(value.as_str(), "yes" | "true" | "sensitive" | "1"),
+                    "case" => {
+                        q.case_sensitive =
+                            matches!(value.as_str(), "yes" | "true" | "sensitive" | "1")
+                    }
                     "in" if value == "title" => q.title_only = true,
                     _ => q.filters.push(Filter {
                         key,
@@ -120,7 +141,11 @@ pub fn parse(input: &str) -> Query {
         }
         let (value, phrase) = unquote(&body);
         if !value.is_empty() {
-            q.terms.push(Term { value, negate, phrase });
+            q.terms.push(Term {
+                value,
+                negate,
+                phrase,
+            });
         }
     }
     q
@@ -131,7 +156,11 @@ impl Query {
     pub fn to_text(&self) -> String {
         let mut parts = Vec::new();
         for t in &self.terms {
-            let v = if t.phrase || t.value.contains(' ') { format!("\"{}\"", t.value) } else { t.value.clone() };
+            let v = if t.phrase || t.value.contains(' ') {
+                format!("\"{}\"", t.value)
+            } else {
+                t.value.clone()
+            };
             parts.push(if t.negate { format!("-{v}") } else { v });
         }
         for f in &self.filters {
@@ -142,8 +171,16 @@ impl Query {
                 Cmp::Gt => ">",
                 Cmp::Ge => ">=",
             };
-            let v = if f.value.contains(' ') { format!("\"{}\"", f.value) } else { f.value.clone() };
-            parts.push(format!("{}{}:{op}{v}", if f.negate { "-" } else { "" }, f.key));
+            let v = if f.value.contains(' ') {
+                format!("\"{}\"", f.value)
+            } else {
+                f.value.clone()
+            };
+            parts.push(format!(
+                "{}{}:{op}{v}",
+                if f.negate { "-" } else { "" },
+                f.key
+            ));
         }
         if self.case_sensitive {
             parts.push("case:yes".into());
@@ -165,11 +202,28 @@ mod tests {
 
     #[test]
     fn parses_mixed_query() {
-        let q = parse(r#"login "exact phrase" -draft tag:backend -tag:wip board:"Project Alpha" due:<2026-10-10 case:yes"#);
+        let q = parse(
+            r#"login "exact phrase" -draft tag:backend -tag:wip board:"Project Alpha" due:<2026-10-10 case:yes"#,
+        );
         assert_eq!(q.terms.len(), 3);
-        assert_eq!(q.terms[1], Term { value: "exact phrase".into(), negate: false, phrase: true });
+        assert_eq!(
+            q.terms[1],
+            Term {
+                value: "exact phrase".into(),
+                negate: false,
+                phrase: true
+            }
+        );
         assert!(q.terms[2].negate);
-        assert_eq!(q.filters[0], Filter { key: "tag".into(), cmp: Cmp::Eq, value: "backend".into(), negate: false });
+        assert_eq!(
+            q.filters[0],
+            Filter {
+                key: "tag".into(),
+                cmp: Cmp::Eq,
+                value: "backend".into(),
+                negate: false
+            }
+        );
         assert!(q.filters[1].negate);
         assert_eq!(q.filters[2].value, "Project Alpha");
         assert_eq!(q.filters[3].cmp, Cmp::Lt);

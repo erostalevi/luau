@@ -9,10 +9,22 @@ use tauri::AppHandle;
 
 use crate::rpc::R;
 
-pub async fn dispatch_async(_app: &AppHandle, _core: &Arc<Core>, _window: &str, _method: &str, _p: &Value) -> Option<R> {
+pub async fn dispatch_async(
+    _app: &AppHandle,
+    _core: &Arc<Core>,
+    _window: &str,
+    _method: &str,
+    _p: &Value,
+) -> Option<R> {
     None
 }
 
-pub fn dispatch_sync(_app: &AppHandle, _core: &Arc<Core>, _window: &str, _method: &str, _p: &Value) -> Option<R> {
+pub fn dispatch_sync(
+    _app: &AppHandle,
+    _core: &Arc<Core>,
+    _window: &str,
+    _method: &str,
+    _p: &Value,
+) -> Option<R> {
     None
 }

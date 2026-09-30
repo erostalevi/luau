@@ -128,9 +128,12 @@ function build(state: EditorState): DecorationSet {
           out.push(lineDeco(`cm-h cm-h${level}`).range(doc.lineAt(from).from));
           if (!touchesLines(from, to)) {
             const mark = childOf(node, 'HeaderMark');
-            if (mark) out.push(hide.range(mark.from, Math.min(mark.to + 1, to)));
-            // Closing #'s
-            for (let c = node.lastChild; c; c = c.prevSibling) if (c.name === 'HeaderMark' && c.from > mark!.from) out.push(hide.range(c.from - 1 >= from ? c.from - 1 : c.from, c.to));
+            if (mark) {
+              out.push(hide.range(mark.from, Math.min(mark.to + 1, to)));
+              // Optional closing #'s (`## Title ##`).
+              const last = node.lastChild;
+              if (last && last.name === 'HeaderMark' && last.from > mark.from) out.push(hide.range(Math.max(from, last.from - 1), last.to));
+            }
           }
           return;
         }

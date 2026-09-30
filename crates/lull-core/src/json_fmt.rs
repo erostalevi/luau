@@ -141,7 +141,10 @@ mod tests {
         let v = json!({"schema": 1, "id": "k4m2p9", "name": "Backlog", "order": ["c1", "c2"]});
         let s = format_value(&v, 100);
         // The whole object fits, so it prints compactly on one line.
-        assert_eq!(s, "{\"schema\": 1, \"id\": \"k4m2p9\", \"name\": \"Backlog\", \"order\": [\"c1\", \"c2\"]}\n");
+        assert_eq!(
+            s,
+            "{\"schema\": 1, \"id\": \"k4m2p9\", \"name\": \"Backlog\", \"order\": [\"c1\", \"c2\"]}\n"
+        );
     }
 
     #[test]
@@ -157,7 +160,8 @@ mod tests {
 
     #[test]
     fn nested_objects_roundtrip() {
-        let v = json!({"a": {"b": [{"c": 1}, {"d": [1, 2, 3]}], "long": "x".repeat(120)}, "e": null});
+        let v =
+            json!({"a": {"b": [{"c": 1}, {"d": [1, 2, 3]}], "long": "x".repeat(120)}, "e": null});
         let s = format_value(&v, 40);
         let back: Value = serde_json::from_str(&s).unwrap();
         assert_eq!(back, v);

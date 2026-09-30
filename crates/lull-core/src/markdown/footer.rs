@@ -29,7 +29,15 @@ pub struct Footer {
 }
 
 /// Keys with dedicated UI; any other `key: value` pair is still kept.
-pub const KNOWN_KEYS: &[&str] = &["priority", "due", "start", "assignees", "labels", "estimate", "status"];
+pub const KNOWN_KEYS: &[&str] = &[
+    "priority",
+    "due",
+    "start",
+    "assignees",
+    "labels",
+    "estimate",
+    "status",
+];
 
 pub const PRIORITIES: &[&str] = &["urgent", "high", "medium", "low", "none"];
 
@@ -39,7 +47,9 @@ fn parse_field(line: &str) -> Option<(String, String)> {
     if key.is_empty()
         || key.len() > 32
         || !key.chars().next()?.is_alphabetic()
-        || !key.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == ' ')
+        || !key
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == ' ')
     {
         return None;
     }
@@ -48,7 +58,12 @@ fn parse_field(line: &str) -> Option<(String, String)> {
 
 fn split_list(v: &str) -> Vec<String> {
     v.split(',')
-        .map(|s| s.trim().trim_start_matches('@').trim_start_matches('#').trim())
+        .map(|s| {
+            s.trim()
+                .trim_start_matches('@')
+                .trim_start_matches('#')
+                .trim()
+        })
         .filter(|s| !s.is_empty())
         .map(str::to_string)
         .collect()
@@ -83,7 +98,10 @@ pub fn parse(lines: &[&str]) -> Footer {
 }
 
 fn build(lines: &[&str], sep: usize) -> Footer {
-    let mut f = Footer { start_line: Some(sep), ..Default::default() };
+    let mut f = Footer {
+        start_line: Some(sep),
+        ..Default::default()
+    };
     for line in &lines[sep + 1..] {
         if let Some((k, v)) = parse_field(line) {
             match k.as_str() {
@@ -124,8 +142,11 @@ pub fn set_fields(content: &str, fields: &[(String, String)]) -> String {
     while body.ends_with('\n') || body.ends_with(' ') {
         body.pop();
     }
-    let non_empty: Vec<(String, String)> =
-        fields.iter().filter(|(_, v)| !v.trim().is_empty()).cloned().collect();
+    let non_empty: Vec<(String, String)> = fields
+        .iter()
+        .filter(|(_, v)| !v.trim().is_empty())
+        .cloned()
+        .collect();
     if non_empty.is_empty() {
         body.push('\n');
         return body;
@@ -167,8 +188,17 @@ mod tests {
     #[test]
     fn set_fields_roundtrip() {
         let src = "# T\n\nbody\n";
-        let with = set_fields(src, &[("priority".into(), "high".into()), ("due".into(), "2026-01-01".into())]);
-        assert_eq!(with, "# T\n\nbody\n\n---\npriority: high\ndue: 2026-01-01\n");
+        let with = set_fields(
+            src,
+            &[
+                ("priority".into(), "high".into()),
+                ("due".into(), "2026-01-01".into()),
+            ],
+        );
+        assert_eq!(
+            with,
+            "# T\n\nbody\n\n---\npriority: high\ndue: 2026-01-01\n"
+        );
         let f = parse(&lines(&with));
         assert_eq!(f.priority.as_deref(), Some("high"));
         let updated = set_fields(&with, &[("priority".into(), "low".into())]);

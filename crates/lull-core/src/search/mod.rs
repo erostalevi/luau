@@ -86,7 +86,13 @@ fn join_tokens(v: &[String]) -> String {
     if v.is_empty() {
         String::new()
     } else {
-        format!(" {} ", v.iter().map(|s| s.to_lowercase()).collect::<Vec<_>>().join(" "))
+        format!(
+            " {} ",
+            v.iter()
+                .map(|s| s.to_lowercase())
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
     }
 }
 
@@ -109,8 +115,13 @@ impl SearchIndex {
 
     fn init(conn: Connection) -> Result<Self> {
         let map = |e: rusqlite::Error| Error::Other(format!("search init: {e}"));
-        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA temp_store=MEMORY;").map_err(map)?;
-        let v: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0)).map_err(map)?;
+        conn.execute_batch(
+            "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA temp_store=MEMORY;",
+        )
+        .map_err(map)?;
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .map_err(map)?;
         if v != SCHEMA_VERSION {
             conn.execute_batch(
                 "DROP TABLE IF EXISTS cards_fts; DROP TABLE IF EXISTS cards; DROP TABLE IF EXISTS boards;",
@@ -142,7 +153,9 @@ impl SearchIndex {
             ))
             .map_err(map)?;
         }
-        Ok(SearchIndex { conn: Mutex::new(conn) })
+        Ok(SearchIndex {
+            conn: Mutex::new(conn),
+        })
     }
 
     pub fn set_board(&self, id: &str, name: &str, kind: &str) -> Result<()> {
@@ -161,10 +174,12 @@ impl SearchIndex {
     pub fn hashes(&self, board: &str) -> std::collections::HashMap<String, String> {
         let c = self.conn.lock();
         let mut out = std::collections::HashMap::new();
-        if let Ok(mut st) = c.prepare("SELECT id, hash FROM cards WHERE board = ?1") {
-            if let Ok(rows) = st.query_map([board], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))) {
-                out.extend(rows.flatten());
-            }
+        if let Ok(mut st) = c.prepare("SELECT id, hash FROM cards WHERE board = ?1")
+            && let Ok(rows) = st.query_map([board], |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+            })
+        {
+            out.extend(rows.flatten());
         }
         out
     }
@@ -227,22 +242,31 @@ impl SearchIndex {
     pub fn remove(&self, board: &str, ids: &[String]) -> Result<()> {
         let c = self.conn.lock();
         for id in ids {
-            c.execute("DELETE FROM cards WHERE board = ?1 AND id = ?2", params![board, id])
-                .map_err(|e| Error::Other(e.to_string()))?;
+            c.execute(
+                "DELETE FROM cards WHERE board = ?1 AND id = ?2",
+                params![board, id],
+            )
+            .map_err(|e| Error::Other(e.to_string()))?;
         }
         Ok(())
     }
 
     /// Remove every doc of `board` not in `keep`.
     pub fn retain(&self, board: &str, keep: &std::collections::HashSet<String>) -> Result<()> {
-        let existing: Vec<String> = self.hashes(board).into_keys().filter(|id| !keep.contains(id)).collect();
+        let existing: Vec<String> = self
+            .hashes(board)
+            .into_keys()
+            .filter(|id| !keep.contains(id))
+            .collect();
         self.remove(board, &existing)
     }
 
     pub fn drop_board(&self, board: &str) -> Result<()> {
         let c = self.conn.lock();
-        c.execute("DELETE FROM cards WHERE board = ?1", [board]).map_err(|e| Error::Other(e.to_string()))?;
-        c.execute("DELETE FROM boards WHERE board = ?1", [board]).map_err(|e| Error::Other(e.to_string()))?;
+        c.execute("DELETE FROM cards WHERE board = ?1", [board])
+            .map_err(|e| Error::Other(e.to_string()))?;
+        c.execute("DELETE FROM boards WHERE board = ?1", [board])
+            .map_err(|e| Error::Other(e.to_string()))?;
         Ok(())
     }
 
@@ -250,7 +274,11 @@ impl SearchIndex {
     pub fn id_taken(&self, id: &str) -> bool {
         self.conn
             .lock()
-            .query_row("SELECT 1 FROM cards WHERE id = ?1 LIMIT 1", [id], |_| Ok(()))
+            .query_row(
+                "SELECT 1 FROM cards WHERE id = ?1 LIMIT 1",
+                [id],
+                |_| Ok(()),
+            )
             .is_ok()
     }
 
@@ -258,7 +286,11 @@ impl SearchIndex {
     pub fn locate(&self, id: &str) -> Option<(String, String)> {
         self.conn
             .lock()
-            .query_row("SELECT board, title FROM cards WHERE id = ?1 LIMIT 1", [id], |r| Ok((r.get(0)?, r.get(1)?)))
+            .query_row(
+                "SELECT board, title FROM cards WHERE id = ?1 LIMIT 1",
+                [id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
             .ok()
     }
 
@@ -266,7 +298,9 @@ impl SearchIndex {
     pub fn titles(&self, ids: &[String]) -> Vec<(String, String, String)> {
         let c = self.conn.lock();
         let mut out = Vec::new();
-        if let Ok(mut st) = c.prepare_cached("SELECT id, board, title FROM cards WHERE id = ?1 LIMIT 1") {
+        if let Ok(mut st) =
+            c.prepare_cached("SELECT id, board, title FROM cards WHERE id = ?1 LIMIT 1")
+        {
             for id in ids {
                 if let Ok(row) = st.query_row([id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))) {
                     out.push(row);
@@ -280,10 +314,13 @@ impl SearchIndex {
     pub fn backlinks(&self, id: &str) -> Vec<(String, String, String)> {
         let c = self.conn.lock();
         let mut out = Vec::new();
-        if let Ok(mut st) = c.prepare("SELECT board, id, title FROM cards WHERE links LIKE ?1 LIMIT 200") {
-            if let Ok(rows) = st.query_map([format!("% {id} %")], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))) {
-                out.extend(rows.flatten());
-            }
+        if let Ok(mut st) =
+            c.prepare("SELECT board, id, title FROM cards WHERE links LIKE ?1 LIMIT 200")
+            && let Ok(rows) = st.query_map([format!("% {id} %")], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+            })
+        {
+            out.extend(rows.flatten());
         }
         out
     }
@@ -295,14 +332,18 @@ impl SearchIndex {
         let sql = if boards.is_empty() {
             "SELECT tags || labels FROM cards".to_string()
         } else {
-            format!("SELECT tags || labels FROM cards WHERE board IN ({})", vec!["?"; boards.len()].join(","))
+            format!(
+                "SELECT tags || labels FROM cards WHERE board IN ({})",
+                vec!["?"; boards.len()].join(",")
+            )
         };
-        if let Ok(mut st) = c.prepare(&sql) {
-            if let Ok(rows) = st.query_map(params_from_iter(boards.iter()), |r| r.get::<_, String>(0)) {
-                for row in rows.flatten() {
-                    for t in split_tokens(&row) {
-                        *counts.entry(t).or_default() += 1;
-                    }
+        if let Ok(mut st) = c.prepare(&sql)
+            && let Ok(rows) =
+                st.query_map(params_from_iter(boards.iter()), |r| r.get::<_, String>(0))
+        {
+            for row in rows.flatten() {
+                for t in split_tokens(&row) {
+                    *counts.entry(t).or_default() += 1;
                 }
             }
         }
@@ -315,11 +356,11 @@ impl SearchIndex {
     pub fn people(&self) -> Vec<String> {
         let c = self.conn.lock();
         let mut set = std::collections::BTreeSet::new();
-        if let Ok(mut st) = c.prepare("SELECT mentions || assignees FROM cards") {
-            if let Ok(rows) = st.query_map([], |r| r.get::<_, String>(0)) {
-                for row in rows.flatten() {
-                    set.extend(split_tokens(&row));
-                }
+        if let Ok(mut st) = c.prepare("SELECT mentions || assignees FROM cards")
+            && let Ok(rows) = st.query_map([], |r| r.get::<_, String>(0))
+        {
+            for row in rows.flatten() {
+                set.extend(split_tokens(&row));
             }
         }
         set.into_iter().collect()
@@ -330,27 +371,45 @@ impl SearchIndex {
         self.search_query(&q, opts)
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn search_query(&self, q: &Query, opts: &SearchOptions) -> Result<Vec<SearchHit>> {
         let mut wh: Vec<String> = Vec::new();
         let mut args: Vec<SqlValue> = Vec::new();
         let mut fts_parts: Vec<String> = Vec::new();
-        let cols = if q.title_only { "c.title" } else { "c.title || ' ' || c.body" };
+        let cols = if q.title_only {
+            "c.title"
+        } else {
+            "c.title || ' ' || c.body"
+        };
         for t in &q.terms {
             let long = t.value.chars().count() >= 3;
             if long && !t.negate && !q.title_only {
                 fts_parts.push(format!("\"{}\"", t.value.replace('"', "\"\"")));
             } else if long && t.negate && !q.title_only {
-                wh.push("c.rowid NOT IN (SELECT rowid FROM cards_fts WHERE cards_fts MATCH ?)".into());
-                args.push(SqlValue::Text(format!("\"{}\"", t.value.replace('"', "\"\""))));
+                wh.push(
+                    "c.rowid NOT IN (SELECT rowid FROM cards_fts WHERE cards_fts MATCH ?)".into(),
+                );
+                args.push(SqlValue::Text(format!(
+                    "\"{}\"",
+                    t.value.replace('"', "\"\"")
+                )));
             } else {
                 let like = format!("%{}%", t.value.replace('%', "\\%").replace('_', "\\_"));
                 let clause = format!("({cols}) LIKE ? ESCAPE '\\'");
-                wh.push(if t.negate { format!("NOT {clause}") } else { clause });
+                wh.push(if t.negate {
+                    format!("NOT {clause}")
+                } else {
+                    clause
+                });
                 args.push(SqlValue::Text(like));
             }
             if q.case_sensitive {
                 let clause = format!("instr({cols}, ?) > 0");
-                wh.push(if t.negate { format!("NOT {clause}") } else { clause });
+                wh.push(if t.negate {
+                    format!("NOT {clause}")
+                } else {
+                    clause
+                });
                 args.push(SqlValue::Text(t.value.clone()));
             }
         }
@@ -420,14 +479,24 @@ impl SearchIndex {
                 }
                 _ => continue,
             };
-            wh.push(if f.negate { format!("NOT ({clause})") } else { clause });
+            wh.push(if f.negate {
+                format!("NOT ({clause})")
+            } else {
+                clause
+            });
             args.extend(vals);
         }
         if !opts.boards.is_empty() {
-            wh.push(format!("c.board IN ({})", vec!["?"; opts.boards.len()].join(",")));
+            wh.push(format!(
+                "c.board IN ({})",
+                vec!["?"; opts.boards.len()].join(",")
+            ));
             args.extend(opts.boards.iter().map(|b| SqlValue::Text(b.clone())));
         }
-        let wants_archived = q.filters.iter().any(|f| f.key == "is" && f.value == "archived" && !f.negate);
+        let wants_archived = q
+            .filters
+            .iter()
+            .any(|f| f.key == "is" && f.value == "archived" && !f.negate);
         if !opts.include_archived && !wants_archived {
             wh.push("c.archived = 0".into());
         }
@@ -455,7 +524,9 @@ impl SearchIndex {
             )
         };
         let c = self.conn.lock();
-        let mut st = c.prepare(&sql).map_err(|e| Error::Other(format!("search: {e}")))?;
+        let mut st = c
+            .prepare(&sql)
+            .map_err(|e| Error::Other(format!("search: {e}")))?;
         let rows = st
             .query_map(params_from_iter(args.iter()), |r| {
                 Ok(SearchHit {
@@ -494,10 +565,27 @@ pub fn docs_for_board(
         .values()
         .map(|n| {
             let lane = st.lane_of(&n.id);
-            let lane_name = lane.as_ref().and_then(|k| st.lane(k)).map(|l| l.name.clone());
-            let body = if n.meta.plain.is_empty() { body_of(&n.id).unwrap_or_default() } else { n.meta.plain.clone() };
+            let lane_name = lane
+                .as_ref()
+                .and_then(|k| st.lane(k))
+                .map(|l| l.name.clone());
+            let body = if n.meta.plain.is_empty() {
+                body_of(&n.id).unwrap_or_default()
+            } else {
+                n.meta.plain.clone()
+            };
             let r = remote(&n.id);
-            doc_from(&st.manifest.id, &n.id, &n.meta, n, lane, lane_name, kind, body, r)
+            doc_from(
+                &st.manifest.id,
+                &n.id,
+                &n.meta,
+                n,
+                lane,
+                lane_name,
+                kind,
+                body,
+                r,
+            )
         })
         .collect()
 }
@@ -537,10 +625,20 @@ pub fn doc_from(
         kind: kind.to_string(),
         tasks_total: meta.tasks.total,
         tasks_done: meta.tasks.done,
-        has_image: n.attachments.iter().any(|a| a.kind == AttachmentKind::Image)
-            || meta.file_refs.iter().any(|f| AttachmentKind::from_ext(f.rsplit('.').next().unwrap_or("")) == AttachmentKind::Image),
+        has_image: n
+            .attachments
+            .iter()
+            .any(|a| a.kind == AttachmentKind::Image)
+            || meta.file_refs.iter().any(|f| {
+                AttachmentKind::from_ext(f.rsplit('.').next().unwrap_or(""))
+                    == AttachmentKind::Image
+            }),
         has_attachment: !n.attachments.is_empty(),
-        due: meta.footer.due.clone().or_else(|| meta.dates.first().cloned()),
+        due: meta
+            .footer
+            .due
+            .clone()
+            .or_else(|| meta.dates.first().cloned()),
         priority: meta.footer.priority.clone(),
         assignees: meta.footer.assignees.clone(),
         mentions: meta.mentions.clone(),
@@ -575,12 +673,28 @@ mod tests {
         let idx = SearchIndex::in_memory().unwrap();
         idx.set_board("b1", "Project Alpha", "kanban").unwrap();
         idx.upsert(&[
-            doc("c1", "Fix Relogin flow", "Safari breaks the OAuth dance", &["backend", "work/client-a"]),
-            doc("c2", "Design screens", "Figma mockups for onboarding", &["design"]),
+            doc(
+                "c1",
+                "Fix Relogin flow",
+                "Safari breaks the OAuth dance",
+                &["backend", "work/client-a"],
+            ),
+            doc(
+                "c2",
+                "Design screens",
+                "Figma mockups for onboarding",
+                &["design"],
+            ),
             doc("c3", "Ops", "rotate keys", &["backend"]),
         ])
         .unwrap();
-        let hits = |q: &str| idx.search(q, &SearchOptions::default()).unwrap().into_iter().map(|h| h.id).collect::<Vec<_>>();
+        let hits = |q: &str| {
+            idx.search(q, &SearchOptions::default())
+                .unwrap()
+                .into_iter()
+                .map(|h| h.id)
+                .collect::<Vec<_>>()
+        };
         assert_eq!(hits("login"), vec!["c1"]); // substring inside "Relogin"
         assert_eq!(hits("oauth"), vec!["c1"]); // case-insensitive
         assert!(hits("oauth case:yes").is_empty());

@@ -51,21 +51,40 @@ pub struct BoardPatch {
 #[serde(rename_all = "camelCase", tag = "op")]
 pub enum Op {
     #[serde(rename_all = "camelCase")]
-    CreateCard { id: String, parent: Parent, index: Option<usize>, content: String },
+    CreateCard {
+        id: String,
+        parent: Parent,
+        index: Option<usize>,
+        content: String,
+    },
     #[serde(rename_all = "camelCase")]
     WriteCard { id: String, content: String },
     #[serde(rename_all = "camelCase")]
-    Move { ids: Vec<String>, to: Parent, before: Option<String> },
+    Move {
+        ids: Vec<String>,
+        to: Parent,
+        before: Option<String>,
+    },
     #[serde(rename_all = "camelCase")]
     Place { items: Vec<Placement> },
     #[serde(rename_all = "camelCase")]
-    Trash { nodes: Vec<String>, lanes: Vec<String> },
+    Trash {
+        nodes: Vec<String>,
+        lanes: Vec<String>,
+    },
     #[serde(rename_all = "camelCase")]
     Restore { entries: Vec<String> },
     #[serde(rename_all = "camelCase")]
-    SetArchived { nodes: Vec<(String, bool)>, lanes: Vec<(String, bool)> },
+    SetArchived {
+        nodes: Vec<(String, bool)>,
+        lanes: Vec<(String, bool)>,
+    },
     #[serde(rename_all = "camelCase")]
-    CreateLane { id: String, name: String, index: Option<usize> },
+    CreateLane {
+        id: String,
+        name: String,
+        index: Option<usize>,
+    },
     #[serde(rename_all = "camelCase")]
     UpdateLane { id: String, patch: LanePatch },
     #[serde(rename_all = "camelCase")]
@@ -144,7 +163,12 @@ impl BoardStore {
 
     fn apply_inner(&mut self, op: Op, acc: &mut Acc) -> Result<Op> {
         match op {
-            Op::CreateCard { id, parent, index, content } => self.op_create_card(id, parent, index, content, acc),
+            Op::CreateCard {
+                id,
+                parent,
+                index,
+                content,
+            } => self.op_create_card(id, parent, index, content, acc),
             Op::WriteCard { id, content } => self.op_write_card(id, content, acc),
             Op::Move { ids, to, before } => self.op_move(ids, to, before, acc),
             Op::Place { items } => self.relocate(items, acc),
@@ -157,7 +181,9 @@ impl BoardStore {
             Op::UpdateBoard { patch } => self.op_update_board(patch, acc),
             Op::SetCover { id, cover } => self.op_set_cover(id, cover, acc),
             Op::SetKind { kind } => self.op_set_kind(kind, acc),
-            Op::External { .. } => Err(Error::invalid("external operation must be handled by the app layer")),
+            Op::External { .. } => Err(Error::invalid(
+                "external operation must be handled by the app layer",
+            )),
             Op::Batch { ops } => {
                 let mut inverses = Vec::new();
                 for o in ops {
@@ -189,18 +215,31 @@ impl BoardStore {
     fn validate_parent(&self, p: &Parent) -> Result<()> {
         let s = &self.state;
         match p {
-            Parent::Lane(k) => s.lane(k).map(|_| ()).ok_or_else(|| Error::not_found(k.clone())),
+            Parent::Lane(k) => s
+                .lane(k)
+                .map(|_| ())
+                .ok_or_else(|| Error::not_found(k.clone())),
             Parent::Root => Ok(()),
-            Parent::Card(c) => s.nodes.get(c).map(|_| ()).ok_or_else(|| Error::not_found(c.clone())),
+            Parent::Card(c) => s
+                .nodes
+                .get(c)
+                .map(|_| ())
+                .ok_or_else(|| Error::not_found(c.clone())),
         }
     }
 
     /// Drop unknown ids, duplicates, and ids whose ancestor is also listed.
     fn normalize_ids(&self, ids: Vec<String>) -> Vec<String> {
         let mut seen = HashSet::new();
-        let ids: Vec<String> = ids.into_iter().filter(|i| self.state.nodes.contains_key(i) && seen.insert(i.clone())).collect();
+        let ids: Vec<String> = ids
+            .into_iter()
+            .filter(|i| self.state.nodes.contains_key(i) && seen.insert(i.clone()))
+            .collect();
         ids.iter()
-            .filter(|id| !ids.iter().any(|other| other != *id && self.state.is_ancestor(other, id)))
+            .filter(|id| {
+                !ids.iter()
+                    .any(|other| other != *id && self.state.is_ancestor(other, id))
+            })
             .cloned()
             .collect()
     }
@@ -212,7 +251,10 @@ impl BoardStore {
         if n.is_group {
             return Ok(());
         }
-        let dir = self.state.container_dir(&n.parent.clone()).ok_or_else(|| Error::not_found(c))?;
+        let dir = self
+            .state
+            .container_dir(&n.parent.clone())
+            .ok_or_else(|| Error::not_found(c))?;
         let gdir = dir.join(c);
         fs::create_dir_all(&gdir).map_err(|e| Error::io(&gdir, e))?;
         let md = dir.join(format!("{c}.md"));
@@ -238,7 +280,10 @@ impl BoardStore {
             return Ok(());
         }
         let parent = n.parent.clone();
-        let dir = self.state.container_dir(&parent).ok_or_else(|| Error::not_found(g))?;
+        let dir = self
+            .state
+            .container_dir(&parent)
+            .ok_or_else(|| Error::not_found(g))?;
         let gdir = dir.join(g);
         let md = dir.join(format!("{g}.md"));
         let index_md = gdir.join(INDEX_MD);
@@ -252,9 +297,14 @@ impl BoardStore {
         }
         remove_path(&gdir.join(INDEX_JSON))?;
         // Anything unknown left inside is preserved in the trash, never deleted.
-        let leftovers: Vec<_> = fs::read_dir(&gdir).map(|r| r.flatten().collect()).unwrap_or_default();
+        let leftovers: Vec<_> = fs::read_dir(&gdir)
+            .map(|r| r.flatten().collect())
+            .unwrap_or_default();
         if !leftovers.is_empty() {
-            let dest = trash::orphans_dir(&self.state.root).join(format!("{g}-{}", chrono::Utc::now().format("%Y%m%dT%H%M%S%3f")));
+            let dest = trash::orphans_dir(&self.state.root).join(format!(
+                "{g}-{}",
+                chrono::Utc::now().format("%Y%m%dT%H%M%S%3f")
+            ));
             move_path(&gdir, &dest)?;
         } else {
             let _ = fs::remove_dir(&gdir);
@@ -279,7 +329,10 @@ impl BoardStore {
                 .map_err(|e| Error::io(from, e))?
                 .flatten()
                 .map(|e| e.file_name().to_string_lossy().into_owned())
-                .filter(|n| n == &format!("{id}.md") || parse_attachment_name(n).is_some_and(|(o, _)| o == id))
+                .filter(|n| {
+                    n == &format!("{id}.md")
+                        || parse_attachment_name(n).is_some_and(|(o, _)| o == id)
+                })
                 .collect();
             for n in names {
                 move_path(&from.join(&n), &to.join(&n))?;
@@ -292,7 +345,14 @@ impl BoardStore {
 
     // --- cards -------------------------------------------------------------------
 
-    fn op_create_card(&mut self, id: String, parent: Parent, index: Option<usize>, content: String, acc: &mut Acc) -> Result<Op> {
+    fn op_create_card(
+        &mut self,
+        id: String,
+        parent: Parent,
+        index: Option<usize>,
+        content: String,
+        acc: &mut Acc,
+    ) -> Result<Op> {
         if !is_id(&id, IdKind::Card) {
             return Err(Error::invalid(format!("bad card id {id}")));
         }
@@ -303,7 +363,10 @@ impl BoardStore {
         if let Parent::Card(c) = &parent {
             self.ensure_group(c, &mut acc.ch)?;
         }
-        let dir = self.state.container_dir(&parent).ok_or_else(|| Error::invalid("bad parent"))?;
+        let dir = self
+            .state
+            .container_dir(&parent)
+            .ok_or_else(|| Error::invalid("bad parent"))?;
         fs::create_dir_all(&dir).map_err(|e| Error::io(&dir, e))?;
         let path = dir.join(format!("{id}.md"));
         if path.exists() {
@@ -338,7 +401,10 @@ impl BoardStore {
         acc.ch.touch_parent(&parent);
         acc.created.push(id.clone());
         acc.touched_anything = true;
-        Ok(Op::Trash { nodes: vec![id], lanes: vec![] })
+        Ok(Op::Trash {
+            nodes: vec![id],
+            lanes: vec![],
+        })
     }
 
     fn op_write_card(&mut self, id: String, content: String, acc: &mut Acc) -> Result<Op> {
@@ -357,7 +423,13 @@ impl BoardStore {
         Ok(Op::WriteCard { id, content: prev })
     }
 
-    fn op_move(&mut self, ids: Vec<String>, to: Parent, before: Option<String>, acc: &mut Acc) -> Result<Op> {
+    fn op_move(
+        &mut self,
+        ids: Vec<String>,
+        to: Parent,
+        before: Option<String>,
+        acc: &mut Acc,
+    ) -> Result<Op> {
         let ids = self.normalize_ids(ids);
         if ids.is_empty() {
             return Ok(Op::Place { items: vec![] });
@@ -371,18 +443,28 @@ impl BoardStore {
             .into_iter()
             .filter(|c| !ids.contains(c))
             .collect();
-        let base = before.as_ref().and_then(|b| siblings.iter().position(|c| c == b)).unwrap_or(siblings.len());
+        let base = before
+            .as_ref()
+            .and_then(|b| siblings.iter().position(|c| c == b))
+            .unwrap_or(siblings.len());
         let items = ids
             .iter()
             .enumerate()
-            .map(|(i, id)| Placement { id: id.clone(), parent: to.clone(), index: base + i })
+            .map(|(i, id)| Placement {
+                id: id.clone(),
+                parent: to.clone(),
+                index: base + i,
+            })
             .collect();
         self.relocate(items, acc)
     }
 
     /// Place each item at `(parent, index)`. Returns the inverse `Place`.
     fn relocate(&mut self, items: Vec<Placement>, acc: &mut Acc) -> Result<Op> {
-        let keep: HashSet<String> = self.normalize_ids(items.iter().map(|i| i.id.clone()).collect()).into_iter().collect();
+        let keep: HashSet<String> = self
+            .normalize_ids(items.iter().map(|i| i.id.clone()).collect())
+            .into_iter()
+            .collect();
         let items: Vec<Placement> = items.into_iter().filter(|i| keep.contains(&i.id)).collect();
         if items.is_empty() {
             return Ok(Op::Place { items: vec![] });
@@ -393,24 +475,42 @@ impl BoardStore {
             if let Parent::Card(c) = &it.parent {
                 for other in &items {
                     if self.state.is_ancestor(&other.id, c) {
-                        return Err(Error::invalid(format!("cannot move {} into itself", other.id)));
+                        return Err(Error::invalid(format!(
+                            "cannot move {} into itself",
+                            other.id
+                        )));
                     }
                 }
             }
         }
         let original: Vec<Placement> = items
             .iter()
-            .filter_map(|it| self.state.position_of(&it.id).map(|(p, i)| Placement { id: it.id.clone(), parent: p, index: i }))
+            .filter_map(|it| {
+                self.state.position_of(&it.id).map(|(p, i)| Placement {
+                    id: it.id.clone(),
+                    parent: p,
+                    index: i,
+                })
+            })
             .collect();
         // No-op detection.
         if original.len() == items.len()
-            && items.iter().zip(&original).all(|(a, b)| a.parent == b.parent && a.index == b.index)
+            && items
+                .iter()
+                .zip(&original)
+                .all(|(a, b)| a.parent == b.parent && a.index == b.index)
         {
             return Ok(Op::Place { items: original });
         }
         let targets: BTreeSet<String> = items
             .iter()
-            .filter_map(|i| if let Parent::Card(c) = &i.parent { Some(c.clone()) } else { None })
+            .filter_map(|i| {
+                if let Parent::Card(c) = &i.parent {
+                    Some(c.clone())
+                } else {
+                    None
+                }
+            })
             .collect();
         for c in &targets {
             self.ensure_group(c, &mut acc.ch)?;
@@ -422,7 +522,10 @@ impl BoardStore {
             let n = self.state.nodes.get(&it.id).unwrap();
             let old_parent = n.parent.clone();
             let is_group = n.is_group;
-            let old_dir = self.state.container_dir(&old_parent).ok_or_else(|| Error::not_found(it.id.clone()))?;
+            let old_dir = self
+                .state
+                .container_dir(&old_parent)
+                .ok_or_else(|| Error::not_found(it.id.clone()))?;
             if let Some(list) = self.state.children_of_mut(&old_parent) {
                 list.retain(|c| c != &it.id);
             }
@@ -433,7 +536,10 @@ impl BoardStore {
         }
         for ((id, is_group, old_dir), it) in moves.into_iter().zip(&items) {
             self.state.nodes.get_mut(&id).unwrap().parent = it.parent.clone();
-            let new_dir = self.state.container_dir(&it.parent).ok_or_else(|| Error::not_found(id.clone()))?;
+            let new_dir = self
+                .state
+                .container_dir(&it.parent)
+                .ok_or_else(|| Error::not_found(id.clone()))?;
             self.move_node_files(&id, is_group, &old_dir, &new_dir)?;
             acc.ch.nodes.insert(id);
         }
@@ -452,10 +558,15 @@ impl BoardStore {
             }
         }
         for p in &old_parents {
-            if let Parent::Card(g) = p {
-                if !targets.contains(g) && self.state.nodes.get(g).is_some_and(|n| n.children.is_empty()) {
-                    self.ensure_plain(g, &mut acc.ch)?;
-                }
+            if let Parent::Card(g) = p
+                && !targets.contains(g)
+                && self
+                    .state
+                    .nodes
+                    .get(g)
+                    .is_some_and(|n| n.children.is_empty())
+            {
+                self.ensure_plain(g, &mut acc.ch)?;
             }
         }
         for p in &to_save {
@@ -471,16 +582,22 @@ impl BoardStore {
     fn op_trash(&mut self, nodes: Vec<String>, lanes: Vec<String>, acc: &mut Acc) -> Result<Op> {
         let mut entries = Vec::new();
         for id in self.normalize_ids(nodes) {
-            let Some((parent, _)) = self.state.position_of(&id) else { continue };
+            let Some((parent, _)) = self.state.position_of(&id) else {
+                continue;
+            };
             let removed = self.state.descendants(&id);
             let tid = trash::trash_node(self, &id)?;
             acc.ch.removed.insert(id.clone());
             acc.ch.removed.extend(removed);
             acc.ch.touch_parent(&parent);
-            if let Parent::Card(g) = &parent {
-                if self.state.nodes.get(g).is_some_and(|n| n.children.is_empty()) {
-                    self.ensure_plain(g, &mut acc.ch)?;
-                }
+            if let Parent::Card(g) = &parent
+                && self
+                    .state
+                    .nodes
+                    .get(g)
+                    .is_some_and(|n| n.children.is_empty())
+            {
+                self.ensure_plain(g, &mut acc.ch)?;
             }
             self.save_container(&parent)?;
             entries.push(tid);
@@ -489,11 +606,18 @@ impl BoardStore {
             if self.state.lane(&k).is_none() {
                 continue;
             }
-            let removed: Vec<String> = self.state.lane(&k).unwrap().order.iter().flat_map(|c| {
-                let mut v = self.state.descendants(c);
-                v.push(c.clone());
-                v
-            }).collect();
+            let removed: Vec<String> = self
+                .state
+                .lane(&k)
+                .unwrap()
+                .order
+                .iter()
+                .flat_map(|c| {
+                    let mut v = self.state.descendants(c);
+                    v.push(c.clone());
+                    v
+                })
+                .collect();
             let tid = trash::trash_lane(self, &k)?;
             acc.ch.removed.extend(removed);
             acc.ch.lanes = true;
@@ -525,12 +649,19 @@ impl BoardStore {
 
     // --- flags & lanes -------------------------------------------------------------
 
-    fn op_set_archived(&mut self, nodes: Vec<(String, bool)>, lanes: Vec<(String, bool)>, acc: &mut Acc) -> Result<Op> {
+    fn op_set_archived(
+        &mut self,
+        nodes: Vec<(String, bool)>,
+        lanes: Vec<(String, bool)>,
+        acc: &mut Acc,
+    ) -> Result<Op> {
         let mut inv_nodes = Vec::new();
         let mut inv_lanes = Vec::new();
         let mut parents: Vec<Parent> = Vec::new();
         for (id, flag) in nodes {
-            let Some(n) = self.state.nodes.get_mut(&id) else { continue };
+            let Some(n) = self.state.nodes.get_mut(&id) else {
+                continue;
+            };
             if n.archived != flag {
                 inv_nodes.push((id.clone(), n.archived));
                 n.archived = flag;
@@ -541,7 +672,9 @@ impl BoardStore {
             }
         }
         for (k, flag) in lanes {
-            let Some(l) = self.state.lane_mut(&k) else { continue };
+            let Some(l) = self.state.lane_mut(&k) else {
+                continue;
+            };
             if l.archived != flag {
                 inv_lanes.push((k, l.archived));
                 l.archived = flag;
@@ -555,10 +688,19 @@ impl BoardStore {
             self.save_manifest()?;
         }
         acc.touched_anything |= !inv_nodes.is_empty() || !inv_lanes.is_empty();
-        Ok(Op::SetArchived { nodes: inv_nodes, lanes: inv_lanes })
+        Ok(Op::SetArchived {
+            nodes: inv_nodes,
+            lanes: inv_lanes,
+        })
     }
 
-    fn op_create_lane(&mut self, id: String, name: String, index: Option<usize>, acc: &mut Acc) -> Result<Op> {
+    fn op_create_lane(
+        &mut self,
+        id: String,
+        name: String,
+        index: Option<usize>,
+        acc: &mut Acc,
+    ) -> Result<Op> {
         if self.state.manifest.kind != BoardKind::Kanban {
             return Err(Error::invalid("lanes only exist on kanban boards"));
         }
@@ -567,7 +709,10 @@ impl BoardStore {
         }
         let dir = self.state.root.join(&id);
         if dir.exists() {
-            return Err(Error::Conflict(format!("lane dir exists: {}", dir.display())));
+            return Err(Error::Conflict(format!(
+                "lane dir exists: {}",
+                dir.display()
+            )));
         }
         fs::create_dir_all(&dir).map_err(|e| Error::io(&dir, e))?;
         self.touch(&dir);
@@ -582,18 +727,26 @@ impl BoardStore {
             archived: false,
             extra: Default::default(),
         };
-        let at = index.unwrap_or(self.state.lanes.len()).min(self.state.lanes.len());
+        let at = index
+            .unwrap_or(self.state.lanes.len())
+            .min(self.state.lanes.len());
         self.state.lanes.insert(at, lane);
         self.save_container(&Parent::Lane(id.clone()))?;
         self.save_manifest()?;
         acc.ch.lanes = true;
         acc.created.push(id.clone());
         acc.touched_anything = true;
-        Ok(Op::Trash { nodes: vec![], lanes: vec![id] })
+        Ok(Op::Trash {
+            nodes: vec![],
+            lanes: vec![id],
+        })
     }
 
     fn op_update_lane(&mut self, id: String, patch: LanePatch, acc: &mut Acc) -> Result<Op> {
-        let l = self.state.lane_mut(&id).ok_or_else(|| Error::not_found(id.clone()))?;
+        let l = self
+            .state
+            .lane_mut(&id)
+            .ok_or_else(|| Error::not_found(id.clone()))?;
         let mut inv = LanePatch::default();
         if let Some(n) = patch.name {
             let n = n.trim().to_string();
@@ -622,11 +775,11 @@ impl BoardStore {
                 l.wip = next;
             }
         }
-        if let Some(c) = patch.collapsed {
-            if c != l.collapsed {
-                inv.collapsed = Some(l.collapsed);
-                l.collapsed = c;
-            }
+        if let Some(c) = patch.collapsed
+            && c != l.collapsed
+        {
+            inv.collapsed = Some(l.collapsed);
+            l.collapsed = c;
         }
         if inv != LanePatch::default() {
             self.save_container(&Parent::Lane(id.clone()))?;
@@ -637,7 +790,12 @@ impl BoardStore {
     }
 
     fn op_move_lane(&mut self, id: String, index: usize, acc: &mut Acc) -> Result<Op> {
-        let from = self.state.lanes.iter().position(|l| l.id == id).ok_or_else(|| Error::not_found(id.clone()))?;
+        let from = self
+            .state
+            .lanes
+            .iter()
+            .position(|l| l.id == id)
+            .ok_or_else(|| Error::not_found(id.clone()))?;
         let to = index.min(self.state.lanes.len() - 1);
         if from != to {
             let l = self.state.lanes.remove(from);
@@ -658,15 +816,15 @@ impl BoardStore {
                 inv.name = Some(std::mem::replace(&mut m.name, n));
             }
         }
-        if let Some(v) = patch.view {
-            if v != m.view {
-                inv.view = Some(std::mem::replace(&mut m.view, v));
-            }
+        if let Some(v) = patch.view
+            && v != m.view
+        {
+            inv.view = Some(std::mem::replace(&mut m.view, v));
         }
-        if let Some(t) = patch.tag_colors {
-            if t != m.tag_colors {
-                inv.tag_colors = Some(std::mem::replace(&mut m.tag_colors, t));
-            }
+        if let Some(t) = patch.tag_colors
+            && t != m.tag_colors
+        {
+            inv.tag_colors = Some(std::mem::replace(&mut m.tag_colors, t));
         }
         if inv != BoardPatch::default() {
             self.save_manifest()?;
@@ -677,7 +835,11 @@ impl BoardStore {
     }
 
     fn op_set_cover(&mut self, id: String, cover: Option<Cover>, acc: &mut Acc) -> Result<Op> {
-        let n = self.state.nodes.get_mut(&id).ok_or_else(|| Error::not_found(id.clone()))?;
+        let n = self
+            .state
+            .nodes
+            .get_mut(&id)
+            .ok_or_else(|| Error::not_found(id.clone()))?;
         let prev = n.cover.clone();
         if prev != cover {
             n.cover = cover;

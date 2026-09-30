@@ -33,9 +33,13 @@ fn init_logging(dir: &std::path::Path) -> Option<tracing_appender::non_blocking:
     let file = tracing_appender::rolling::daily(dir, "lull.log");
     let (nb, guard) = tracing_appender::non_blocking(file);
     let filter = EnvFilter::try_from_env("LULL_LOG").unwrap_or_else(|_| EnvFilter::new("info"));
-    let registry = tracing_subscriber::registry().with(filter).with(fmt::layer().with_writer(nb).with_ansi(false));
+    let registry = tracing_subscriber::registry()
+        .with(filter)
+        .with(fmt::layer().with_writer(nb).with_ansi(false));
     if cfg!(debug_assertions) {
-        let _ = registry.with(fmt::layer().with_writer(std::io::stderr)).try_init();
+        let _ = registry
+            .with(fmt::layer().with_writer(std::io::stderr))
+            .try_init();
     } else {
         let _ = registry.try_init();
     }
@@ -43,7 +47,10 @@ fn init_logging(dir: &std::path::Path) -> Option<tracing_appender::non_blocking:
 }
 
 fn run_in_background(core: &Core) -> bool {
-    core.settings().get("app.runInBackground").and_then(|v| v.as_bool()).unwrap_or(false)
+    core.settings()
+        .get("app.runInBackground")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -53,8 +60,13 @@ pub fn run() {
     #[cfg(desktop)]
     {
         builder = builder
-            .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| windows::focus_any(app)))
-            .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--background"])))
+            .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+                windows::focus_any(app)
+            }))
+            .plugin(tauri_plugin_autostart::init(
+                tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+                Some(vec!["--background"]),
+            ))
             .plugin(tauri_plugin_updater::Builder::new().build());
     }
 
@@ -92,8 +104,9 @@ pub fn run() {
             let guard = init_logging(&paths.logs);
             app.manage(guard);
             tracing::info!("starting Lull {}", env!("CARGO_PKG_VERSION"));
-            let core = Core::new(paths, Arc::new(TauriSink(handle.clone())))
-                .map_err(|e| Box::new(std::io::Error::other(e.to_string())) as Box<dyn std::error::Error>)?;
+            let core = Core::new(paths, Arc::new(TauriSink(handle.clone()))).map_err(|e| {
+                Box::new(std::io::Error::other(e.to_string())) as Box<dyn std::error::Error>
+            })?;
             app.manage(AppState { core: core.clone() });
 
             let menu = menu::build(&handle)?;
@@ -113,10 +126,10 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let WindowEvent::Destroyed = event {
-                if let Some(state) = window.try_state::<AppState>() {
-                    state.core.release_window(window.label());
-                }
+            if let WindowEvent::Destroyed = event
+                && let Some(state) = window.try_state::<AppState>()
+            {
+                state.core.release_window(window.label());
             }
         })
         .build(tauri::generate_context!())
@@ -131,10 +144,11 @@ pub fn run() {
                 }
             }
             #[cfg(target_os = "macos")]
-            RunEvent::Reopen { has_visible_windows, .. } => {
-                if !has_visible_windows {
-                    windows::focus_any(app);
-                }
+            RunEvent::Reopen {
+                has_visible_windows,
+                ..
+            } if !has_visible_windows => {
+                windows::focus_any(app);
             }
             _ => {}
         });

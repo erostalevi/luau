@@ -24,12 +24,18 @@ pub struct RpcError {
 
 impl From<lull_core::Error> for RpcError {
     fn from(e: lull_core::Error) -> Self {
-        RpcError { code: e.code().into(), message: e.to_string() }
+        RpcError {
+            code: e.code().into(),
+            message: e.to_string(),
+        }
     }
 }
 
 fn bad(msg: impl Into<String>) -> RpcError {
-    RpcError { code: "invalid".into(), message: msg.into() }
+    RpcError {
+        code: "invalid".into(),
+        message: msg.into(),
+    }
 }
 
 pub type R = Result<Value, RpcError>;
@@ -42,7 +48,9 @@ pub fn arg<T: DeserializeOwned>(p: &Value, key: &str) -> Result<T, RpcError> {
 pub fn opt<T: DeserializeOwned>(p: &Value, key: &str) -> Result<Option<T>, RpcError> {
     match p.get(key) {
         None | Some(Value::Null) => Ok(None),
-        Some(v) => serde_json::from_value(v.clone()).map(Some).map_err(|e| bad(format!("param `{key}`: {e}"))),
+        Some(v) => serde_json::from_value(v.clone())
+            .map(Some)
+            .map_err(|e| bad(format!("param `{key}`: {e}"))),
     }
 }
 
@@ -55,7 +63,9 @@ pub async fn rpc(app: AppHandle, window: WebviewWindow, method: String, params: 
     let core = app.state::<AppState>().core.clone();
     let label = window.label().to_string();
     // Async-native methods first (network / long-running), per feature module.
-    if let Some(res) = crate::integrations_rpc::dispatch_async(&app, &core, &label, &method, &params).await {
+    if let Some(res) =
+        crate::integrations_rpc::dispatch_async(&app, &core, &label, &method, &params).await
+    {
         return res;
     }
     if let Some(res) = crate::ai_rpc::dispatch_async(&app, &core, &label, &method, &params).await {
@@ -115,7 +125,9 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             use base64::Engine;
             let path: PathBuf = arg(p, "path")?;
             let b64: String = arg(p, "base64")?;
-            let bytes = base64::engine::general_purpose::STANDARD.decode(b64).map_err(|e| bad(e.to_string()))?;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(b64)
+                .map_err(|e| bad(e.to_string()))?;
             lull_core::fsutil::atomic_write(&path, &bytes)?;
             ok(true)
         }
@@ -140,7 +152,9 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         }
         "path.exists" => {
             let path: PathBuf = arg(p, "path")?;
-            ok(json!({ "exists": path.exists(), "isDir": path.is_dir(), "isBoard": lull_core::store::is_board(&path) }))
+            ok(
+                json!({ "exists": path.exists(), "isDir": path.is_dir(), "isBoard": lull_core::store::is_board(&path) }),
+            )
         }
         "logs.export" => {
             let dest: PathBuf = arg(p, "dest")?;
@@ -273,7 +287,9 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
                 ok(core.add_attachment(&board, &card, files::Source::Path(&path), &name)?)
             } else {
                 let b64: String = arg(p, "base64")?;
-                let bytes = base64::engine::general_purpose::STANDARD.decode(b64).map_err(|e| bad(e.to_string()))?;
+                let bytes = base64::engine::general_purpose::STANDARD
+                    .decode(b64)
+                    .map_err(|e| bad(e.to_string()))?;
                 ok(core.add_attachment(&board, &card, files::Source::Bytes(&bytes), &name)?)
             }
         }
@@ -283,7 +299,9 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             ok(core.cleanup_unlinked(&board, now)?)
         }
         "trash.list" => ok(core.trash_list(&arg::<String>(p, "board")?)?),
-        "trash.purge" => ok(core.trash_purge(&arg::<String>(p, "board")?, opt(p, "all")?.unwrap_or(false))?),
+        "trash.purge" => {
+            ok(core.trash_purge(&arg::<String>(p, "board")?, opt(p, "all")?.unwrap_or(false))?)
+        }
 
         // --- history & search ------------------------------------------------------
         "history.query" => {
@@ -291,13 +309,17 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             let filter: HistoryFilter = opt(p, "filter")?.unwrap_or_default();
             ok(core.history(&board, &filter)?)
         }
-        "history.blob" => ok(core.history_blob(&arg::<String>(p, "board")?, &arg::<String>(p, "hash")?)?),
+        "history.blob" => {
+            ok(core.history_blob(&arg::<String>(p, "board")?, &arg::<String>(p, "hash")?)?)
+        }
         "search.query" => {
             let q: String = arg(p, "q")?;
             let opts: SearchOptions = opt(p, "opts")?.unwrap_or_default();
             ok(core.search(&q, &opts)?)
         }
-        "search.tags" => ok(core.search.tags(&opt::<Vec<String>>(p, "boards")?.unwrap_or_default())),
+        "search.tags" => ok(core
+            .search
+            .tags(&opt::<Vec<String>>(p, "boards")?.unwrap_or_default())),
         "search.people" => ok(core.search.people()),
         "search.titles" => ok(core
             .search
@@ -311,7 +333,10 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             .into_iter()
             .map(|(board, id, title)| json!({ "id": id, "board": board, "title": title }))
             .collect::<Vec<_>>()),
-        "search.locate" => ok(core.search.locate(&arg::<String>(p, "id")?).map(|(b, t)| json!({ "board": b, "title": t }))),
+        "search.locate" => ok(core
+            .search
+            .locate(&arg::<String>(p, "id")?)
+            .map(|(b, t)| json!({ "board": b, "title": t }))),
 
         // --- import / export ---------------------------------------------------------
         "history.queryAll" => {

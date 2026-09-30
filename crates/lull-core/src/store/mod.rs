@@ -33,8 +33,9 @@ use crate::model::*;
 
 pub use ops::{Applied, BoardPatch, LanePatch, Op, Placement};
 
-static ATTACHMENT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(c[a-z0-9]{6})\.([a-z0-9]{4})(?:-(.+?))?\.([A-Za-z0-9]{1,12})$").unwrap());
+static ATTACHMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(c[a-z0-9]{6})\.([a-z0-9]{4})(?:-(.+?))?\.([A-Za-z0-9]{1,12})$").unwrap()
+});
 
 pub fn marker_dir(root: &Path) -> PathBuf {
     root.join(MARKER_DIR)
@@ -105,13 +106,21 @@ const TOUCH_WINDOW: Duration = Duration::from_millis(2500);
 impl BoardStore {
     pub fn open(root: &Path) -> Result<Self> {
         let state = load_board(root, None)?;
-        Ok(BoardStore { state, undo: vec![], redo: vec![], touched: VecDeque::new() })
+        Ok(BoardStore {
+            state,
+            undo: vec![],
+            redo: vec![],
+            touched: VecDeque::new(),
+        })
     }
 
     /// Create a brand-new board at `root` (which may already contain files).
     pub fn create(root: &Path, id: String, name: String, kind: BoardKind) -> Result<Self> {
         if is_board(root) {
-            return Err(Error::Conflict(format!("already a board: {}", root.display())));
+            return Err(Error::Conflict(format!(
+                "already a board: {}",
+                root.display()
+            )));
         }
         fs::create_dir_all(marker_dir(root)).map_err(|e| Error::io(root, e))?;
         let manifest = BoardManifest::new(id, name, kind);
@@ -126,7 +135,7 @@ impl BoardStore {
 
     /// Re-read from disk (after external changes), reusing cached parses.
     pub fn reload(&mut self) -> Result<Changes> {
-        let prev = std::mem::replace(&mut self.state.nodes, HashMap::new());
+        let prev = std::mem::take(&mut self.state.nodes);
         let prev_lanes: Vec<LaneDto> = self.state.lanes.iter().map(LaneDto::from).collect();
         let prev_root = self.state.root_order.clone();
         let prev_header = self.state.header_dto();
@@ -162,7 +171,11 @@ impl BoardStore {
     /// Record paths written by us so the watcher can ignore the echo.
     pub(crate) fn touch(&mut self, p: &Path) {
         let now = Instant::now();
-        while self.touched.front().is_some_and(|(_, t)| now.duration_since(*t) > TOUCH_WINDOW) {
+        while self
+            .touched
+            .front()
+            .is_some_and(|(_, t)| now.duration_since(*t) > TOUCH_WINDOW)
+        {
             self.touched.pop_front();
         }
         self.touched.push_back((p.to_path_buf(), now));
@@ -182,10 +195,22 @@ impl BoardStore {
             board_id: s.manifest.id.clone(),
             version: s.version,
             header: ch.header.then(|| s.header_dto()),
-            lanes: ch.lanes.then(|| s.lanes.iter().map(LaneDto::from).collect()),
+            lanes: ch
+                .lanes
+                .then(|| s.lanes.iter().map(LaneDto::from).collect()),
             root_order: ch.root.then(|| s.root_order.clone()),
-            nodes: ch.nodes.iter().filter_map(|id| s.nodes.get(id)).map(NodeDto::from).collect(),
-            removed: ch.removed.iter().filter(|id| !s.nodes.contains_key(*id)).cloned().collect(),
+            nodes: ch
+                .nodes
+                .iter()
+                .filter_map(|id| s.nodes.get(id))
+                .map(NodeDto::from)
+                .collect(),
+            removed: ch
+                .removed
+                .iter()
+                .filter(|id| !s.nodes.contains_key(*id))
+                .cloned()
+                .collect(),
         }
     }
 
@@ -206,10 +231,14 @@ impl BoardStore {
     pub fn apply_user(&mut self, op: Op, label: &str, coalesce: Option<String>) -> Result<Applied> {
         let applied = self.apply(op)?;
         if applied.changes_anything {
-            let top_matches = coalesce.is_some()
-                && self.undo.last().is_some_and(|e| e.coalesce == coalesce);
+            let top_matches =
+                coalesce.is_some() && self.undo.last().is_some_and(|e| e.coalesce == coalesce);
             if !top_matches {
-                self.undo.push(UndoEntry { label: label.to_string(), op: applied.inverse.clone(), coalesce });
+                self.undo.push(UndoEntry {
+                    label: label.to_string(),
+                    op: applied.inverse.clone(),
+                    coalesce,
+                });
                 if self.undo.len() > UNDO_LIMIT {
                     self.undo.remove(0);
                 }
@@ -252,16 +281,28 @@ impl BoardStore {
     }
 
     pub fn undo(&mut self) -> Result<Option<(String, Applied)>> {
-        let Some(entry) = self.undo.pop() else { return Ok(None) };
+        let Some(entry) = self.undo.pop() else {
+            return Ok(None);
+        };
         let applied = self.apply(entry.op)?;
-        self.redo.push(UndoEntry { label: entry.label.clone(), op: applied.inverse.clone(), coalesce: None });
+        self.redo.push(UndoEntry {
+            label: entry.label.clone(),
+            op: applied.inverse.clone(),
+            coalesce: None,
+        });
         Ok(Some((entry.label, applied)))
     }
 
     pub fn redo(&mut self) -> Result<Option<(String, Applied)>> {
-        let Some(entry) = self.redo.pop() else { return Ok(None) };
+        let Some(entry) = self.redo.pop() else {
+            return Ok(None);
+        };
         let applied = self.apply(entry.op)?;
-        self.undo.push(UndoEntry { label: entry.label.clone(), op: applied.inverse.clone(), coalesce: None });
+        self.undo.push(UndoEntry {
+            label: entry.label.clone(),
+            op: applied.inverse.clone(),
+            coalesce: None,
+        });
         Ok(Some((entry.label, applied)))
     }
 
@@ -270,13 +311,31 @@ impl BoardStore {
     pub(crate) fn save_manifest(&mut self) -> Result<()> {
         let s = &mut self.state;
         s.manifest.lanes = s.lanes.iter().map(|l| l.id.clone()).collect();
-        s.manifest.archived_lanes = s.lanes.iter().filter(|l| l.archived).map(|l| l.id.clone()).collect();
-        s.manifest.order = if s.manifest.kind == BoardKind::Files { s.root_order.clone() } else { vec![] };
-        s.manifest.archived = s.root_order.iter().filter(|id| s.nodes.get(*id).is_some_and(|n| n.archived)).cloned().collect();
+        s.manifest.archived_lanes = s
+            .lanes
+            .iter()
+            .filter(|l| l.archived)
+            .map(|l| l.id.clone())
+            .collect();
+        s.manifest.order = if s.manifest.kind == BoardKind::Files {
+            s.root_order.clone()
+        } else {
+            vec![]
+        };
+        s.manifest.archived = s
+            .root_order
+            .iter()
+            .filter(|id| s.nodes.get(*id).is_some_and(|n| n.archived))
+            .cloned()
+            .collect();
         s.manifest.covers = s
             .root_order
             .iter()
-            .filter_map(|id| s.nodes.get(id).and_then(|n| n.cover.clone().map(|c| (id.clone(), c))))
+            .filter_map(|id| {
+                s.nodes
+                    .get(id)
+                    .and_then(|n| n.cover.clone().map(|c| (id.clone(), c)))
+            })
             .collect();
         let p = manifest_path(&s.root);
         let m = s.manifest.clone();
@@ -307,11 +366,15 @@ impl BoardStore {
                 (s.root.join(k).join(INDEX_JSON), idx)
             }
             Parent::Card(c) => {
-                let Some(n) = s.nodes.get(c) else { return Ok(()) };
+                let Some(n) = s.nodes.get(c) else {
+                    return Ok(());
+                };
                 if !n.is_group {
                     return Ok(());
                 }
-                let Some(dir) = s.attachment_dir(c) else { return Ok(()) };
+                let Some(dir) = s.attachment_dir(c) else {
+                    return Ok(());
+                };
                 let idx = ContainerIndex {
                     schema: SCHEMA,
                     id: c.clone(),
@@ -331,7 +394,10 @@ impl BoardStore {
 
     /// Write a node's Markdown and refresh its metadata.
     pub(crate) fn write_node_content(&mut self, id: &str, content: &str) -> Result<()> {
-        let path = self.state.node_file(id).ok_or_else(|| Error::not_found(id))?;
+        let path = self
+            .state
+            .node_file(id)
+            .ok_or_else(|| Error::not_found(id))?;
         let normalized = markdown::normalize(content);
         atomic_write(&path, normalized.as_bytes())?;
         self.touch(&path);
@@ -340,9 +406,16 @@ impl BoardStore {
     }
 
     pub(crate) fn refresh_node_meta(&mut self, id: &str, content: &str) -> Result<()> {
-        let path = self.state.node_file(id).ok_or_else(|| Error::not_found(id))?;
+        let path = self
+            .state
+            .node_file(id)
+            .ok_or_else(|| Error::not_found(id))?;
         let meta = fs::metadata(&path).ok();
-        let n = self.state.nodes.get_mut(id).ok_or_else(|| Error::not_found(id))?;
+        let n = self
+            .state
+            .nodes
+            .get_mut(id)
+            .ok_or_else(|| Error::not_found(id))?;
         n.meta = markdown::parse(content);
         n.hash = short_hash(content.as_bytes());
         if let Some(m) = meta {
@@ -353,7 +426,10 @@ impl BoardStore {
     }
 
     pub fn read_content(&self, id: &str) -> Result<String> {
-        let path = self.state.node_file(id).ok_or_else(|| Error::not_found(id))?;
+        let path = self
+            .state
+            .node_file(id)
+            .ok_or_else(|| Error::not_found(id))?;
         if !path.exists() {
             return Ok(String::new());
         }
@@ -362,7 +438,9 @@ impl BoardStore {
 
     /// Re-scan the attachments of a node from disk.
     pub(crate) fn rescan_attachments(&mut self, id: &str) {
-        let Some(dir) = self.state.attachment_dir(id) else { return };
+        let Some(dir) = self.state.attachment_dir(id) else {
+            return;
+        };
         let list = list_attachments(&dir, id);
         if let Some(n) = self.state.nodes.get_mut(id) {
             n.attachments = list;
@@ -371,15 +449,27 @@ impl BoardStore {
 }
 
 fn archived_of(s: &BoardState, ids: &[String]) -> Vec<String> {
-    ids.iter().filter(|id| s.nodes.get(*id).is_some_and(|n| n.archived)).cloned().collect()
+    ids.iter()
+        .filter(|id| s.nodes.get(*id).is_some_and(|n| n.archived))
+        .cloned()
+        .collect()
 }
 
 fn covers_of(s: &BoardState, ids: &[String]) -> std::collections::BTreeMap<String, Cover> {
-    ids.iter().filter_map(|id| s.nodes.get(id).and_then(|n| n.cover.clone().map(|c| (id.clone(), c)))).collect()
+    ids.iter()
+        .filter_map(|id| {
+            s.nodes
+                .get(id)
+                .and_then(|n| n.cover.clone().map(|c| (id.clone(), c)))
+        })
+        .collect()
 }
 
 pub(crate) fn write_json<T: serde::Serialize>(path: &Path, v: &T) -> Result<()> {
-    let s = json_fmt::to_string(v).map_err(|e| Error::Json { path: path.into(), source: e })?;
+    let s = json_fmt::to_string(v).map_err(|e| Error::Json {
+        path: path.into(),
+        source: e,
+    })?;
     atomic_write(path, s.as_bytes())
 }
 
@@ -393,15 +483,22 @@ pub(crate) fn write_marker_gitignore(root: &Path) -> Result<()> {
 
 pub fn list_attachments(dir: &Path, id: &str) -> Vec<Attachment> {
     let mut out = Vec::new();
-    let Ok(rd) = fs::read_dir(dir) else { return out };
+    let Ok(rd) = fs::read_dir(dir) else {
+        return out;
+    };
     for e in rd.flatten() {
         let name = e.file_name().to_string_lossy().into_owned();
-        if let Some((owner, display)) = parse_attachment_name(&name) {
-            if owner == id {
-                let size = e.metadata().map(|m| m.len()).unwrap_or(0);
-                let ext = name.rsplit('.').next().unwrap_or("");
-                out.push(Attachment { kind: AttachmentKind::from_ext(ext), file: name, display, size });
-            }
+        if let Some((owner, display)) = parse_attachment_name(&name)
+            && owner == id
+        {
+            let size = e.metadata().map(|m| m.len()).unwrap_or(0);
+            let ext = name.rsplit('.').next().unwrap_or("");
+            out.push(Attachment {
+                kind: AttachmentKind::from_ext(ext),
+                file: name,
+                display,
+                size,
+            });
         }
     }
     out.sort_by(|a, b| a.file.cmp(&b.file));
@@ -419,16 +516,37 @@ struct LoadCtx<'a> {
     root: PathBuf,
 }
 
-fn read_json_or_recover<T: serde::de::DeserializeOwned + Default>(path: &Path, root: &Path, warnings: &mut Vec<String>) -> T {
-    let Ok(text) = fs::read_to_string(path) else { return T::default() };
+fn read_json_or_recover<T: serde::de::DeserializeOwned + Default>(
+    path: &Path,
+    root: &Path,
+    warnings: &mut Vec<String>,
+) -> T {
+    let Ok(text) = fs::read_to_string(path) else {
+        return T::default();
+    };
     match serde_json::from_str(&text) {
         Ok(v) => v,
         Err(e) => {
             let rec = marker_dir(root).join("cache").join("recovered");
             let _ = fs::create_dir_all(&rec);
-            let name = path.strip_prefix(root).unwrap_or(path).to_string_lossy().replace(['/', '\\'], "_");
-            let _ = fs::write(rec.join(format!("{}-{}", chrono::Utc::now().format("%Y%m%dT%H%M%S"), name)), &text);
-            warnings.push(format!("recovered:{}:{}", path.strip_prefix(root).unwrap_or(path).display(), e));
+            let name = path
+                .strip_prefix(root)
+                .unwrap_or(path)
+                .to_string_lossy()
+                .replace(['/', '\\'], "_");
+            let _ = fs::write(
+                rec.join(format!(
+                    "{}-{}",
+                    chrono::Utc::now().format("%Y%m%dT%H%M%S"),
+                    name
+                )),
+                &text,
+            );
+            warnings.push(format!(
+                "recovered:{}:{}",
+                path.strip_prefix(root).unwrap_or(path).display(),
+                e
+            ));
             T::default()
         }
     }
@@ -450,10 +568,19 @@ pub fn load_board(root: &Path, cache: Option<&HashMap<String, Node>>) -> Result<
                 .captures(&text)
                 .map(|c| c[1].to_string())
                 .unwrap_or_else(|| crate::ids::new_id(IdKind::Board, |_| false));
-            let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            let name = root
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
             let rec = marker_dir(root).join("cache").join("recovered");
             let _ = fs::create_dir_all(&rec);
-            let _ = fs::write(rec.join(format!("{}-board.json", chrono::Utc::now().format("%Y%m%dT%H%M%S"))), &text);
+            let _ = fs::write(
+                rec.join(format!(
+                    "{}-board.json",
+                    chrono::Utc::now().format("%Y%m%dT%H%M%S")
+                )),
+                &text,
+            );
             warnings.push(format!("recovered:board.json:{e}"));
             let m = BoardManifest::new(id, name, BoardKind::Kanban);
             write_json(&mp, &m)?;
@@ -462,7 +589,12 @@ pub fn load_board(root: &Path, cache: Option<&HashMap<String, Node>>) -> Result<
     };
     let read_only = (manifest.schema > SCHEMA).then(|| format!("newer_schema:{}", manifest.schema));
 
-    let mut ctx = LoadCtx { nodes: HashMap::new(), warnings, cache, root: root.to_path_buf() };
+    let mut ctx = LoadCtx {
+        nodes: HashMap::new(),
+        warnings,
+        cache,
+        root: root.to_path_buf(),
+    };
     let mut lanes = Vec::new();
     let mut root_order = Vec::new();
 
@@ -476,7 +608,12 @@ pub fn load_board(root: &Path, cache: Option<&HashMap<String, Node>>) -> Result<
                 .filter(|n| is_id(n, IdKind::Lane))
                 .collect();
             present.sort();
-            let mut order: Vec<String> = manifest.lanes.iter().filter(|k| present.contains(k)).cloned().collect();
+            let mut order: Vec<String> = manifest
+                .lanes
+                .iter()
+                .filter(|k| present.contains(k))
+                .cloned()
+                .collect();
             order.dedup();
             for k in &present {
                 if !order.contains(k) {
@@ -485,11 +622,17 @@ pub fn load_board(root: &Path, cache: Option<&HashMap<String, Node>>) -> Result<
             }
             for k in order {
                 let dir = root.join(&k);
-                let idx: ContainerIndex = read_json_or_recover(&dir.join(INDEX_JSON), root, &mut ctx.warnings);
-                let (children, _) = scan_container(&mut ctx, &dir, Parent::Lane(k.clone()), &idx, None);
+                let idx: ContainerIndex =
+                    read_json_or_recover(&dir.join(INDEX_JSON), root, &mut ctx.warnings);
+                let (children, _) =
+                    scan_container(&mut ctx, &dir, Parent::Lane(k.clone()), &idx, None);
                 lanes.push(Lane {
                     id: k.clone(),
-                    name: idx.name.clone().filter(|n| !n.trim().is_empty()).unwrap_or_else(|| "Untitled".into()),
+                    name: idx
+                        .name
+                        .clone()
+                        .filter(|n| !n.trim().is_empty())
+                        .unwrap_or_else(|| "Untitled".into()),
                     order: children,
                     color: idx.color.clone(),
                     width: idx.width,
@@ -548,16 +691,20 @@ fn scan_container_only(
     let mut plain: HashMap<String, PathBuf> = HashMap::new();
     let mut groups: HashMap<String, PathBuf> = HashMap::new();
     let mut attachments: HashMap<String, Vec<Attachment>> = HashMap::new();
-    let Ok(rd) = fs::read_dir(dir) else { return (vec![], vec![]) };
+    let Ok(rd) = fs::read_dir(dir) else {
+        return (vec![], vec![]);
+    };
     for e in rd.flatten() {
         let name = e.file_name().to_string_lossy().into_owned();
         if name.starts_with('.') {
             continue;
         }
-        if let Some(o) = only {
-            if name != o && name != format!("{o}.md") && !name.starts_with(&format!("{o}.")) {
-                continue;
-            }
+        if let Some(o) = only
+            && name != o
+            && name != format!("{o}.md")
+            && !name.starts_with(&format!("{o}."))
+        {
+            continue;
         }
         let Ok(ft) = e.file_type() else { continue };
         if ft.is_symlink() {
@@ -587,7 +734,10 @@ fn scan_container_only(
     }
     for id in groups.keys() {
         if plain.remove(id).is_some() {
-            ctx.warnings.push(format!("duplicate_file:{}", dir.join(format!("{id}.md")).display()));
+            ctx.warnings.push(format!(
+                "duplicate_file:{}",
+                dir.join(format!("{id}.md")).display()
+            ));
         }
     }
     let mut present: Vec<String> = plain.keys().chain(groups.keys()).cloned().collect();
@@ -612,7 +762,8 @@ fn scan_container_only(
         let archived = idx.archived.contains(&id);
         let cover = idx.covers.get(&id).cloned();
         if let Some(gdir) = groups.get(&id) {
-            let gidx: ContainerIndex = read_json_or_recover(&gdir.join(INDEX_JSON), &ctx.root.clone(), &mut ctx.warnings);
+            let gidx: ContainerIndex =
+                read_json_or_recover(&gdir.join(INDEX_JSON), &ctx.root.clone(), &mut ctx.warnings);
             let md = gdir.join(INDEX_MD);
             // Insert a placeholder first so children see their parent exists.
             let (meta, mtime, size, hash) = read_meta(ctx, &id, &md, true);
@@ -633,7 +784,8 @@ fn scan_container_only(
                     group_extra: gidx.extra.clone(),
                 },
             );
-            let (children, own) = scan_container(ctx, gdir, Parent::Card(id.clone()), &gidx, Some(&id));
+            let (children, own) =
+                scan_container(ctx, gdir, Parent::Card(id.clone()), &gidx, Some(&id));
             if let Some(n) = ctx.nodes.get_mut(&id) {
                 n.children = children;
                 n.attachments = own;
@@ -660,14 +812,29 @@ fn scan_container_only(
         }
         result.push(id);
     }
-    let own = own_id.and_then(|o| attachments.remove(o)).unwrap_or_default();
+    let own = own_id
+        .and_then(|o| attachments.remove(o))
+        .unwrap_or_default();
     (result, own)
 }
 
 /// Load a single node (and its subtree) found in `dir`.
-pub(crate) fn load_node_tree(root: &Path, dir: &Path, parent: Parent, id: &str) -> Result<HashMap<String, Node>> {
-    let mut ctx = LoadCtx { nodes: HashMap::new(), warnings: vec![], cache: None, root: root.to_path_buf() };
-    let idx = ContainerIndex { order: vec![id.to_string()], ..Default::default() };
+pub(crate) fn load_node_tree(
+    root: &Path,
+    dir: &Path,
+    parent: Parent,
+    id: &str,
+) -> Result<HashMap<String, Node>> {
+    let mut ctx = LoadCtx {
+        nodes: HashMap::new(),
+        warnings: vec![],
+        cache: None,
+        root: root.to_path_buf(),
+    };
+    let idx = ContainerIndex {
+        order: vec![id.to_string()],
+        ..Default::default()
+    };
     scan_container_only(&mut ctx, dir, parent, &idx, None, Some(id));
     if !ctx.nodes.contains_key(id) {
         return Err(Error::not_found(format!("restored node {id}")));
@@ -676,24 +843,52 @@ pub(crate) fn load_node_tree(root: &Path, dir: &Path, parent: Parent, id: &str) 
 }
 
 /// Load all children of a lane directory.
-pub(crate) fn load_lane_children(root: &Path, k: &str, idx: &ContainerIndex) -> (Vec<String>, HashMap<String, Node>) {
-    let mut ctx = LoadCtx { nodes: HashMap::new(), warnings: vec![], cache: None, root: root.to_path_buf() };
-    let (order, _) = scan_container(&mut ctx, &root.join(k), Parent::Lane(k.to_string()), idx, None);
+pub(crate) fn load_lane_children(
+    root: &Path,
+    k: &str,
+    idx: &ContainerIndex,
+) -> (Vec<String>, HashMap<String, Node>) {
+    let mut ctx = LoadCtx {
+        nodes: HashMap::new(),
+        warnings: vec![],
+        cache: None,
+        root: root.to_path_buf(),
+    };
+    let (order, _) = scan_container(
+        &mut ctx,
+        &root.join(k),
+        Parent::Lane(k.to_string()),
+        idx,
+        None,
+    );
     (order, ctx.nodes)
 }
 
-fn read_meta(ctx: &LoadCtx, id: &str, path: &Path, is_group: bool) -> (markdown::ParsedCard, i64, u64, String) {
+fn read_meta(
+    ctx: &LoadCtx,
+    id: &str,
+    path: &Path,
+    is_group: bool,
+) -> (markdown::ParsedCard, i64, u64, String) {
     let Ok(m) = fs::metadata(path) else {
         return (markdown::ParsedCard::default(), 0, 0, String::new());
     };
     let (mtime, size) = (mtime_ms(&m), m.len());
-    if let Some(prev) = ctx.cache.and_then(|c| c.get(id)) {
-        if prev.mtime == mtime && prev.size == size && prev.is_group == is_group && !prev.hash.is_empty() {
-            return (prev.meta.clone(), mtime, size, prev.hash.clone());
-        }
+    if let Some(prev) = ctx.cache.and_then(|c| c.get(id))
+        && prev.mtime == mtime
+        && prev.size == size
+        && prev.is_group == is_group
+        && !prev.hash.is_empty()
+    {
+        return (prev.meta.clone(), mtime, size, prev.hash.clone());
     }
     match read_to_string(path) {
-        Ok(text) => (markdown::parse(&text), mtime, size, short_hash(text.as_bytes())),
+        Ok(text) => (
+            markdown::parse(&text),
+            mtime,
+            size,
+            short_hash(text.as_bytes()),
+        ),
         Err(_) => (markdown::ParsedCard::default(), mtime, size, String::new()),
     }
 }

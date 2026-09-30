@@ -1,4 +1,5 @@
 //! Lull core: domain model, file store, search, history and integrations.
+#![allow(clippy::type_complexity)]
 //!
 //! Layout (hexagonal):
 //! - pure domain: [`ids`], [`markdown`], [`json_fmt`], [`model`]

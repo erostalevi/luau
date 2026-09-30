@@ -22,7 +22,9 @@ pub fn short_hash(bytes: &[u8]) -> String {
 
 /// Write via temp file + fsync + rename so readers never see partial files.
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
-    let dir = path.parent().ok_or_else(|| Error::invalid(format!("no parent: {}", path.display())))?;
+    let dir = path
+        .parent()
+        .ok_or_else(|| Error::invalid(format!("no parent: {}", path.display())))?;
     fs::create_dir_all(dir).map_err(|e| Error::io(dir, e))?;
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
     let tmp = dir.join(format!(".{name}.tmp-{}", random_suffix(6)));
@@ -44,7 +46,8 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
 
 pub fn read_to_string(path: &Path) -> Result<String> {
     let bytes = fs::read(path).map_err(|e| Error::io(path, e))?;
-    Ok(String::from_utf8(bytes).unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned()))
+    Ok(String::from_utf8(bytes)
+        .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned()))
 }
 
 /// Rename, falling back to copy + delete across devices.
@@ -53,7 +56,10 @@ pub fn move_path(from: &Path, to: &Path) -> Result<()> {
         fs::create_dir_all(p).map_err(|e| Error::io(p, e))?;
     }
     if to.exists() {
-        return Err(Error::Conflict(format!("destination exists: {}", to.display())));
+        return Err(Error::Conflict(format!(
+            "destination exists: {}",
+            to.display()
+        )));
     }
     match fs::rename(from, to) {
         Ok(()) => Ok(()),
@@ -112,13 +118,23 @@ pub fn safe_join(root: &Path, rel: &str) -> Result<PathBuf> {
 pub fn sanitize_name(name: &str, max: usize) -> String {
     let mut s: String = name
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c.to_ascii_lowercase() } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
         .collect();
     while s.contains("--") {
         s = s.replace("--", "-");
     }
     let s = s.trim_matches('-');
-    s.chars().take(max).collect::<String>().trim_matches('-').to_string()
+    s.chars()
+        .take(max)
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string()
 }
 
 pub fn mtime_ms(meta: &fs::Metadata) -> i64 {
@@ -149,12 +165,18 @@ mod tests {
         let root = Path::new("/r");
         assert!(safe_join(root, "../x").is_err());
         assert!(safe_join(root, "/etc/passwd").is_err());
-        assert_eq!(safe_join(root, "a/./b.png").unwrap(), PathBuf::from("/r/a/b.png"));
+        assert_eq!(
+            safe_join(root, "a/./b.png").unwrap(),
+            PathBuf::from("/r/a/b.png")
+        );
     }
 
     #[test]
     fn sanitizes() {
-        assert_eq!(sanitize_name("My Report (final).PDF", 20), "my-report-final-pdf");
+        assert_eq!(
+            sanitize_name("My Report (final).PDF", 20),
+            "my-report-final-pdf"
+        );
         assert_eq!(sanitize_name("../../etc", 20), "etc");
         assert_eq!(sanitize_name("ñandú", 3), "ñan");
     }

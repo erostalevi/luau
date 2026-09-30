@@ -56,7 +56,10 @@ pub fn history_dir(root: &Path) -> PathBuf {
 }
 
 fn blob_path(root: &Path, hash: &str) -> PathBuf {
-    history_dir(root).join("blobs").join(&hash[..2.min(hash.len())]).join(format!("{hash}.gz"))
+    history_dir(root)
+        .join("blobs")
+        .join(&hash[..2.min(hash.len())])
+        .join(format!("{hash}.gz"))
 }
 
 /// Store content; returns its sha256 hash. Deduplicated by hash.
@@ -65,7 +68,8 @@ pub fn put_blob(root: &Path, content: &str) -> Result<String> {
     let p = blob_path(root, &hash);
     if !p.exists() {
         let mut enc = GzEncoder::new(Vec::new(), Compression::default());
-        enc.write_all(content.as_bytes()).map_err(|e| Error::io(&p, e))?;
+        enc.write_all(content.as_bytes())
+            .map_err(|e| Error::io(&p, e))?;
         let bytes = enc.finish().map_err(|e| Error::io(&p, e))?;
         atomic_write(&p, &bytes)?;
     }
@@ -79,7 +83,9 @@ pub fn get_blob(root: &Path, hash: &str) -> Result<String> {
     let p = blob_path(root, hash);
     let f = fs::File::open(&p).map_err(|e| Error::io(&p, e))?;
     let mut s = String::new();
-    GzDecoder::new(f).read_to_string(&mut s).map_err(|e| Error::io(&p, e))?;
+    GzDecoder::new(f)
+        .read_to_string(&mut s)
+        .map_err(|e| Error::io(&p, e))?;
     Ok(s)
 }
 
@@ -88,9 +94,16 @@ pub fn append(root: &Path, entry: &JournalEntry) -> Result<()> {
     fs::create_dir_all(&dir).map_err(|e| Error::io(&dir, e))?;
     let day = entry.ts.get(..10).unwrap_or("unknown");
     let p = dir.join(format!("{day}.jsonl"));
-    let mut line = serde_json::to_string(entry).map_err(|e| Error::Json { path: p.clone(), source: e })?;
+    let mut line = serde_json::to_string(entry).map_err(|e| Error::Json {
+        path: p.clone(),
+        source: e,
+    })?;
     line.push('\n');
-    let mut f = OpenOptions::new().create(true).append(true).open(&p).map_err(|e| Error::io(&p, e))?;
+    let mut f = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&p)
+        .map_err(|e| Error::io(&p, e))?;
     f.write_all(line.as_bytes()).map_err(|e| Error::io(&p, e))?;
     Ok(())
 }
@@ -113,7 +126,12 @@ pub fn query(root: &Path, f: &HistoryFilter) -> Vec<JournalEntry> {
     let mut days: Vec<String> = fs::read_dir(&dir)
         .map(|rd| {
             rd.flatten()
-                .filter_map(|e| e.file_name().to_str().and_then(|n| n.strip_suffix(".jsonl")).map(str::to_string))
+                .filter_map(|e| {
+                    e.file_name()
+                        .to_str()
+                        .and_then(|n| n.strip_suffix(".jsonl"))
+                        .map(str::to_string)
+                })
                 .collect()
         })
         .unwrap_or_default();
@@ -130,8 +148,13 @@ pub fn query(root: &Path, f: &HistoryFilter) -> Vec<JournalEntry> {
         if to_day.is_some_and(|d| day.as_str() > d) {
             continue;
         }
-        let Ok(text) = fs::read_to_string(dir.join(format!("{day}.jsonl"))) else { continue };
-        let mut day_entries: Vec<JournalEntry> = text.lines().filter_map(|l| serde_json::from_str(l).ok()).collect();
+        let Ok(text) = fs::read_to_string(dir.join(format!("{day}.jsonl"))) else {
+            continue;
+        };
+        let mut day_entries: Vec<JournalEntry> = text
+            .lines()
+            .filter_map(|l| serde_json::from_str(l).ok())
+            .collect();
         day_entries.reverse();
         for e in day_entries {
             if f.from.as_deref().is_some_and(|from| e.ts.as_str() < from) {
@@ -162,18 +185,33 @@ pub fn query(root: &Path, f: &HistoryFilter) -> Vec<JournalEntry> {
 /// once total size exceeds `max_bytes` (oldest first). Structure entries are kept.
 pub fn prune(root: &Path, keep_days: u32, max_bytes: u64) -> Result<usize> {
     let cutoff = (chrono::Utc::now() - chrono::Duration::days(keep_days as i64)).to_rfc3339();
-    let recent = query(root, &HistoryFilter { from: Some(cutoff), limit: Some(usize::MAX), ..Default::default() });
-    let keep: std::collections::HashSet<String> =
-        recent.iter().flat_map(|e| e.before.iter().chain(e.after.iter()).cloned()).collect();
+    let recent = query(
+        root,
+        &HistoryFilter {
+            from: Some(cutoff),
+            limit: Some(usize::MAX),
+            ..Default::default()
+        },
+    );
+    let keep: std::collections::HashSet<String> = recent
+        .iter()
+        .flat_map(|e| e.before.iter().chain(e.after.iter()).cloned())
+        .collect();
     let blobs_dir = history_dir(root).join("blobs");
     let mut all: Vec<(PathBuf, std::time::SystemTime, u64, String)> = Vec::new();
     for e in walkdir::WalkDir::new(&blobs_dir).into_iter().flatten() {
         if e.file_type().is_file() {
-            let name = e.file_name().to_string_lossy().trim_end_matches(".gz").to_string();
+            let name = e
+                .file_name()
+                .to_string_lossy()
+                .trim_end_matches(".gz")
+                .to_string();
             let meta = e.metadata().ok();
             all.push((
                 e.path().to_path_buf(),
-                meta.as_ref().and_then(|m| m.modified().ok()).unwrap_or(std::time::UNIX_EPOCH),
+                meta.as_ref()
+                    .and_then(|m| m.modified().ok())
+                    .unwrap_or(std::time::UNIX_EPOCH),
                 meta.map(|m| m.len()).unwrap_or(0),
                 name,
             ));
@@ -184,11 +222,9 @@ pub fn prune(root: &Path, keep_days: u32, max_bytes: u64) -> Result<usize> {
     let mut removed = 0;
     for (p, _, size, hash) in all {
         let over = total > max_bytes;
-        if !keep.contains(&hash) || over {
-            if fs::remove_file(&p).is_ok() {
-                removed += 1;
-                total = total.saturating_sub(size);
-            }
+        if (!keep.contains(&hash) || over) && fs::remove_file(&p).is_ok() {
+            removed += 1;
+            total = total.saturating_sub(size);
         }
     }
     Ok(removed)
@@ -235,9 +271,21 @@ mod tests {
         let all = query(d.path(), &HistoryFilter::default());
         assert_eq!(all.len(), 3);
         assert_eq!(all[0].kind, "edit"); // newest first
-        let some = query(d.path(), &HistoryFilter { from: Some("2026-09-29".into()), ..Default::default() });
+        let some = query(
+            d.path(),
+            &HistoryFilter {
+                from: Some("2026-09-29".into()),
+                ..Default::default()
+            },
+        );
         assert_eq!(some.len(), 2);
-        let ids = query(d.path(), &HistoryFilter { ids: vec!["c0".into()], ..Default::default() });
+        let ids = query(
+            d.path(),
+            &HistoryFilter {
+                ids: vec!["c0".into()],
+                ..Default::default()
+            },
+        );
         assert_eq!(ids.len(), 1);
     }
 }

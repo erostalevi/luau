@@ -34,7 +34,11 @@ pub struct AppPaths {
 
 impl AppPaths {
     pub fn under(base: &Path) -> Self {
-        AppPaths { data: base.join("data"), config: base.join("config"), logs: base.join("logs") }
+        AppPaths {
+            data: base.join("data"),
+            config: base.join("config"),
+            logs: base.join("logs"),
+        }
     }
     pub fn registry(&self) -> PathBuf {
         self.data.join("registry.json")
@@ -62,15 +66,30 @@ pub enum CoreEvent {
     #[serde(rename_all = "camelCase")]
     BoardDelta { delta: BoardDelta },
     #[serde(rename_all = "camelCase")]
-    UndoState { board_id: String, can_undo: bool, can_redo: bool, undo_label: Option<String>, redo_label: Option<String> },
+    UndoState {
+        board_id: String,
+        can_undo: bool,
+        can_redo: bool,
+        undo_label: Option<String>,
+        redo_label: Option<String>,
+    },
     #[serde(rename_all = "camelCase")]
     RegistryChanged { registry: Registry },
     #[serde(rename_all = "camelCase")]
     ExternalChange { board_id: String, ids: Vec<String> },
     #[serde(rename_all = "camelCase")]
-    Toast { level: String, key: String, params: Value },
+    Toast {
+        level: String,
+        key: String,
+        params: Value,
+    },
     #[serde(rename_all = "camelCase")]
-    Progress { task: String, done: usize, total: usize, label: Option<String> },
+    Progress {
+        task: String,
+        done: usize,
+        total: usize,
+        label: Option<String>,
+    },
     /// Generic channel for integrations, summaries, schedulers.
     #[serde(rename_all = "camelCase")]
     Custom { name: String, payload: Value },
@@ -189,7 +208,10 @@ impl Core {
     }
 
     pub fn read_json_file(&self, path: &Path) -> Value {
-        std::fs::read_to_string(path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or(Value::Null)
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or(Value::Null)
     }
 
     pub fn write_json_file(&self, path: &Path, v: &Value) -> Result<()> {
@@ -200,7 +222,11 @@ impl Core {
     // --- ids ------------------------------------------------------------------
 
     pub fn id_taken(&self, id: &str) -> bool {
-        self.boards.read().values().any(|b| b.lock().state.nodes.contains_key(id)) || self.search.id_taken(id)
+        self.boards
+            .read()
+            .values()
+            .any(|b| b.lock().state.nodes.contains_key(id))
+            || self.search.id_taken(id)
     }
 
     pub fn new_card_id(&self) -> String {
@@ -209,7 +235,10 @@ impl Core {
 
     pub fn new_lane_id(&self, board: &str) -> String {
         let b = self.board(board).ok();
-        new_id(IdKind::Lane, |id| b.as_ref().is_some_and(|b| b.lock().state.lane(id).is_some()))
+        new_id(IdKind::Lane, |id| {
+            b.as_ref()
+                .is_some_and(|b| b.lock().state.lane(id).is_some())
+        })
     }
 
     pub fn new_board_id(&self) -> String {
@@ -252,7 +281,11 @@ impl Core {
     // --- boards: lifecycle ------------------------------------------------------
 
     pub fn board(&self, id: &str) -> Result<Arc<Mutex<BoardStore>>> {
-        self.boards.read().get(id).cloned().ok_or_else(|| Error::not_found(format!("board {id} not open")))
+        self.boards
+            .read()
+            .get(id)
+            .cloned()
+            .ok_or_else(|| Error::not_found(format!("board {id} not open")))
     }
 
     pub fn open_board_ids(&self) -> Vec<String> {
@@ -260,16 +293,31 @@ impl Core {
     }
 
     /// Create a board (folder may already exist). `lanes` seeds a kanban template.
-    pub fn create_board(self: &Arc<Self>, path: &Path, name: &str, kind: BoardKind, lanes: &[String], git: bool) -> Result<BoardSnapshot> {
+    pub fn create_board(
+        self: &Arc<Self>,
+        path: &Path,
+        name: &str,
+        kind: BoardKind,
+        lanes: &[String],
+        git: bool,
+    ) -> Result<BoardSnapshot> {
         if store::is_board(path) {
-            return Err(Error::Conflict(format!("already a board: {}", path.display())));
+            return Err(Error::Conflict(format!(
+                "already a board: {}",
+                path.display()
+            )));
         }
         if let Some(parent_board) = path.ancestors().skip(1).find(|p| store::is_board(p)) {
-            return Err(Error::invalid(format!("nested_board:{}", parent_board.display())));
+            return Err(Error::invalid(format!(
+                "nested_board:{}",
+                parent_board.display()
+            )));
         }
         let id = self.new_board_id();
         let name = if name.trim().is_empty() {
-            path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "Board".into())
+            path.file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "Board".into())
         } else {
             name.trim().to_string()
         };
@@ -277,7 +325,11 @@ impl Core {
         if kind == BoardKind::Kanban {
             for l in lanes {
                 let k = new_id(IdKind::Lane, |id| s.state.lane(id).is_some());
-                s.apply(Op::CreateLane { id: k, name: l.clone(), index: None })?;
+                s.apply(Op::CreateLane {
+                    id: k,
+                    name: l.clone(),
+                    index: None,
+                })?;
             }
         }
         if git {
@@ -289,7 +341,8 @@ impl Core {
 
     /// Open by path (or re-use when already open). Returns a full snapshot.
     pub fn open_board(self: &Arc<Self>, path: &Path) -> Result<BoardSnapshot> {
-        let found = crate::discovery::read_marker(path).ok_or_else(|| Error::NotABoard(path.into()))?;
+        let found =
+            crate::discovery::read_marker(path).ok_or_else(|| Error::NotABoard(path.into()))?;
         if let Some(b) = self.boards.read().get(&found.id) {
             let b = b.lock();
             if b.state.root == path {
@@ -301,11 +354,15 @@ impl Core {
         let _ = trash::purge(path, ttl.max(1), false);
         let snap = store.state.snapshot();
         self.register(&store.state);
-        self.registry.lock().get_mut(&found.id).map(|e| e.last_opened = Some(chrono::Utc::now().timestamp_millis()));
+        if let Some(e) = self.registry.lock().get_mut(&found.id) {
+            e.last_opened = Some(chrono::Utc::now().timestamp_millis());
+        }
         self.save_registry();
         let id = store.id().to_string();
         let _ = &mut store;
-        self.boards.write().insert(id.clone(), Arc::new(Mutex::new(store)));
+        self.boards
+            .write()
+            .insert(id.clone(), Arc::new(Mutex::new(store)));
         watch::watch_board(self, &id, path);
         let me = Arc::clone(self);
         let bid = id.clone();
@@ -326,7 +383,12 @@ impl Core {
         if let Ok(b) = self.board(id) {
             return Ok(b.lock().state.snapshot());
         }
-        let path = self.registry.lock().get(id).map(|e| PathBuf::from(&e.path)).ok_or_else(|| Error::not_found(id))?;
+        let path = self
+            .registry
+            .lock()
+            .get(id)
+            .map(|e| PathBuf::from(&e.path))
+            .ok_or_else(|| Error::not_found(id))?;
         if !store::is_board(&path) {
             self.update_registry(|r| {
                 if let Some(e) = r.get_mut(id) {
@@ -390,20 +452,33 @@ impl Core {
 
     /// Validate board-kind rules for user operations.
     fn check_kind_rules(st: &BoardState, op: &Op) -> Result<()> {
-        let bad = |p: &Parent| match (st.manifest.kind, p) {
-            (BoardKind::Kanban, Parent::Root) => true,
-            (BoardKind::Files, Parent::Lane(_)) => true,
-            _ => false,
+        let bad = |p: &Parent| {
+            matches!(
+                (st.manifest.kind, p),
+                (BoardKind::Kanban, Parent::Root) | (BoardKind::Files, Parent::Lane(_))
+            )
         };
         match op {
-            Op::CreateCard { parent, .. } if bad(parent) => Err(Error::invalid("parent not valid for this board type")),
-            Op::Move { to, .. } if bad(to) => Err(Error::invalid("target not valid for this board type")),
-            Op::CreateLane { .. } if st.manifest.kind == BoardKind::Files => Err(Error::invalid("files boards have no lanes")),
+            Op::CreateCard { parent, .. } if bad(parent) => {
+                Err(Error::invalid("parent not valid for this board type"))
+            }
+            Op::Move { to, .. } if bad(to) => {
+                Err(Error::invalid("target not valid for this board type"))
+            }
+            Op::CreateLane { .. } if st.manifest.kind == BoardKind::Files => {
+                Err(Error::invalid("files boards have no lanes"))
+            }
             _ => Ok(()),
         }
     }
 
-    pub fn apply(&self, board: &str, op: Op, label: &str, coalesce: Option<String>) -> Result<ApplyResult> {
+    pub fn apply(
+        &self,
+        board: &str,
+        op: Op,
+        label: &str,
+        coalesce: Option<String>,
+    ) -> Result<ApplyResult> {
         let b = self.board(board)?;
         let mut s = b.lock();
         Self::check_kind_rules(&s.state, &op)?;
@@ -419,7 +494,12 @@ impl Core {
         if applied.changes_anything {
             if let Some((id, before)) = edit_before {
                 let after = s.read_content(&id).unwrap_or_default();
-                let title = s.state.nodes.get(&id).map(|n| n.meta.title.clone()).unwrap_or_default();
+                let title = s
+                    .state
+                    .nodes
+                    .get(&id)
+                    .map(|n| n.meta.title.clone())
+                    .unwrap_or_default();
                 self.note_edit(board, &id, before, after, title);
             } else {
                 self.journal(&s.state, kind, label, &op_for_journal, &applied, before_ctx);
@@ -427,32 +507,64 @@ impl Core {
             self.index_changes(&mut s, &applied.changes);
         }
         self.emit_delta(&s, &applied.changes);
-        Ok(ApplyResult { version: s.state.version, created: applied.created, trashed: applied.trashed })
+        Ok(ApplyResult {
+            version: s.state.version,
+            created: applied.created,
+            trashed: applied.trashed,
+        })
     }
 
     pub fn undo(&self, board: &str) -> Result<UndoResult> {
         self.flush_edits(Some(board));
         let b = self.board(board)?;
-        let top_is_external = matches!(b.lock().peek_undo(), Some(UndoEntry { op: Op::External { .. }, .. }));
+        let top_is_external = matches!(
+            b.lock().peek_undo(),
+            Some(UndoEntry {
+                op: Op::External { .. },
+                ..
+            })
+        );
         if top_is_external {
             let entry = b.lock().take_undo().unwrap();
-            let Op::External { token } = &entry.op else { unreachable!() };
+            let Op::External { token } = &entry.op else {
+                unreachable!()
+            };
             let token = token.clone();
             let label = entry.label.clone();
             let inverse = self.run_cross(&token)?;
-            b.lock().push_redo(UndoEntry { label: label.clone(), op: Op::External { token: inverse.clone() }, coalesce: None });
+            b.lock().push_redo(UndoEntry {
+                label: label.clone(),
+                op: Op::External {
+                    token: inverse.clone(),
+                },
+                coalesce: None,
+            });
             self.emit_undo_state(board);
-            return Ok(UndoResult { label: Some(label), done: true });
+            return Ok(UndoResult {
+                label: Some(label),
+                done: true,
+            });
         }
         let mut s = b.lock();
         match s.undo() {
             Ok(Some((label, applied))) => {
-                self.journal_simple(&s.state, "undo", &format!("Undo: {label}"), &applied.changes);
+                self.journal_simple(
+                    &s.state,
+                    "undo",
+                    &format!("Undo: {label}"),
+                    &applied.changes,
+                );
                 self.index_changes(&mut s, &applied.changes);
                 self.emit_delta(&s, &applied.changes);
-                Ok(UndoResult { label: Some(label), done: true })
+                Ok(UndoResult {
+                    label: Some(label),
+                    done: true,
+                })
             }
-            Ok(None) => Ok(UndoResult { label: None, done: false }),
+            Ok(None) => Ok(UndoResult {
+                label: None,
+                done: false,
+            }),
             Err(e) => {
                 self.emit_delta(&s, &Changes::default());
                 Err(e)
@@ -462,25 +574,53 @@ impl Core {
 
     pub fn redo(&self, board: &str) -> Result<UndoResult> {
         let b = self.board(board)?;
-        let top_is_external = matches!(b.lock().peek_redo(), Some(UndoEntry { op: Op::External { .. }, .. }));
+        let top_is_external = matches!(
+            b.lock().peek_redo(),
+            Some(UndoEntry {
+                op: Op::External { .. },
+                ..
+            })
+        );
         if top_is_external {
             let entry = b.lock().take_redo().unwrap();
-            let Op::External { token } = &entry.op else { unreachable!() };
+            let Op::External { token } = &entry.op else {
+                unreachable!()
+            };
             let token = token.clone();
             let inverse = self.run_cross(&token)?;
-            b.lock().push_undo(UndoEntry { label: entry.label.clone(), op: Op::External { token: inverse.clone() }, coalesce: None });
+            b.lock().push_undo(UndoEntry {
+                label: entry.label.clone(),
+                op: Op::External {
+                    token: inverse.clone(),
+                },
+                coalesce: None,
+            });
             self.emit_undo_state(board);
-            return Ok(UndoResult { label: Some(entry.label), done: true });
+            return Ok(UndoResult {
+                label: Some(entry.label),
+                done: true,
+            });
         }
         let mut s = b.lock();
         match s.redo()? {
             Some((label, applied)) => {
-                self.journal_simple(&s.state, "redo", &format!("Redo: {label}"), &applied.changes);
+                self.journal_simple(
+                    &s.state,
+                    "redo",
+                    &format!("Redo: {label}"),
+                    &applied.changes,
+                );
                 self.index_changes(&mut s, &applied.changes);
                 self.emit_delta(&s, &applied.changes);
-                Ok(UndoResult { label: Some(label), done: true })
+                Ok(UndoResult {
+                    label: Some(label),
+                    done: true,
+                })
             }
-            None => Ok(UndoResult { label: None, done: false }),
+            None => Ok(UndoResult {
+                label: None,
+                done: false,
+            }),
         }
     }
 
@@ -506,34 +646,98 @@ impl Core {
         self.board(board)?.lock().read_content(id)
     }
 
-    pub fn write_card(&self, board: &str, id: &str, content: &str, session: Option<String>) -> Result<ApplyResult> {
+    pub fn write_card(
+        &self,
+        board: &str,
+        id: &str,
+        content: &str,
+        session: Option<String>,
+    ) -> Result<ApplyResult> {
         let key = session.map(|s| format!("edit:{id}:{s}"));
-        self.apply(board, Op::WriteCard { id: id.to_string(), content: content.to_string() }, "Edit card", key)
+        self.apply(
+            board,
+            Op::WriteCard {
+                id: id.to_string(),
+                content: content.to_string(),
+            },
+            "Edit card",
+            key,
+        )
     }
 
     // --- cross-board moves ------------------------------------------------------
 
     /// Move `ids` from `from` into `to` board at (`parent`, before `before`).
-    pub fn move_across(&self, from: &str, ids: &[String], to: &str, parent: Parent, before: Option<String>) -> Result<()> {
+    pub fn move_across(
+        &self,
+        from: &str,
+        ids: &[String],
+        to: &str,
+        parent: Parent,
+        before: Option<String>,
+    ) -> Result<()> {
         if from == to {
-            self.apply(from, Op::Move { ids: ids.to_vec(), to: parent, before }, "Move", None)?;
+            self.apply(
+                from,
+                Op::Move {
+                    ids: ids.to_vec(),
+                    to: parent,
+                    before,
+                },
+                "Move",
+                None,
+            )?;
             return Ok(());
         }
         let target_index = {
             let b = self.board(to)?;
             let s = b.lock();
-            Self::check_kind_rules(&s.state, &Op::Move { ids: vec![], to: parent.clone(), before: None })?;
-            let sib = s.state.children_of(&parent).cloned().ok_or_else(|| Error::not_found("target"))?;
-            before.as_ref().and_then(|x| sib.iter().position(|c| c == x)).unwrap_or(sib.len())
+            Self::check_kind_rules(
+                &s.state,
+                &Op::Move {
+                    ids: vec![],
+                    to: parent.clone(),
+                    before: None,
+                },
+            )?;
+            let sib = s
+                .state
+                .children_of(&parent)
+                .cloned()
+                .ok_or_else(|| Error::not_found("target"))?;
+            before
+                .as_ref()
+                .and_then(|x| sib.iter().position(|c| c == x))
+                .unwrap_or(sib.len())
         };
-        let items: Vec<Placement> =
-            ids.iter().enumerate().map(|(i, id)| Placement { id: id.clone(), parent: parent.clone(), index: target_index + i }).collect();
+        let items: Vec<Placement> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| Placement {
+                id: id.clone(),
+                parent: parent.clone(),
+                index: target_index + i,
+            })
+            .collect();
         let token = new_id(IdKind::Trash, |t| self.cross.lock().contains_key(t));
-        self.cross.lock().insert(token.clone(), CrossMove { from_board: from.to_string(), to_board: to.to_string(), items });
+        self.cross.lock().insert(
+            token.clone(),
+            CrossMove {
+                from_board: from.to_string(),
+                to_board: to.to_string(),
+                items,
+            },
+        );
         let inverse = self.run_cross(&token)?;
         let b = self.board(to)?;
         let mut s = b.lock();
-        s.push_undo(UndoEntry { label: "Move to board".into(), op: Op::External { token: inverse.clone() }, coalesce: None });
+        s.push_undo(UndoEntry {
+            label: "Move to board".into(),
+            op: Op::External {
+                token: inverse.clone(),
+            },
+            coalesce: None,
+        });
         s.clear_redo();
         drop(s);
         self.emit_undo_state(to);
@@ -542,7 +746,12 @@ impl Core {
 
     /// Execute a registered cross move; returns the token of its inverse.
     fn run_cross(&self, token: &str) -> Result<String> {
-        let cm = self.cross.lock().get(token).cloned().ok_or_else(|| Error::not_found("cross move"))?;
+        let cm = self
+            .cross
+            .lock()
+            .get(token)
+            .cloned()
+            .ok_or_else(|| Error::not_found("cross move"))?;
         let (a, b) = (self.board(&cm.from_board)?, self.board(&cm.to_board)?);
         // Lock in a stable order to avoid deadlocks.
         let (mut src, mut dst) = if cm.from_board < cm.to_board {
@@ -557,11 +766,19 @@ impl Core {
         let mut original = Vec::new();
         for it in &cm.items {
             if let Some((p, i)) = src.state.position_of(&it.id) {
-                original.push(Placement { id: it.id.clone(), parent: p, index: i });
+                original.push(Placement {
+                    id: it.id.clone(),
+                    parent: p,
+                    index: i,
+                });
             }
         }
         let (src_ch, dst_ch) = files::transfer(&mut src, &mut dst, &cm.items)?;
-        let titles: Vec<String> = cm.items.iter().filter_map(|i| dst.state.nodes.get(&i.id).map(|n| n.meta.title.clone())).collect();
+        let titles: Vec<String> = cm
+            .items
+            .iter()
+            .filter_map(|i| dst.state.nodes.get(&i.id).map(|n| n.meta.title.clone()))
+            .collect();
         for (st, dir) in [(&src.state, "out"), (&dst.state, "in")] {
             let _ = history::append(
                 &st.root,
@@ -570,7 +787,11 @@ impl Core {
                     board: st.manifest.id.clone(),
                     kind: "moveBoard".into(),
                     origin: Origin::You,
-                    label: if dir == "in" { "Moved from another board".into() } else { "Moved to another board".into() },
+                    label: if dir == "in" {
+                        "Moved from another board".into()
+                    } else {
+                        "Moved to another board".into()
+                    },
                     ids: cm.items.iter().map(|i| i.id.clone()).collect(),
                     details: json!({ "titles": titles, "from": cm.from_board, "to": cm.to_board }),
                     before: None,
@@ -583,14 +804,35 @@ impl Core {
         self.emit_delta(&src, &src_ch);
         self.emit_delta(&dst, &dst_ch);
         let inv = new_id(IdKind::Trash, |t| self.cross.lock().contains_key(t));
-        self.cross.lock().insert(inv.clone(), CrossMove { from_board: cm.to_board.clone(), to_board: cm.from_board.clone(), items: original });
+        self.cross.lock().insert(
+            inv.clone(),
+            CrossMove {
+                from_board: cm.to_board.clone(),
+                to_board: cm.from_board.clone(),
+                items: original,
+            },
+        );
         Ok(inv)
     }
 
     // --- journaling --------------------------------------------------------------
 
-    fn journal(&self, st: &BoardState, kind: &str, label: &str, op: &Op, applied: &store::Applied, before: Value) {
-        let mut ids: Vec<String> = applied.changes.nodes.iter().chain(applied.changes.removed.iter()).cloned().collect();
+    fn journal(
+        &self,
+        st: &BoardState,
+        kind: &str,
+        label: &str,
+        op: &Op,
+        applied: &store::Applied,
+        before: Value,
+    ) {
+        let mut ids: Vec<String> = applied
+            .changes
+            .nodes
+            .iter()
+            .chain(applied.changes.removed.iter())
+            .cloned()
+            .collect();
         ids.extend(applied.created.iter().cloned());
         ids.sort();
         ids.dedup();
@@ -639,7 +881,9 @@ impl Core {
         let now = Instant::now();
         let mut p = self.pending.lock();
         let key = (board.to_string(), id.to_string());
-        let flush_old = p.get(&key).is_some_and(|e| now.duration_since(e.started).as_secs() > 60);
+        let flush_old = p
+            .get(&key)
+            .is_some_and(|e| now.duration_since(e.started).as_secs() > 60);
         if flush_old {
             let old = p.remove(&key).unwrap();
             drop(p);
@@ -653,7 +897,16 @@ impl Core {
                 e.last = now;
             }
             None => {
-                p.insert(key, PendingEdit { before, after, title, started: now, last: now });
+                p.insert(
+                    key,
+                    PendingEdit {
+                        before,
+                        after,
+                        title,
+                        started: now,
+                        last: now,
+                    },
+                );
             }
         }
     }
@@ -685,7 +938,10 @@ impl Core {
     }
 
     pub fn flush_edit(&self, board: &str, id: &str) {
-        let e = self.pending.lock().remove(&(board.to_string(), id.to_string()));
+        let e = self
+            .pending
+            .lock()
+            .remove(&(board.to_string(), id.to_string()));
         if let Some(e) = e {
             self.write_edit(board, id, e);
         }
@@ -695,8 +951,14 @@ impl Core {
     pub fn flush_edits(&self, board: Option<&str>) {
         let drained: Vec<((String, String), PendingEdit)> = {
             let mut p = self.pending.lock();
-            let keys: Vec<(String, String)> = p.keys().filter(|(b, _)| board.is_none_or(|x| x == b)).cloned().collect();
-            keys.into_iter().filter_map(|k| p.remove(&k).map(|v| (k, v))).collect()
+            let keys: Vec<(String, String)> = p
+                .keys()
+                .filter(|(b, _)| board.is_none_or(|x| x == b))
+                .cloned()
+                .collect();
+            keys.into_iter()
+                .filter_map(|k| p.remove(&k).map(|v| (k, v)))
+                .collect()
         };
         for ((b, id), e) in drained {
             self.write_edit(&b, &id, e);
@@ -726,7 +988,13 @@ impl Core {
     /// History across several boards (all known boards when `boards` is empty), newest first.
     pub fn history_all(&self, boards: &[String], filter: &HistoryFilter) -> Vec<JournalEntry> {
         let ids: Vec<String> = if boards.is_empty() {
-            self.registry.lock().boards.iter().filter(|b| !b.missing).map(|b| b.id.clone()).collect()
+            self.registry
+                .lock()
+                .boards
+                .iter()
+                .filter(|b| !b.missing)
+                .map(|b| b.id.clone())
+                .collect()
         } else {
             boards.to_vec()
         };
@@ -749,14 +1017,22 @@ impl Core {
         if let Ok(b) = self.board(board) {
             return Ok(b.lock().state.root.clone());
         }
-        self.registry.lock().get(board).map(|e| PathBuf::from(&e.path)).ok_or_else(|| Error::not_found(board))
+        self.registry
+            .lock()
+            .get(board)
+            .map(|e| PathBuf::from(&e.path))
+            .ok_or_else(|| Error::not_found(board))
     }
 
     // --- search indexing --------------------------------------------------------
 
     pub(crate) fn index_changes(&self, s: &mut BoardStore, ch: &Changes) {
         let st = &s.state;
-        let kind = if st.manifest.kind == BoardKind::Files { "doc" } else { "card" };
+        let kind = if st.manifest.kind == BoardKind::Files {
+            "doc"
+        } else {
+            "card"
+        };
         let mut docs = Vec::new();
         let mut ids: HashSet<String> = ch.nodes.clone().into_iter().collect();
         if ch.lanes {
@@ -766,19 +1042,41 @@ impl Core {
         for id in &ids {
             let Some(n) = st.nodes.get(id) else { continue };
             let body = if n.meta.plain.is_empty() {
-                s.read_content(id).map(|c| markdown::parse(&c).plain).unwrap_or_default()
+                s.read_content(id)
+                    .map(|c| markdown::parse(&c).plain)
+                    .unwrap_or_default()
             } else {
                 n.meta.plain.clone()
             };
             let lane = st.lane_of(id);
-            let lane_name = lane.as_ref().and_then(|k| st.lane(k)).map(|l| l.name.clone());
-            docs.push(search::doc_from(&st.manifest.id, id, &n.meta, n, lane, lane_name, kind, body, None));
+            let lane_name = lane
+                .as_ref()
+                .and_then(|k| st.lane(k))
+                .map(|l| l.name.clone());
+            docs.push(search::doc_from(
+                &st.manifest.id,
+                id,
+                &n.meta,
+                n,
+                lane,
+                lane_name,
+                kind,
+                body,
+                None,
+            ));
         }
         let _ = self.search.upsert(&docs);
-        let removed: Vec<String> = ch.removed.iter().filter(|i| !st.nodes.contains_key(*i)).cloned().collect();
+        let removed: Vec<String> = ch
+            .removed
+            .iter()
+            .filter(|i| !st.nodes.contains_key(*i))
+            .cloned()
+            .collect();
         let _ = self.search.remove(&st.manifest.id, &removed);
         if ch.header {
-            let _ = self.search.set_board(&st.manifest.id, &st.manifest.name, kind);
+            let _ = self
+                .search
+                .set_board(&st.manifest.id, &st.manifest.name, kind);
         }
         // Drop the plain text from memory once indexed.
         for id in &ids {
@@ -792,8 +1090,14 @@ impl Core {
         let Ok(b) = self.board(board) else { return };
         let mut s = b.lock();
         let st = &s.state;
-        let kind = if st.manifest.kind == BoardKind::Files { "doc" } else { "card" };
-        let _ = self.search.set_board(&st.manifest.id, &st.manifest.name, kind);
+        let kind = if st.manifest.kind == BoardKind::Files {
+            "doc"
+        } else {
+            "card"
+        };
+        let _ = self
+            .search
+            .set_board(&st.manifest.id, &st.manifest.name, kind);
         let existing = self.search.hashes(&st.manifest.id);
         let mut docs = Vec::new();
         for (id, n) in &st.nodes {
@@ -801,13 +1105,28 @@ impl Core {
                 continue;
             }
             let body = if n.meta.plain.is_empty() {
-                s.read_content(id).map(|c| markdown::parse(&c).plain).unwrap_or_default()
+                s.read_content(id)
+                    .map(|c| markdown::parse(&c).plain)
+                    .unwrap_or_default()
             } else {
                 n.meta.plain.clone()
             };
             let lane = st.lane_of(id);
-            let lane_name = lane.as_ref().and_then(|k| st.lane(k)).map(|l| l.name.clone());
-            docs.push(search::doc_from(&st.manifest.id, id, &n.meta, n, lane, lane_name, kind, body, None));
+            let lane_name = lane
+                .as_ref()
+                .and_then(|k| st.lane(k))
+                .map(|l| l.name.clone());
+            docs.push(search::doc_from(
+                &st.manifest.id,
+                id,
+                &n.meta,
+                n,
+                lane,
+                lane_name,
+                kind,
+                body,
+                None,
+            ));
         }
         let keep: HashSet<String> = st.nodes.keys().cloned().collect();
         let _ = self.search.upsert(&docs);
@@ -819,10 +1138,18 @@ impl Core {
 
     /// Index a board that is not open (discovery), without keeping it in memory.
     pub fn index_closed_board(&self, path: &Path) {
-        let Ok(store) = BoardStore::open(path) else { return };
+        let Ok(store) = BoardStore::open(path) else {
+            return;
+        };
         let st = &store.state;
-        let kind = if st.manifest.kind == BoardKind::Files { "doc" } else { "card" };
-        let _ = self.search.set_board(&st.manifest.id, &st.manifest.name, kind);
+        let kind = if st.manifest.kind == BoardKind::Files {
+            "doc"
+        } else {
+            "card"
+        };
+        let _ = self
+            .search
+            .set_board(&st.manifest.id, &st.manifest.name, kind);
         let existing = self.search.hashes(&st.manifest.id);
         let docs: Vec<_> = search::docs_for_board(st, &|_| None, &|id| store.read_content(id).ok())
             .into_iter()
@@ -843,13 +1170,18 @@ impl Core {
         let s = self.settings();
         let mut o = crate::discovery::Options::default();
         if let Some(roots) = s.get("discovery.roots").and_then(|v| v.as_array()) {
-            let r: Vec<PathBuf> = roots.iter().filter_map(|x| x.as_str()).map(PathBuf::from).collect();
+            let r: Vec<PathBuf> = roots
+                .iter()
+                .filter_map(|x| x.as_str())
+                .map(PathBuf::from)
+                .collect();
             if !r.is_empty() {
                 o.roots = r;
             }
         }
         if let Some(ex) = s.get("discovery.exclude").and_then(|v| v.as_array()) {
-            o.excludes.extend(ex.iter().filter_map(|x| x.as_str()).map(str::to_string));
+            o.excludes
+                .extend(ex.iter().filter_map(|x| x.as_str()).map(str::to_string));
         }
         o
     }
@@ -863,7 +1195,12 @@ impl Core {
         let me = Arc::clone(self);
         std::thread::spawn(move || {
             let opts = me.discovery_options();
-            me.sink.emit(CoreEvent::Progress { task: "discovery".into(), done: 0, total: 0, label: None });
+            me.sink.emit(CoreEvent::Progress {
+                task: "discovery".into(),
+                done: 0,
+                total: 0,
+                label: None,
+            });
             let found = crate::discovery::scan(&opts, &|| false);
             let mut seen = HashSet::new();
             {
@@ -873,7 +1210,10 @@ impl Core {
                     seen.insert(f.id.clone());
                 }
                 for e in reg.boards.iter_mut() {
-                    if !e.mirror && !seen.contains(&e.id) && !Path::new(&e.path).join(MARKER_DIR).exists() {
+                    if !e.mirror
+                        && !seen.contains(&e.id)
+                        && !Path::new(&e.path).join(MARKER_DIR).exists()
+                    {
                         e.missing = true;
                     }
                 }
@@ -884,7 +1224,12 @@ impl Core {
                 if me.board(&f.id).is_err() {
                     me.index_closed_board(Path::new(&f.path));
                 }
-                me.sink.emit(CoreEvent::Progress { task: "index".into(), done: i + 1, total, label: Some(f.name.clone()) });
+                me.sink.emit(CoreEvent::Progress {
+                    task: "index".into(),
+                    done: i + 1,
+                    total,
+                    label: Some(f.name.clone()),
+                });
             }
             me.scanning.store(false, Ordering::SeqCst);
         });
@@ -894,7 +1239,10 @@ impl Core {
     pub fn reassign_board_id(self: &Arc<Self>, path: &Path) -> Result<String> {
         let mp = store::manifest_path(path);
         let text = std::fs::read_to_string(&mp).map_err(|e| Error::io(&mp, e))?;
-        let mut m: BoardManifest = serde_json::from_str(&text).map_err(|e| Error::Json { path: mp.clone(), source: e })?;
+        let mut m: BoardManifest = serde_json::from_str(&text).map_err(|e| Error::Json {
+            path: mp.clone(),
+            source: e,
+        })?;
         let old = m.id.clone();
         m.id = self.new_board_id();
         let s = crate::json_fmt::to_string(&m).unwrap_or_default();
@@ -910,7 +1258,13 @@ impl Core {
 
     // --- attachments & cleanup ---------------------------------------------------
 
-    pub fn add_attachment(&self, board: &str, card: &str, src: files::Source, name: &str) -> Result<Attachment> {
+    pub fn add_attachment(
+        &self,
+        board: &str,
+        card: &str,
+        src: files::Source,
+        name: &str,
+    ) -> Result<Attachment> {
         let b = self.board(board)?;
         let mut s = b.lock();
         let (att, ch) = files::add_attachment(&mut s, card, src, name)?;
@@ -967,8 +1321,12 @@ fn journal_context(st: &BoardState, op: &Op) -> Value {
             "items": ids.iter().map(|i| describe(i)).collect::<Vec<_>>(),
             "to": match to { Parent::Lane(k) => json!({"lane": lane_name(k)}), Parent::Card(c) => json!({"card": st.nodes.get(c).map(|n| n.meta.title.clone())}), Parent::Root => json!({"root": true}) },
         }),
-        Op::Place { items } => json!({ "items": items.iter().map(|i| describe(&i.id)).collect::<Vec<_>>() }),
-        Op::CreateCard { id, .. } | Op::WriteCard { id, .. } | Op::SetCover { id, .. } => json!({ "items": [describe(id)] }),
+        Op::Place { items } => {
+            json!({ "items": items.iter().map(|i| describe(&i.id)).collect::<Vec<_>>() })
+        }
+        Op::CreateCard { id, .. } | Op::WriteCard { id, .. } | Op::SetCover { id, .. } => {
+            json!({ "items": [describe(id)] })
+        }
         Op::Trash { nodes, lanes } => json!({
             "items": nodes.iter().map(|i| describe(i)).collect::<Vec<_>>(),
             "lanes": lanes.iter().map(|k| lane_name(k)).collect::<Vec<_>>(),

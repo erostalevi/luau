@@ -43,15 +43,28 @@ pub fn create(app: &AppHandle, label: &str, query: &str) -> tauri::Result<Webvie
     {
         use tauri::utils::config::WindowEffectsConfig;
         use tauri::window::Effect;
-        b = b.decorations(false).transparent(true).effects(WindowEffectsConfig {
-            effects: vec![Effect::Mica],
-            state: None,
-            radius: None,
-            color: None,
-            interactive: false,
-        });
+        b = b
+            .decorations(false)
+            .transparent(true)
+            .effects(WindowEffectsConfig {
+                effects: vec![Effect::Mica],
+                state: None,
+                radius: None,
+                color: None,
+                interactive: false,
+            });
     }
     let w = b.build()?;
+    // Safety net: the UI shows the window once mounted; if it failed to boot,
+    // show it anyway so the app is never invisible.
+    let fallback = w.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(2500));
+        if !fallback.is_visible().unwrap_or(true) {
+            let _ = fallback.show();
+            let _ = fallback.set_focus();
+        }
+    });
     Ok(w)
 }
 

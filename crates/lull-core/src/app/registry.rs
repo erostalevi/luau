@@ -48,7 +48,10 @@ pub struct Registry {
 
 impl Registry {
     pub fn load(path: &Path) -> Self {
-        std::fs::read_to_string(path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default()
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or_default()
     }
 
     pub fn save(&self, path: &Path) -> Result<()> {
@@ -70,7 +73,14 @@ impl Registry {
     }
 
     /// Insert or update an entry found at `path`. Returns true when changed.
-    pub fn upsert(&mut self, id: &str, path: &str, name: &str, kind: BoardKind, mirror: bool) -> bool {
+    pub fn upsert(
+        &mut self,
+        id: &str,
+        path: &str,
+        name: &str,
+        kind: BoardKind,
+        mirror: bool,
+    ) -> bool {
         let now = chrono::Utc::now().timestamp_millis();
         if let Some(e) = self.get_mut(id) {
             let mut changed = false;
@@ -118,5 +128,9 @@ impl Registry {
 fn normalize(p: &str) -> String {
     let s = p.replace('\\', "/");
     let s = s.trim_end_matches('/');
-    if cfg!(any(target_os = "windows", target_os = "macos")) { s.to_lowercase() } else { s.to_string() }
+    if cfg!(any(target_os = "windows", target_os = "macos")) {
+        s.to_lowercase()
+    } else {
+        s.to_string()
+    }
 }

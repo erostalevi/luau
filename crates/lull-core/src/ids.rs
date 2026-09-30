@@ -95,7 +95,9 @@ pub fn is_id(s: &str, kind: IdKind) -> bool {
     let b = s.as_bytes();
     b.len() == ID_LEN + 1
         && b[0] == kind.prefix() as u8
-        && b[1..].iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+        && b[1..]
+            .iter()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
 }
 
 /// Parse the kind of any valid ID.

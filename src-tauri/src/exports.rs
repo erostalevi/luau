@@ -14,10 +14,15 @@ pub fn zip_dir(src: &Path, dest: &Path) -> std::io::Result<()> {
     zip_dir_filtered(src, dest, &|_| true)
 }
 
-pub fn zip_dir_filtered(src: &Path, dest: &Path, keep: &dyn Fn(&Path) -> bool) -> std::io::Result<()> {
+pub fn zip_dir_filtered(
+    src: &Path,
+    dest: &Path,
+    keep: &dyn Fn(&Path) -> bool,
+) -> std::io::Result<()> {
     let file = std::fs::File::create(dest)?;
     let mut zip = zip::ZipWriter::new(file);
-    let opts = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let opts = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
     let base = src.parent().unwrap_or(src);
     for entry in walkdir(src) {
         let rel = entry.strip_prefix(base).unwrap_or(&entry);
@@ -59,6 +64,12 @@ fn walkdir(root: &Path) -> Vec<std::path::PathBuf> {
 
 /// Import/export, templates and board maintenance RPC methods.
 /// Returns `None` for methods this module does not handle.
-pub fn dispatch(_app: &tauri::AppHandle, _core: &Arc<Core>, _window: &str, _method: &str, _p: &Value) -> Option<R> {
+pub fn dispatch(
+    _app: &tauri::AppHandle,
+    _core: &Arc<Core>,
+    _window: &str,
+    _method: &str,
+    _p: &Value,
+) -> Option<R> {
     None
 }

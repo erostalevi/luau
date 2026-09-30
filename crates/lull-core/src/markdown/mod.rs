@@ -64,10 +64,23 @@ pub struct FaceItem {
 pub enum Face {
     #[default]
     None,
-    Checklist { items: Vec<FaceItem>, total: usize },
-    List { items: Vec<FaceItem>, total: usize, ordered: bool },
-    Table { header: Vec<String>, rows: Vec<Vec<String>>, total: usize },
-    Summary { text: String },
+    Checklist {
+        items: Vec<FaceItem>,
+        total: usize,
+    },
+    List {
+        items: Vec<FaceItem>,
+        total: usize,
+        ordered: bool,
+    },
+    Table {
+        header: Vec<String>,
+        rows: Vec<Vec<String>>,
+        total: usize,
+    },
+    Summary {
+        text: String,
+    },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -97,7 +110,8 @@ static TAG_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)(?:^|[\s(\[,;])#([\p{L}\p{N}_/\-]+)").unwrap());
 static MENTION_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)(?:^|[\s(\[,;])@([\p{L}\p{N}][\p{L}\p{N}_.\-]*)").unwrap());
-static LINK_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(!?)\[\[([^\[\]\n]+?)\]\]").unwrap());
+static LINK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(!?)\[\[([^\[\]\n]+?)\]\]").unwrap());
 static DATE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?\]").unwrap());
 static TASK_LINE_RE: LazyLock<Regex> =
@@ -131,7 +145,8 @@ pub fn title_line(first_line: &str) -> Option<String> {
     if t == "#" {
         return Some(String::new());
     }
-    t.strip_prefix("# ").map(|r| r.trim().trim_end_matches('#').trim().to_string())
+    t.strip_prefix("# ")
+        .map(|r| r.trim().trim_end_matches('#').trim().to_string())
 }
 
 /// Replace (or insert) the title line of `content`.
@@ -193,18 +208,29 @@ fn push_unique_ci(v: &mut Vec<String>, s: &str) {
 }
 
 /// Parse a full card document.
+#[allow(clippy::type_complexity)]
 pub fn parse(content: &str) -> ParsedCard {
     let content = content.strip_prefix('\u{feff}').unwrap_or(content);
-    let src: std::borrow::Cow<str> =
-        if content.contains('\r') { content.replace("\r\n", "\n").into() } else { content.into() };
+    let src: std::borrow::Cow<str> = if content.contains('\r') {
+        content.replace("\r\n", "\n").into()
+    } else {
+        content.into()
+    };
     let lines: Vec<&str> = src.split('\n').collect();
     let footer = footer::parse(&lines);
     let body_end_line = footer.start_line.unwrap_or(lines.len());
     let li = LineIndex::new(&src);
-    let body_end = li.0.get(body_end_line).copied().unwrap_or(src.len()).min(src.len());
+    let body_end =
+        li.0.get(body_end_line)
+            .copied()
+            .unwrap_or(src.len())
+            .min(src.len());
     let body = &src[..body_end];
 
-    let mut out = ParsedCard { footer, ..Default::default() };
+    let mut out = ParsedCard {
+        footer,
+        ..Default::default()
+    };
     if let Some(t) = lines.first().and_then(|l| title_line(l)) {
         out.title = t;
         out.has_title_line = true;
@@ -251,14 +277,20 @@ pub fn parse(content: &str) -> ParsedCard {
                     para_text.push_str(&t);
                 }
             }
-            Event::InlineMath(_) | Event::DisplayMath(_) | Event::Html(_) | Event::InlineHtml(_) => {
+            Event::InlineMath(_)
+            | Event::DisplayMath(_)
+            | Event::Html(_)
+            | Event::InlineHtml(_) => {
                 masks.push(range.clone());
             }
-            Event::Start(Tag::Link { dest_url, .. }) | Event::Start(Tag::Image { dest_url, .. }) => {
+            Event::Start(Tag::Link { dest_url, .. })
+            | Event::Start(Tag::Image { dest_url, .. }) => {
                 masks.push(range.clone());
                 let url = dest_url.split(['#', '?']).next().unwrap_or("");
                 if is_local_ref(url) {
-                    let decoded = percent_encoding::percent_decode_str(url).decode_utf8_lossy().into_owned();
+                    let decoded = percent_encoding::percent_decode_str(url)
+                        .decode_utf8_lossy()
+                        .into_owned();
                     if !out.file_refs.contains(&decoded) {
                         out.file_refs.push(decoded);
                     }
@@ -300,31 +332,42 @@ pub fn parse(content: &str) -> ParsedCard {
             }
             Event::End(TagEnd::List(_)) => {
                 list_depth = list_depth.saturating_sub(1);
-                if list_depth == 0 {
-                    if let Some((ordered, items, total)) = cap_list.take() {
-                        if !items.is_empty() {
-                            let is_tasks = items.iter().any(|i| i.task.is_some());
-                            face = Some(if is_tasks {
-                                Face::Checklist { items, total }
-                            } else {
-                                Face::List { items, total, ordered }
-                            });
+                if list_depth == 0
+                    && let Some((ordered, items, total)) = cap_list.take()
+                    && !items.is_empty()
+                {
+                    let is_tasks = items.iter().any(|i| i.task.is_some());
+                    face = Some(if is_tasks {
+                        Face::Checklist { items, total }
+                    } else {
+                        Face::List {
+                            items,
+                            total,
+                            ordered,
                         }
-                    }
+                    });
                 }
             }
             Event::Start(Tag::Item) => {
                 if list_depth == 1 && cap_list.is_some() {
-                    cur_item = Some(FaceItem { text: String::new(), task: None, line: li.line_of(range.start) });
+                    cur_item = Some(FaceItem {
+                        text: String::new(),
+                        task: None,
+                        line: li.line_of(range.start),
+                    });
                 }
             }
             Event::End(TagEnd::Item) => {
-                if list_depth == 1 {
-                    if let (Some(item), Some((_, items, total))) = (cur_item.take(), cap_list.as_mut()) {
-                        *total += 1;
-                        if items.len() < FACE_MAX_ITEMS {
-                            items.push(FaceItem { text: item.text.trim().to_string(), ..item });
-                        }
+                if list_depth == 1
+                    && let (Some(item), Some((_, items, total))) =
+                        (cur_item.take(), cap_list.as_mut())
+                {
+                    *total += 1;
+                    if items.len() < FACE_MAX_ITEMS {
+                        items.push(FaceItem {
+                            text: item.text.trim().to_string(),
+                            ..item
+                        });
                     }
                 }
                 plain.push('\n');
@@ -334,10 +377,10 @@ pub fn parse(content: &str) -> ParsedCard {
                 if checked {
                     out.tasks.done += 1;
                 }
-                if list_depth == 1 {
-                    if let Some(item) = cur_item.as_mut() {
-                        item.task = Some(checked);
-                    }
+                if list_depth == 1
+                    && let Some(item) = cur_item.as_mut()
+                {
+                    item.task = Some(checked);
                 }
             }
             Event::Start(Tag::Table(_)) => {
@@ -376,7 +419,11 @@ pub fn parse(content: &str) -> ParsedCard {
             }
             Event::End(TagEnd::Table) => {
                 if let Some((header, rows, total, _)) = cap_table.take() {
-                    face = Some(Face::Table { header, rows, total });
+                    face = Some(Face::Table {
+                        header,
+                        rows,
+                        total,
+                    });
                 }
                 plain.push('\n');
             }
@@ -404,10 +451,10 @@ pub fn parse(content: &str) -> ParsedCard {
                 plain.push(' ');
                 if in_para && cur_item.is_none() {
                     para_text.push(' ');
-                } else if let Some(i) = cur_item.as_mut() {
-                    if list_depth == 1 {
-                        i.text.push(' ');
-                    }
+                } else if let Some(i) = cur_item.as_mut()
+                    && list_depth == 1
+                {
+                    i.text.push(' ');
                 }
             }
             _ => {}
@@ -491,7 +538,11 @@ pub fn parse(content: &str) -> ParsedCard {
         None => {
             let text = paragraphs.join("\n");
             let s = summary::summarize(&text, 2, SUMMARY_MAX_CHARS);
-            if s.is_empty() { Face::None } else { Face::Summary { text: s } }
+            if s.is_empty() {
+                Face::None
+            } else {
+                Face::Summary { text: s }
+            }
         }
     };
     out.word_count = plain.split_whitespace().count();
@@ -502,7 +553,11 @@ pub fn parse(content: &str) -> ParsedCard {
 /// Extract the title only (cheap path).
 pub fn quick_title(content: &str) -> String {
     let content = content.strip_prefix('\u{feff}').unwrap_or(content);
-    let first = content.split('\n').next().unwrap_or("").trim_end_matches('\r');
+    let first = content
+        .split('\n')
+        .next()
+        .unwrap_or("")
+        .trim_end_matches('\r');
     title_line(first).unwrap_or_else(|| parse(content).title)
 }
 
@@ -537,7 +592,11 @@ mod tests {
         assert!(p.tags.contains(&"paren".to_string()));
         assert!(p.tags.contains(&"notatitletag".to_string()));
         for bad in ["code", "fenced", "anchor", "frag", "123", "double", "math"] {
-            assert!(!p.tags.iter().any(|t| t == bad), "unexpected tag {bad}: {:?}", p.tags);
+            assert!(
+                !p.tags.iter().any(|t| t == bad),
+                "unexpected tag {bad}: {:?}",
+                p.tags
+            );
         }
     }
 
@@ -555,7 +614,9 @@ mod tests {
 
     #[test]
     fn links_and_embeds() {
-        let p = parse("# T\n\nSee [[c8x1q0a]] and ![[c2mz7pb#Plan|the plan]] or [[Some Title]].\n`[[c0000000]]`\n");
+        let p = parse(
+            "# T\n\nSee [[c8x1q0a]] and ![[c2mz7pb#Plan|the plan]] or [[Some Title]].\n`[[c0000000]]`\n",
+        );
         assert_eq!(p.links.len(), 3);
         assert_eq!(p.links[0].id.as_deref(), Some("c8x1q0a"));
         assert!(!p.links[0].embed);
@@ -570,7 +631,9 @@ mod tests {
 
     #[test]
     fn mentions_and_dates() {
-        let p = parse("# T\n\nAsk @ana and @luis.p about [2026-10-03], not a@b.com or [2026-13-40] or [x](y) [2026-01-02](url)\n");
+        let p = parse(
+            "# T\n\nAsk @ana and @luis.p about [2026-10-03], not a@b.com or [2026-13-40] or [x](y) [2026-01-02](url)\n",
+        );
         assert_eq!(p.mentions, vec!["ana", "luis.p"]);
         assert_eq!(p.dates, vec!["2026-10-03"]);
     }
@@ -595,10 +658,21 @@ mod tests {
     #[test]
     fn face_list_and_table() {
         let p = parse("# T\n\n1. a\n2. b\n");
-        assert!(matches!(p.face, Face::List { ordered: true, total: 2, .. }));
+        assert!(matches!(
+            p.face,
+            Face::List {
+                ordered: true,
+                total: 2,
+                ..
+            }
+        ));
         let p = parse("# T\n\n| A | B |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n");
         match p.face {
-            Face::Table { header, rows, total } => {
+            Face::Table {
+                header,
+                rows,
+                total,
+            } => {
                 assert_eq!(header, vec!["A", "B"]);
                 assert_eq!(rows, vec![vec!["1", "2"], vec!["3", "4"]]);
                 assert_eq!(total, 2);
@@ -624,15 +698,26 @@ mod tests {
 
     #[test]
     fn file_refs() {
-        let p = parse("# T\n\n![](c8x1q0a.3f9a.png) [doc](c8x1q0a.ab12.pdf) [w](https://x.com) ![](my%20pic.png)\n");
-        assert_eq!(p.file_refs, vec!["c8x1q0a.3f9a.png", "c8x1q0a.ab12.pdf", "my pic.png"]);
+        let p = parse(
+            "# T\n\n![](c8x1q0a.3f9a.png) [doc](c8x1q0a.ab12.pdf) [w](https://x.com) ![](my%20pic.png)\n",
+        );
+        assert_eq!(
+            p.file_refs,
+            vec!["c8x1q0a.3f9a.png", "c8x1q0a.ab12.pdf", "my pic.png"]
+        );
     }
 
     #[test]
     fn toggles_tasks() {
         let src = "# T\n- [ ] a\n- [x] b\nnot a task\n";
-        assert_eq!(toggle_task(src, 1).unwrap(), "# T\n- [x] a\n- [x] b\nnot a task\n");
-        assert_eq!(toggle_task(src, 2).unwrap(), "# T\n- [ ] a\n- [ ] b\nnot a task\n");
+        assert_eq!(
+            toggle_task(src, 1).unwrap(),
+            "# T\n- [x] a\n- [x] b\nnot a task\n"
+        );
+        assert_eq!(
+            toggle_task(src, 2).unwrap(),
+            "# T\n- [ ] a\n- [ ] b\nnot a task\n"
+        );
         assert!(toggle_task(src, 3).is_none());
         assert!(toggle_task(src, 99).is_none());
     }

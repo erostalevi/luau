@@ -38,7 +38,7 @@ export const lullMarkdown: MarkdownConfig = {
       name: 'CardLink',
       before: 'Link',
       parse(cx, next, pos) {
-        let start = pos;
+        const start = pos;
         let embed = false;
         if (next === BANG && charAt(cx, pos + 1) === LBRACK && charAt(cx, pos + 2) === LBRACK) {
           embed = true;
@@ -52,7 +52,6 @@ export const lullMarkdown: MarkdownConfig = {
         return cx.addElement(
           cx.elt(embed ? 'CardEmbed' : 'CardLink', start, close + 2, [cx.elt('CardLinkMark', start, pos + 2), cx.elt('CardLinkMark', close, close + 2)]),
         );
-        void start;
       },
     },
     {

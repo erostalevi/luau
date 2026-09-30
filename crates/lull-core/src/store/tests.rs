@@ -12,30 +12,70 @@ fn kid() -> String {
 
 fn kanban() -> (tempfile::TempDir, BoardStore) {
     let d = tempfile::tempdir().unwrap();
-    let s = BoardStore::create(d.path(), "b000001".into(), "Test".into(), BoardKind::Kanban).unwrap();
+    let s =
+        BoardStore::create(d.path(), "b000001".into(), "Test".into(), BoardKind::Kanban).unwrap();
     (d, s)
 }
 
 fn lane(s: &mut BoardStore, name: &str) -> String {
     let k = kid();
-    s.apply_user(Op::CreateLane { id: k.clone(), name: name.into(), index: None }, "lane", None).unwrap();
+    s.apply_user(
+        Op::CreateLane {
+            id: k.clone(),
+            name: name.into(),
+            index: None,
+        },
+        "lane",
+        None,
+    )
+    .unwrap();
     k
 }
 
 fn card(s: &mut BoardStore, parent: Parent, title: &str) -> String {
     let c = cid();
-    s.apply_user(Op::CreateCard { id: c.clone(), parent, index: None, content: format!("# {title}\n") }, "card", None)
-        .unwrap();
+    s.apply_user(
+        Op::CreateCard {
+            id: c.clone(),
+            parent,
+            index: None,
+            content: format!("# {title}\n"),
+        },
+        "card",
+        None,
+    )
+    .unwrap();
     c
 }
 
 /// Structural fingerprint used to compare memory vs disk.
-fn shape(st: &BoardState) -> (Vec<(String, String, Vec<String>, bool)>, BTreeMap<String, (Parent, bool, Vec<String>, bool, String)>) {
-    let lanes = st.lanes.iter().map(|l| (l.id.clone(), l.name.clone(), l.order.clone(), l.archived)).collect();
+#[allow(clippy::type_complexity)]
+fn shape(
+    st: &BoardState,
+) -> (
+    Vec<(String, String, Vec<String>, bool)>,
+    BTreeMap<String, (Parent, bool, Vec<String>, bool, String)>,
+) {
+    let lanes = st
+        .lanes
+        .iter()
+        .map(|l| (l.id.clone(), l.name.clone(), l.order.clone(), l.archived))
+        .collect();
     let nodes = st
         .nodes
         .iter()
-        .map(|(id, n)| (id.clone(), (n.parent.clone(), n.is_group, n.children.clone(), n.archived, n.meta.title.clone())))
+        .map(|(id, n)| {
+            (
+                id.clone(),
+                (
+                    n.parent.clone(),
+                    n.is_group,
+                    n.children.clone(),
+                    n.archived,
+                    n.meta.title.clone(),
+                ),
+            )
+        })
         .collect();
     (lanes, nodes)
 }
@@ -51,7 +91,11 @@ fn check_invariants(st: &BoardState) {
     // Every node appears exactly once in its parent's children.
     for (id, n) in &st.nodes {
         let siblings = st.children_of(&n.parent).expect("parent exists");
-        assert_eq!(siblings.iter().filter(|c| *c == id).count(), 1, "{id} not in parent");
+        assert_eq!(
+            siblings.iter().filter(|c| *c == id).count(),
+            1,
+            "{id} not in parent"
+        );
         // Groups are never empty.
         if n.is_group {
             assert!(!n.children.is_empty(), "empty group {id}");
@@ -90,7 +134,16 @@ fn nesting_converts_to_group_and_back() {
     fs::write(&att, b"png").unwrap();
     s.rescan_attachments(&a);
 
-    s.apply_user(Op::Move { ids: vec![b.clone()], to: Parent::Card(a.clone()), before: None }, "nest", None).unwrap();
+    s.apply_user(
+        Op::Move {
+            ids: vec![b.clone()],
+            to: Parent::Card(a.clone()),
+            before: None,
+        },
+        "nest",
+        None,
+    )
+    .unwrap();
     let n = &s.state.nodes[&a];
     assert!(n.is_group);
     assert_eq!(n.children, vec![b.clone()]);
@@ -101,11 +154,26 @@ fn nesting_converts_to_group_and_back() {
     assert_disk_matches(&s);
 
     // Move the child out: the group becomes a plain card again.
-    s.apply_user(Op::Move { ids: vec![b.clone()], to: Parent::Lane(k.clone()), before: Some(a.clone()) }, "out", None).unwrap();
+    s.apply_user(
+        Op::Move {
+            ids: vec![b.clone()],
+            to: Parent::Lane(k.clone()),
+            before: Some(a.clone()),
+        },
+        "out",
+        None,
+    )
+    .unwrap();
     assert!(!s.state.nodes[&a].is_group);
     assert!(!gdir.exists());
     assert!(s.state.root.join(&k).join(format!("{a}.md")).exists());
-    assert!(s.state.root.join(&k).join(format!("{a}.ab12-pic.png")).exists());
+    assert!(
+        s.state
+            .root
+            .join(&k)
+            .join(format!("{a}.ab12-pic.png"))
+            .exists()
+    );
     assert_eq!(s.state.lane(&k).unwrap().order, vec![b.clone(), a.clone()]);
     assert_disk_matches(&s);
     check_invariants(&s.state);
@@ -119,10 +187,44 @@ fn undo_redo_roundtrip() {
     let a = card(&mut s, Parent::Lane(k1.clone()), "A");
     let b = card(&mut s, Parent::Lane(k1.clone()), "B");
     let before = shape(&s.state);
-    s.apply_user(Op::Move { ids: vec![a.clone()], to: Parent::Card(b.clone()), before: None }, "m1", None).unwrap();
-    s.apply_user(Op::Move { ids: vec![b.clone()], to: Parent::Lane(k2.clone()), before: None }, "m2", None).unwrap();
-    s.apply_user(Op::WriteCard { id: a.clone(), content: "# A2\n\nbody\n".into() }, "edit", None).unwrap();
-    s.apply_user(Op::Trash { nodes: vec![b.clone()], lanes: vec![] }, "del", None).unwrap();
+    s.apply_user(
+        Op::Move {
+            ids: vec![a.clone()],
+            to: Parent::Card(b.clone()),
+            before: None,
+        },
+        "m1",
+        None,
+    )
+    .unwrap();
+    s.apply_user(
+        Op::Move {
+            ids: vec![b.clone()],
+            to: Parent::Lane(k2.clone()),
+            before: None,
+        },
+        "m2",
+        None,
+    )
+    .unwrap();
+    s.apply_user(
+        Op::WriteCard {
+            id: a.clone(),
+            content: "# A2\n\nbody\n".into(),
+        },
+        "edit",
+        None,
+    )
+    .unwrap();
+    s.apply_user(
+        Op::Trash {
+            nodes: vec![b.clone()],
+            lanes: vec![],
+        },
+        "del",
+        None,
+    )
+    .unwrap();
     assert!(!s.state.nodes.contains_key(&a));
     let after = shape(&s.state);
     for _ in 0..4 {
@@ -145,9 +247,27 @@ fn trash_and_restore_lane() {
     let k = lane(&mut s, "Doomed");
     let a = card(&mut s, Parent::Lane(k.clone()), "A");
     let b = card(&mut s, Parent::Lane(k.clone()), "B");
-    s.apply_user(Op::Move { ids: vec![b.clone()], to: Parent::Card(a.clone()), before: None }, "nest", None).unwrap();
+    s.apply_user(
+        Op::Move {
+            ids: vec![b.clone()],
+            to: Parent::Card(a.clone()),
+            before: None,
+        },
+        "nest",
+        None,
+    )
+    .unwrap();
     let before = shape(&s.state);
-    let applied = s.apply_user(Op::Trash { nodes: vec![], lanes: vec![k.clone()] }, "del lane", None).unwrap();
+    let applied = s
+        .apply_user(
+            Op::Trash {
+                nodes: vec![],
+                lanes: vec![k.clone()],
+            },
+            "del lane",
+            None,
+        )
+        .unwrap();
     assert!(s.state.lanes.is_empty());
     assert!(s.state.nodes.is_empty());
     assert_eq!(trash::list(&s.state.root).len(), 1);
@@ -164,7 +284,15 @@ fn coalesced_edits_are_one_undo_step() {
     let k = lane(&mut s, "L");
     let a = card(&mut s, Parent::Lane(k), "A");
     for i in 0..5 {
-        s.apply_user(Op::WriteCard { id: a.clone(), content: format!("# A\n\nv{i}\n") }, "edit", Some(format!("sess:{a}"))).unwrap();
+        s.apply_user(
+            Op::WriteCard {
+                id: a.clone(),
+                content: format!("# A\n\nv{i}\n"),
+            },
+            "edit",
+            Some(format!("sess:{a}")),
+        )
+        .unwrap();
     }
     s.undo().unwrap();
     assert_eq!(s.read_content(&a).unwrap(), "# A\n");
@@ -176,7 +304,15 @@ fn cannot_move_into_descendant() {
     let k = lane(&mut s, "L");
     let a = card(&mut s, Parent::Lane(k.clone()), "A");
     let b = card(&mut s, Parent::Card(a.clone()), "B");
-    let r = s.apply_user(Op::Move { ids: vec![a.clone()], to: Parent::Card(b.clone()), before: None }, "bad", None);
+    let r = s.apply_user(
+        Op::Move {
+            ids: vec![a.clone()],
+            to: Parent::Card(b.clone()),
+            before: None,
+        },
+        "bad",
+        None,
+    );
     assert!(r.is_err());
     check_invariants(&s.state);
 }
@@ -210,7 +346,11 @@ fn reload_reports_changes() {
     let k = lane(&mut s, "L");
     let a = card(&mut s, Parent::Lane(k.clone()), "A");
     std::thread::sleep(std::time::Duration::from_millis(15));
-    fs::write(s.state.root.join(&k).join(format!("{a}.md")), "# Changed title\n").unwrap();
+    fs::write(
+        s.state.root.join(&k).join(format!("{a}.md")),
+        "# Changed title\n",
+    )
+    .unwrap();
     let ch = s.reload().unwrap();
     assert!(ch.nodes.contains(&a));
     assert_eq!(s.state.nodes[&a].meta.title, "Changed title");
@@ -219,7 +359,8 @@ fn reload_reports_changes() {
 #[test]
 fn files_board_and_conversion() {
     let d = tempfile::tempdir().unwrap();
-    let mut s = BoardStore::create(d.path(), "b000002".into(), "Notes".into(), BoardKind::Files).unwrap();
+    let mut s =
+        BoardStore::create(d.path(), "b000002".into(), "Notes".into(), BoardKind::Files).unwrap();
     let a = card(&mut s, Parent::Root, "Doc A");
     let b = card(&mut s, Parent::Root, "Doc B");
     let c = card(&mut s, Parent::Card(a.clone()), "Sub");
@@ -231,16 +372,29 @@ fn files_board_and_conversion() {
     s.apply_user(
         Op::Batch {
             ops: vec![
-                Op::SetKind { kind: BoardKind::Kanban },
-                Op::CreateLane { id: inbox.clone(), name: "Inbox".into(), index: None },
-                Op::Move { ids: vec![a.clone(), b.clone()], to: Parent::Lane(inbox.clone()), before: None },
+                Op::SetKind {
+                    kind: BoardKind::Kanban,
+                },
+                Op::CreateLane {
+                    id: inbox.clone(),
+                    name: "Inbox".into(),
+                    index: None,
+                },
+                Op::Move {
+                    ids: vec![a.clone(), b.clone()],
+                    to: Parent::Lane(inbox.clone()),
+                    before: None,
+                },
             ],
         },
         "convert",
         None,
     )
     .unwrap();
-    assert_eq!(s.state.lane(&inbox).unwrap().order, vec![a.clone(), b.clone()]);
+    assert_eq!(
+        s.state.lane(&inbox).unwrap().order,
+        vec![a.clone(), b.clone()]
+    );
     assert!(s.state.root_order.is_empty());
     assert_eq!(s.state.nodes[&c].parent, Parent::Card(a.clone()));
     assert_disk_matches(&s);
@@ -255,7 +409,15 @@ fn archive_flags_persist() {
     let (_d, mut s) = kanban();
     let k = lane(&mut s, "L");
     let a = card(&mut s, Parent::Lane(k.clone()), "A");
-    s.apply_user(Op::SetArchived { nodes: vec![(a.clone(), true)], lanes: vec![(k.clone(), true)] }, "arch", None).unwrap();
+    s.apply_user(
+        Op::SetArchived {
+            nodes: vec![(a.clone(), true)],
+            lanes: vec![(k.clone(), true)],
+        },
+        "arch",
+        None,
+    )
+    .unwrap();
     assert_disk_matches(&s);
     let st = load_board(&s.state.root, None).unwrap();
     assert!(st.nodes[&a].archived);
@@ -268,11 +430,20 @@ fn archive_flags_persist() {
 fn newer_schema_is_read_only() {
     let (_d, mut s) = kanban();
     let mp = manifest_path(&s.state.root);
-    let text = fs::read_to_string(&mp).unwrap().replace("\"schema\": 1", "\"schema\": 99");
+    let text = fs::read_to_string(&mp)
+        .unwrap()
+        .replace("\"schema\": 1", "\"schema\": 99");
     fs::write(&mp, text).unwrap();
     let mut s2 = BoardStore::open(&s.state.root).unwrap();
     assert!(s2.state.read_only.is_some());
-    assert!(s2.apply(Op::CreateLane { id: kid(), name: "x".into(), index: None }).is_err());
+    assert!(
+        s2.apply(Op::CreateLane {
+            id: kid(),
+            name: "x".into(),
+            index: None
+        })
+        .is_err()
+    );
     let _ = &mut s;
 }
 

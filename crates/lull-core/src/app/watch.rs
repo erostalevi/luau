@@ -23,11 +23,11 @@ const QUIET: Duration = Duration::from_millis(220);
 fn relevant(root: &Path, p: &Path) -> bool {
     let rel = p.strip_prefix(root).unwrap_or(p);
     let mut comps = rel.components();
-    if let Some(first) = comps.next() {
-        if first.as_os_str() == MARKER_DIR {
-            // Only the manifest matters inside the marker dir.
-            return comps.next().is_some_and(|c| c.as_os_str() == BOARD_FILE) && comps.next().is_none();
-        }
+    if let Some(first) = comps.next()
+        && first.as_os_str() == MARKER_DIR
+    {
+        // Only the manifest matters inside the marker dir.
+        return comps.next().is_some_and(|c| c.as_os_str() == BOARD_FILE) && comps.next().is_none();
     }
     let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
     !(name.starts_with('.') && name.contains(".tmp-")
@@ -41,7 +41,10 @@ pub fn start(core: &Arc<Core>) {
     let (tx, rx) = channel::<WatchMsg>();
     *core.watch_tx.lock() = Some(tx);
     let weak = Arc::downgrade(core);
-    std::thread::Builder::new().name("lull-watch".into()).spawn(move || run(weak, rx)).ok();
+    std::thread::Builder::new()
+        .name("lull-watch".into())
+        .spawn(move || run(weak, rx))
+        .ok();
 }
 
 fn run(core: Weak<Core>, rx: Receiver<WatchMsg>) {
@@ -50,7 +53,9 @@ fn run(core: Weak<Core>, rx: Receiver<WatchMsg>) {
     loop {
         match rx.recv_timeout(Duration::from_millis(120)) {
             Ok(WatchMsg::Event { board, paths }) => {
-                let e = pending.entry(board).or_insert_with(|| (Vec::new(), Instant::now()));
+                let e = pending
+                    .entry(board)
+                    .or_insert_with(|| (Vec::new(), Instant::now()));
                 e.0.extend(paths);
                 e.1 = Instant::now();
             }
@@ -58,7 +63,11 @@ fn run(core: Weak<Core>, rx: Receiver<WatchMsg>) {
             Err(RecvTimeoutError::Disconnected) => return,
         }
         let Some(core) = core.upgrade() else { return };
-        let ready: Vec<String> = pending.iter().filter(|(_, (_, t))| t.elapsed() >= QUIET).map(|(b, _)| b.clone()).collect();
+        let ready: Vec<String> = pending
+            .iter()
+            .filter(|(_, (_, t))| t.elapsed() >= QUIET)
+            .map(|(b, _)| b.clone())
+            .collect();
         for b in ready {
             if let Some((paths, _)) = pending.remove(&b) {
                 process(&core, &b, &paths);
@@ -76,7 +85,10 @@ pub fn process(core: &Core, board: &str, paths: &[PathBuf]) {
     let Ok(b) = core.board(board) else { return };
     let mut s = b.lock();
     let root = s.state.root.clone();
-    let external: Vec<&PathBuf> = paths.iter().filter(|p| relevant(&root, p) && !s.recently_touched(p)).collect();
+    let external: Vec<&PathBuf> = paths
+        .iter()
+        .filter(|p| relevant(&root, p) && !s.recently_touched(p))
+        .collect();
     if external.is_empty() {
         return;
     }
@@ -89,7 +101,11 @@ pub fn process(core: &Core, board: &str, paths: &[PathBuf]) {
     };
     let ids: Vec<String> = ch.nodes.iter().chain(ch.removed.iter()).cloned().collect();
     if !ids.is_empty() || ch.lanes || ch.header {
-        let titles: Vec<String> = ch.nodes.iter().filter_map(|i| s.state.nodes.get(i).map(|n| n.meta.title.clone())).collect();
+        let titles: Vec<String> = ch
+            .nodes
+            .iter()
+            .filter_map(|i| s.state.nodes.get(i).map(|n| n.meta.title.clone()))
+            .collect();
         let _ = history::append(
             &root,
             &JournalEntry {
@@ -107,11 +123,16 @@ pub fn process(core: &Core, board: &str, paths: &[PathBuf]) {
     }
     core.index_changes(&mut s, &ch);
     core.emit_delta(&s, &ch);
-    core.sink.emit(CoreEvent::ExternalChange { board_id: board.to_string(), ids });
+    core.sink.emit(CoreEvent::ExternalChange {
+        board_id: board.to_string(),
+        ids,
+    });
 }
 
 pub fn watch_board(core: &Core, id: &str, root: &Path) {
-    let Some(tx) = core.watch_tx.lock().clone() else { return };
+    let Some(tx) = core.watch_tx.lock().clone() else {
+        return;
+    };
     let bid = id.to_string();
     let r = root.to_path_buf();
     let watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
@@ -121,7 +142,10 @@ pub fn watch_board(core: &Core, id: &str, root: &Path) {
             }
             let paths: Vec<PathBuf> = ev.paths.into_iter().filter(|p| relevant(&r, p)).collect();
             if !paths.is_empty() {
-                let _ = tx.send(WatchMsg::Event { board: bid.clone(), paths });
+                let _ = tx.send(WatchMsg::Event {
+                    board: bid.clone(),
+                    paths,
+                });
             }
         }
     });

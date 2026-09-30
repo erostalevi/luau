@@ -177,7 +177,9 @@ pub enum AttachmentKind {
 impl AttachmentKind {
     pub fn from_ext(ext: &str) -> Self {
         match ext.to_ascii_lowercase().as_str() {
-            "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg" | "avif" | "heic" => Self::Image,
+            "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg" | "avif" | "heic" => {
+                Self::Image
+            }
             "pdf" => Self::Pdf,
             "mp4" | "mov" | "webm" | "mkv" | "m4v" => Self::Video,
             "mp3" | "wav" | "ogg" | "m4a" | "flac" => Self::Audio,
@@ -269,7 +271,11 @@ impl BoardState {
     pub fn node_file(&self, id: &str) -> Option<PathBuf> {
         let n = self.nodes.get(id)?;
         let dir = self.container_dir(&n.parent)?;
-        Some(if n.is_group { dir.join(id).join(crate::brand::INDEX_MD) } else { dir.join(format!("{id}.md")) })
+        Some(if n.is_group {
+            dir.join(id).join(crate::brand::INDEX_MD)
+        } else {
+            dir.join(format!("{id}.md"))
+        })
     }
 
     /// Directory holding the node's attachments.
@@ -281,7 +287,10 @@ impl BoardState {
 
     /// Path relative to the board root (forward slashes).
     pub fn rel(&self, p: &std::path::Path) -> String {
-        p.strip_prefix(&self.root).unwrap_or(p).to_string_lossy().replace('\\', "/")
+        p.strip_prefix(&self.root)
+            .unwrap_or(p)
+            .to_string_lossy()
+            .replace('\\', "/")
     }
 
     /// True when `ancestor` is `id` or one of its ancestors.
@@ -314,7 +323,11 @@ impl BoardState {
     /// All descendants (depth-first, excluding `id`).
     pub fn descendants(&self, id: &str) -> Vec<String> {
         let mut out = Vec::new();
-        let mut stack: Vec<String> = self.nodes.get(id).map(|n| n.children.iter().rev().cloned().collect()).unwrap_or_default();
+        let mut stack: Vec<String> = self
+            .nodes
+            .get(id)
+            .map(|n| n.children.iter().rev().cloned().collect())
+            .unwrap_or_default();
         while let Some(c) = stack.pop() {
             if let Some(n) = self.nodes.get(&c) {
                 stack.extend(n.children.iter().rev().cloned());
@@ -456,7 +469,11 @@ pub struct BoardDelta {
 
 impl BoardDelta {
     pub fn is_empty(&self) -> bool {
-        self.header.is_none() && self.lanes.is_none() && self.root_order.is_none() && self.nodes.is_empty() && self.removed.is_empty()
+        self.header.is_none()
+            && self.lanes.is_none()
+            && self.root_order.is_none()
+            && self.nodes.is_empty()
+            && self.removed.is_empty()
     }
 }
 

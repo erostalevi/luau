@@ -70,7 +70,7 @@ export const CORE_SETTINGS: SettingDef[] = [
   s('general.confirmDelete', 'boolean', false, 'general'),
   s('app.runInBackground', 'boolean', false, 'general', { restart: false }),
   s('app.launchAtLogin', 'boolean', false, 'general'),
-  s('updates.checkOnStart', 'boolean', true, 'general'),
+  s('updates.checkOnStart', 'boolean', false, 'general'),
   s('general.firstRunDone', 'boolean', false, 'general', { hidden: true }),
 
   // appearance
