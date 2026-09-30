@@ -10,3 +10,6 @@ coverage/
 *.key.pub.bak
 .env
 .env.*
+
+# local tooling
+.claude/worktrees/
