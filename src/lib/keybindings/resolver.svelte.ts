@@ -55,7 +55,13 @@ export function bindingsFor(command: string): Keybinding[] {
 /** Primary shortcut label for a command (used in menus/palette). */
 export function primaryKey(command: string): string | null {
   const list = bindingsFor(command);
-  return list.length ? list[list.length - 1].key : null;
+  if (!list.length) return null;
+  // User bindings win; otherwise prefer the canonical modifier shortcut over
+  // single keys and alternates (F1, n…).
+  const user = list.filter((b) => b.source === 'user');
+  if (user.length) return user[user.length - 1].key;
+  const withMod = list.find((b) => b.key.split(' ')[0].includes('+') && !/^f\d+$/.test(b.key));
+  return (withMod ?? list[0]).key;
 }
 
 export async function loadKeybindings() {
