@@ -1,0 +1,158 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  line-height: var(--lh);
+  font-weight: var(--fw-regular);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* Solid fallback when the window has no native translucency. */
+:root:not([data-glass='on']) body {
+  background: var(--bg);
+}
+
+#app {
+  height: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: default;
+}
+
+input,
+textarea,
+[contenteditable] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+a {
+  color: var(--primary-strong);
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--primary-soft);
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* Soft, thin scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ink-4);
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* Global drag cursor while the DnD engine is active. */
+:root[data-dragging] * {
+  cursor: grabbing !important;
+}
+
+:root[data-dragging='deny'] * {
+  cursor: not-allowed !important;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}

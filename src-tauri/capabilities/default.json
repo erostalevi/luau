@@ -1,0 +1,54 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions for all Lull windows",
+  "windows": [
+    "*"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "core:window:allow-is-maximized",
+    "core:window:allow-set-title",
+    "core:window:allow-set-effects",
+    "core:window:allow-set-theme",
+    "core:webview:allow-set-webview-zoom",
+    "core:webview:allow-print",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-message",
+    "dialog:allow-ask",
+    "dialog:allow-confirm",
+    "notification:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-write-html",
+    "clipboard-manager:allow-read-image",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://*"
+        },
+        {
+          "url": "http://*"
+        },
+        {
+          "url": "mailto:*"
+        }
+      ]
+    },
+    "opener:allow-reveal-item-in-dir",
+    "updater:default",
+    "process:allow-restart",
+    "window-state:default",
+    "autostart:default"
+  ]
+}

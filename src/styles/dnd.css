@@ -1,0 +1,85 @@
+.dnd-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 3000;
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 18px 32px rgb(30 30 70 / 0.22));
+}
+.dnd-clone {
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  opacity: 0.96;
+  transform: scale(1.02);
+  box-shadow: var(--shadow-drag) !important;
+  animation: dnd-lift var(--dur) var(--ease-spring);
+}
+@keyframes dnd-lift {
+  from {
+    transform: scale(1);
+  }
+}
+.dnd-stack {
+  position: absolute;
+  inset: 6px -6px -6px 6px;
+  z-index: 1;
+  border-radius: var(--r-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-2);
+  opacity: 0.8;
+}
+.dnd-badge {
+  position: absolute;
+  z-index: 3;
+  top: -8px;
+  right: -8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 12px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+.dnd-pill {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-drag);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.dnd-indicator {
+  position: fixed;
+  z-index: 2999;
+  pointer-events: none;
+  border-radius: 3px;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-ring);
+  opacity: 0;
+  transition:
+    top 90ms var(--ease),
+    left 90ms var(--ease),
+    width 90ms var(--ease),
+    height 90ms var(--ease),
+    opacity 90ms var(--ease);
+}
+.dnd-into {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px;
+  background-color: var(--primary-softer) !important;
+  transition: outline-color var(--dur-fast) var(--ease);
+}
+.dnd-list-over {
+  background-color: color-mix(in srgb, var(--primary-softer) 60%, transparent);
+}
+.dragging-source {
+  opacity: 0.35;
+  filter: saturate(0.6);
+}

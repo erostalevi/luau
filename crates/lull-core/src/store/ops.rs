@@ -78,6 +78,9 @@ pub enum Op {
     SetKind { kind: BoardKind },
     #[serde(rename_all = "camelCase")]
     Batch { ops: Vec<Op> },
+    /// Handled by the application layer (e.g. cross-board moves); a store refuses it.
+    #[serde(rename_all = "camelCase")]
+    External { token: String },
 }
 
 impl Op {
@@ -98,6 +101,7 @@ impl Op {
             Op::SetCover { .. } => "setCover",
             Op::SetKind { .. } => "setKind",
             Op::Batch { .. } => "batch",
+            Op::External { .. } => "external",
         }
     }
 }
@@ -153,6 +157,7 @@ impl BoardStore {
             Op::UpdateBoard { patch } => self.op_update_board(patch, acc),
             Op::SetCover { id, cover } => self.op_set_cover(id, cover, acc),
             Op::SetKind { kind } => self.op_set_kind(kind, acc),
+            Op::External { .. } => Err(Error::invalid("external operation must be handled by the app layer")),
             Op::Batch { ops } => {
                 let mut inverses = Vec::new();
                 for o in ops {

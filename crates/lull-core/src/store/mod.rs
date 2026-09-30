@@ -226,6 +226,31 @@ impl BoardStore {
         }
     }
 
+    pub fn peek_undo(&self) -> Option<&UndoEntry> {
+        self.undo.last()
+    }
+    pub fn peek_redo(&self) -> Option<&UndoEntry> {
+        self.redo.last()
+    }
+    pub fn take_undo(&mut self) -> Option<UndoEntry> {
+        self.undo.pop()
+    }
+    pub fn take_redo(&mut self) -> Option<UndoEntry> {
+        self.redo.pop()
+    }
+    pub fn push_undo(&mut self, e: UndoEntry) {
+        self.undo.push(e);
+        if self.undo.len() > UNDO_LIMIT {
+            self.undo.remove(0);
+        }
+    }
+    pub fn push_redo(&mut self, e: UndoEntry) {
+        self.redo.push(e);
+    }
+    pub fn clear_redo(&mut self) {
+        self.redo.clear();
+    }
+
     pub fn undo(&mut self) -> Result<Option<(String, Applied)>> {
         let Some(entry) = self.undo.pop() else { return Ok(None) };
         let applied = self.apply(entry.op)?;

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lull",
+  "version": "0.1.0",
+  "identifier": "app.lull.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev:web",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build:web",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "macOSPrivateApi": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' lull: http://lull.localhost data: blob: https: http:; media-src 'self' lull: http://lull.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src ipc: http://ipc.localhost lull: http://lull.localhost; frame-src 'self' lull: http://lull.localhost; object-src 'none'; base-uri 'none'; form-action 'none'",
+      "dangerousDisableAssetCspModification": false,
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": [
+      "app",
+      "dmg",
+      "nsis",
+      "msi",
+      "appimage",
+      "deb",
+      "rpm"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Calm, local-first kanban and notes",
+    "longDescription": "Lull is a calm, local-first kanban and notes app. Every card is a plain Markdown file.",
+    "copyright": "\u00a9 2026 Eros Talevi",
+    "license": "MIT",
+    "macOS": {
+      "minimumSystemVersion": "13.0"
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "rpm": {
+        "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNGRTc1N0QyRTg2RjI2QjIKUldTeUptL28wbGZuUDc2RWZGYXM3a0lpd0hGNXAxb0xnYWV1R3ZkWlFoQytmVGVXc3Z6K0JmY2kK",
+      "endpoints": [
+        "https://github.com/OWNER/lull/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

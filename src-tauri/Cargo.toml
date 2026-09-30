@@ -12,6 +12,7 @@ name = "lull_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
+tauri-build = "2"
 
 [dependencies]
 lull-core = { path = "../crates/lull-core" }
@@ -21,3 +22,24 @@ thiserror.workspace = true
 parking_lot.workspace = true
 tracing.workspace = true
 chrono.workspace = true
+tauri = { version = "2", features = ["tray-icon", "image-png", "macos-private-api"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-process = "2"
+tauri-plugin-window-state = "2"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+zip = { version = "8", default-features = false, features = ["deflate"] }
+fontdb = { version = "0.24", default-features = false, features = ["fs"] }
+notify = "8"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+tracing-appender = "0.2"
+dirs = "7"
+base64 = "0.23"
+percent-encoding = "2.3.2"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
