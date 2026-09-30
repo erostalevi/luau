@@ -45,16 +45,29 @@ const loaders: Record<Locale, () => Promise<{ default: Dict }>> = {
 
 export const i18n = $state({ locale: 'en' as Locale, ready: 0 });
 
-export async function setLocale(locale: Locale) {
+/** Narrow any stored/typed value to a supported locale ('es-CL' → 'es', unknown → 'en'). */
+export function normalizeLocale(value: unknown): Locale {
+  const id = String(value ?? '').slice(0, 2).toLowerCase();
+  return LOCALES.some((l) => l.id === id) ? (id as Locale) : 'en';
+}
+
+export async function setLocale(value: Locale) {
+  // settings.json is user-editable: an unknown value must not crash startup.
+  const locale = normalizeLocale(value);
   if (!dicts[locale]) dicts[locale] = (await loaders[locale]()).default;
   i18n.locale = locale;
   i18n.ready++;
   document.documentElement.lang = locale;
 }
 
+/** First supported language in the OS/browser preference list, else English. */
 export function detectLocale(): Locale {
-  const nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
-  return nav === 'es' || nav === 'pt' ? nav : 'en';
+  const prefs = navigator.languages?.length ? navigator.languages : [navigator.language || 'en'];
+  for (const p of prefs) {
+    const id = p.slice(0, 2).toLowerCase();
+    if (LOCALES.some((l) => l.id === id)) return id as Locale;
+  }
+  return 'en';
 }
 
 /** Dot-path lookup that also matches object keys containing dots (setting ids). */
@@ -102,6 +115,8 @@ export function t(key: string, params?: Record<string, unknown>): string {
 /** Locale-aware relative time ("3 min ago"). */
 export function relTime(ts: number | string): string {
   const d = typeof ts === 'number' ? ts : Date.parse(ts);
+  // RelativeTimeFormat.format throws a RangeError on NaN (missing/invalid timestamps).
+  if (!Number.isFinite(d)) return '';
   const diff = (d - Date.now()) / 1000;
   const rtf = new Intl.RelativeTimeFormat(i18n.locale, { numeric: 'auto' });
   const abs = Math.abs(diff);
@@ -114,5 +129,6 @@ export function relTime(ts: number | string): string {
 
 export function fmtDate(d: string | number | Date, opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }): string {
   const date = d instanceof Date ? d : new Date(typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d + 'T00:00:00' : d);
+  if (Number.isNaN(date.getTime())) return typeof d === 'string' ? d : '';
   return date.toLocaleDateString(i18n.locale, opts);
 }

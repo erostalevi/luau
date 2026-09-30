@@ -41,6 +41,8 @@ jobs:
         run: pnpm test
       - name: i18n completeness (English)
         run: pnpm i18n en
+      - name: i18n parity (Spanish, Portuguese)
+        run: pnpm i18n es && pnpm i18n pt
       - name: Rust format
         run: cargo fmt --all -- --check
       - name: Clippy
