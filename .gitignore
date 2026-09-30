@@ -1,0 +1,12 @@
+node_modules/
+dist/
+target/
+*.log
+.DS_Store
+.vite/
+coverage/
+/src-tauri/gen/schemas/
+*.key
+*.key.pub.bak
+.env
+.env.*
