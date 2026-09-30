@@ -29,7 +29,16 @@ if (!mod) {
   console.log([...used].sort().join('\n'));
   process.exit(0);
 }
-const dict = mod.default;
+const merge = (a, b) => {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) out[k] = typeof v === 'object' && typeof out[k] === 'object' ? merge(out[k], v) : v;
+  return out;
+};
+let dict = mod.default;
+const partsDir = join(root, 'lib/i18n/parts');
+for (const f of readdirSync(partsDir)) {
+  if (f.endsWith(`.${locale}.ts`)) dict = merge(dict, (await import(pathToFileURL(join(partsDir, f)).href)).default);
+}
 const get = (key) => {
   const parts = key.split('.');
   let cur = dict;

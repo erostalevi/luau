@@ -11,6 +11,8 @@ export interface CompletionData {
   tags(): Promise<string[]>;
   people(): Promise<string[]>;
   searchCards(q: string): Promise<{ id: string; title: string; board: string }[]>;
+  /** Create a new card titled `title` next to the edited card; returns its id. */
+  createCard(title: string): Promise<string | null>;
   headings(id: string): Promise<string[]>;
   insertFile(view: EditorView, from: number, to: number): void;
   t(key: string): string;
@@ -134,18 +136,36 @@ function cardLinkSource(d: CompletionData) {
     const q = ctx.state.sliceDoc(open, ctx.pos);
     const hits = await d.searchCards(q);
     const after = ctx.state.sliceDoc(ctx.pos, ctx.pos + 2);
+    const exact = hits.some((h) => h.title.trim().toLowerCase() === q.trim().toLowerCase());
+    const create: Completion[] =
+      q.trim() && !exact
+        ? [
+            {
+              label: d.t('editor.createCardNamed').replace('{title}', q.trim()),
+              type: 'create',
+              boost: -99,
+              apply: (view: EditorView, _c: Completion, from: number, to: number) => {
+                void d.createCard(q.trim()).then((id) => {
+                  if (!id) return;
+                  const close = view.state.sliceDoc(to, to + 2) === ']]' ? '' : ']]';
+                  view.dispatch({ changes: { from, to, insert: `${id}${close}` }, selection: { anchor: from + id.length + 2 }, userEvent: 'input.complete' });
+                });
+              },
+            },
+          ]
+        : [];
     return {
       from: open,
       filter: false,
-      options: hits.map((h) => ({
+      options: [...hits.map((h) => ({
         label: h.title || d.t('common.untitled'),
         detail: h.board,
         type: 'card',
-        apply: (view, _c, from, to) => {
+        apply: (view: EditorView, _c: Completion, from: number, to: number) => {
           const close = after === ']]' ? '' : ']]';
           view.dispatch({ changes: { from, to, insert: `${h.id}${close}` }, selection: { anchor: from + h.id.length + 2 }, userEvent: 'input.complete' });
         },
-      })),
+      })), ...create],
     };
   };
 }

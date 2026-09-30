@@ -84,7 +84,24 @@
     saveTimer = setTimeout(() => void save(), settings.get<number>('editor.autosaveDelay'));
   }
 
+  /** `[[Some Title]]` typed by hand → `[[cardId]]` when exactly one card matches. */
+  async function resolveTitleLinks() {
+    if (!view || readOnly) return;
+    const doc = view.state.doc.toString();
+    const found = [...doc.matchAll(/(!?)\[\[([^\[\]\n|#]+)((?:#[^\]\n|]*)?(?:\|[^\]\n]*)?)\]\]/g)].filter((m) => !/^c[a-z0-9]{6}$/.test(m[2].trim()));
+    if (!found.length) return;
+    const changes: { from: number; to: number; insert: string }[] = [];
+    for (const m of found) {
+      const title = m[2].trim();
+      const hits = await rpc<SearchHit[]>('search.query', { q: `"${title.replace(/"/g, '')}" in:title`, opts: { limit: 5 } }).catch(() => []);
+      const exact = hits.filter((h) => h.title.trim().toLowerCase() === title.toLowerCase());
+      if (exact.length === 1) changes.push({ from: m.index!, to: m.index! + m[0].length, insert: `${m[1]}[[${exact[0].id}${m[3] ?? ''}]]` });
+    }
+    if (changes.length && view && view.state.doc.toString() === doc) view.dispatch({ changes, userEvent: 'input.resolveLinks' });
+  }
+
   async function flushAndSeal() {
+    await resolveTitleLinks();
     await save(true);
     await rpc('board.seal', { board: boardId, card: cardId }).catch(() => {});
     session = Math.random().toString(36).slice(2, 10);
@@ -215,6 +232,13 @@
         searchCards: async (q) => {
           const hits = await rpc<SearchHit[]>('search.query', { q: q.trim() ? `${q} in:title` : '', opts: { limit: 20 } }).catch(() => []);
           return hits.filter((h) => h.id !== cardId).map((h) => ({ id: h.id, title: h.title, board: h.boardName }));
+        },
+        createCard: async (title) => {
+          const n = model?.nodes.get(cardId);
+          if (!model || !n) return null;
+          const { createCard } = await import('$lib/board/cardActions');
+          const sibs = model.childrenOf(n.parent);
+          return createCard(boardId, n.parent, sibs[sibs.indexOf(cardId) + 1] ?? null, `# ${title}\n`);
         },
         headings: async (id) => {
           for (const m of boards.values()) {

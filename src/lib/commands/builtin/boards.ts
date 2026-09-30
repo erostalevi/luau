@@ -147,6 +147,7 @@ async function convertBoard() {
 export const boardCommands: Command[] = [
   { id: 'board.openPicker', title: 'commands.board.openPicker', category: 'board', icon: FolderOpen, run: boardPicker },
   { id: 'board.open', title: 'commands.board.open', category: 'board', icon: FolderOpen, run: openFolderAsBoard },
+  { id: 'board.openById', title: 'commands.board.openPicker', category: 'board', hidden: true, run: (id?: string) => (id ? openBoardTab(id) : boardPicker()) },
   { id: 'board.new', title: 'commands.board.new', category: 'board', icon: Plus, run: () => newBoardFlow() },
   {
     id: 'board.rename',
