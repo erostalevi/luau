@@ -25,6 +25,7 @@ import { luauContext, type LuauEditorContext } from './context';
 import { luauCompletions, type CompletionData } from './autocomplete';
 import { pasteAndDrop, type PasteOptions } from './paste';
 import { runRequest } from './widgets';
+import { verticalMotionKeymap } from './verticalMotion';
 
 export const compartments = {
   preview: new Compartment(),
@@ -140,6 +141,7 @@ export function createState(o: SetupOptions): EditorState {
         ...markdownKeymap,
         ...searchKeymap,
         ...historyKeymap,
+        ...verticalMotionKeymap,
         ...defaultKeymap,
         indentWithTab,
       ]),
