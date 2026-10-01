@@ -35,6 +35,9 @@ pub struct BoardEntry {
     /// Other paths holding the same id (copies awaiting a decision).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub duplicates: Vec<String>,
+    /// Plain folder opened "as is" (no `.lull`, read-only; see `io::loose`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub loose: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -119,6 +122,7 @@ impl Registry {
                 last_opened: None,
                 last_seen: now,
                 duplicates: vec![],
+                loose: false,
             });
             true
         }

@@ -139,6 +139,9 @@ pub fn mime_for(path: &Path) -> &'static str {
 /// Thumbnail (max `width` px wide) cached under `.lull/cache/thumbs/`.
 /// Returns `None` for formats we do not rasterize (served as original).
 pub fn thumbnail(root: &Path, file: &Path, width: u32) -> Option<(Vec<u8>, &'static str)> {
+    if !crate::store::is_board(root) {
+        return None; // folders opened "as is" get no `.lull/cache`
+    }
     let ext = file.extension()?.to_str()?.to_ascii_lowercase();
     if !matches!(
         ext.as_str(),
@@ -305,6 +308,9 @@ pub fn sweep_unlinked(
     ttl_days: u64,
     now: bool,
 ) -> Result<(usize, Changes)> {
+    if store.state.loose.is_some() {
+        return Ok((0, Changes::default())); // never touch files of folders opened "as is"
+    }
     let root = store.state.root.clone();
     let mut tracker: BTreeMap<String, i64> = fs::read_to_string(tracker_path(&root))
         .ok()

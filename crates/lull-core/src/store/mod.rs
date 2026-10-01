@@ -114,6 +114,16 @@ impl BoardStore {
         })
     }
 
+    /// Wrap an already-loaded state (used by `io::loose` for folders opened as is).
+    pub(crate) fn from_state(state: BoardState) -> Self {
+        BoardStore {
+            state,
+            undo: vec![],
+            redo: vec![],
+            touched: VecDeque::new(),
+        }
+    }
+
     /// Create a brand-new board at `root` (which may already contain files).
     pub fn create(root: &Path, id: String, name: String, kind: BoardKind) -> Result<Self> {
         if is_board(root) {
@@ -139,7 +149,12 @@ impl BoardStore {
         let prev_lanes: Vec<LaneDto> = self.state.lanes.iter().map(LaneDto::from).collect();
         let prev_root = self.state.root_order.clone();
         let prev_header = self.state.header_dto();
-        let mut next = match load_board(&self.state.root, Some(&prev)) {
+        let loaded = if self.state.loose.is_some() {
+            crate::io::loose::reload_state(&self.state, &prev)
+        } else {
+            load_board(&self.state.root, Some(&prev))
+        };
+        let mut next = match loaded {
             Ok(s) => s,
             Err(e) => {
                 self.state.nodes = prev;
@@ -426,6 +441,9 @@ impl BoardStore {
     }
 
     pub fn read_content(&self, id: &str) -> Result<String> {
+        if let Some(text) = self.state.loose.as_ref().and_then(|l| l.synthetic.get(id)) {
+            return Ok(text.clone());
+        }
         let path = self
             .state
             .node_file(id)
@@ -664,6 +682,7 @@ pub fn load_board(root: &Path, cache: Option<&HashMap<String, Node>>) -> Result<
         read_only,
         warnings: ctx.warnings,
         version: 1,
+        loose: None,
     })
 }
 

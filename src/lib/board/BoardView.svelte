@@ -157,9 +157,14 @@
     <div class="titlebox">
       {#if board.remote.size || board.header.readOnly?.startsWith('mirror')}<Diamond size={15} class="muted" />{/if}
       <h1>{board.header.name}</h1>
-      {#if board.header.readOnly && !board.header.readOnly.startsWith('mirror')}
+      {#if board.header.readOnly === 'loose'}
+        <span class="chip warn" use:tip={t('io.loose.tip')}><TriangleAlert size={12} /> {t('board.readOnly')}</span>
+        <button class="btn sm soft" onclick={() => runCommand('board.import', { path: board.header.root })}>{t('io.loose.importCopy')}</button>
+      {:else if board.header.readOnly && !board.header.readOnly.startsWith('mirror')}
         <span class="chip warn" use:tip={t('board.readOnlyTip')}><TriangleAlert size={12} /> {t('board.readOnly')}</span>
-        <button class="btn sm soft" onclick={() => runCommand('board.upgradeSchema')}>{t('board.convertVersion')}</button>
+        {#if board.header.readOnly.startsWith('newer_schema')}
+          <button class="btn sm soft" onclick={() => runCommand('board.upgradeSchema')}>{t('board.convertVersion')}</button>
+        {/if}
       {/if}
       {#if board.header.warnings.length}
         <span class="chip warn" use:tip={board.header.warnings.join('\n')}><TriangleAlert size={12} /> {t('board.recovered', { count: board.header.warnings.length })}</span>

@@ -12,7 +12,7 @@ import { pickColor } from '$lib/state/colorDialog.svelte';
 import { confirm } from '$lib/state/dialogs.svelte';
 import { toast } from '$lib/state/toasts.svelte';
 import { setLocale, LOCALES, detectLocale, t, type Locale } from '$lib/i18n/index.svelte';
-import { pickFile, pickSavePath, reveal } from '$lib/app/helpers';
+import { pickSavePath, reveal } from '$lib/app/helpers';
 import { app } from '$lib/app/bootstrap';
 import { registry } from '$lib/state/registry.svelte';
 
@@ -250,39 +250,15 @@ export const appCommands: Command[] = [
     title: 'commands.app.exportSettings',
     category: 'preferences',
     icon: Upload,
-    run: async () => {
-      const dest = await pickSavePath(t('commands.app.exportSettings'), 'lull-settings.json', [{ name: 'JSON', extensions: ['json'] }]);
-      if (!dest) return;
-      const bundle = {
-        lull: 1,
-        exportedAt: new Date().toISOString(),
-        settings: settings.all(),
-        keybindings: kb.user,
-        explorer: { order: registry.data.order, mirrorOrder: registry.data.mirrorOrder },
-      };
-      await rpc('json.write', { path: dest, value: bundle });
-      toast.success(t('toasts.exported'), { action: { label: t('common.reveal'), run: () => reveal(dest) } });
-    },
+    // Implemented in io.commands.ts (validated bundle, secrets stripped).
+    run: async () => (await import('../registry.svelte')).runCommand('settings.export'),
   },
   {
     id: 'app.importSettings',
     title: 'commands.app.importSettings',
     category: 'preferences',
     icon: Download,
-    run: async () => {
-      const files = await pickFile(t('commands.app.importSettings'), [{ name: 'JSON', extensions: ['json'] }]);
-      if (!files?.length) return;
-      const data = await rpc<any>('json.read', { path: files[0] });
-      if (!data || typeof data !== 'object' || !data.settings) {
-        toast.error(t('errors.invalidSettingsFile'));
-        return;
-      }
-      const ok = await confirm({ title: t('import.settingsTitle'), message: t('import.settingsMessage'), confirmLabel: t('common.import') });
-      if (!ok) return;
-      settings.replaceAll(data.settings);
-      if (Array.isArray(data.keybindings)) await saveUserKeybindings(data.keybindings);
-      toast.success(t('toasts.settingsImported'));
-    },
+    run: async () => (await import('../registry.svelte')).runCommand('settings.import'),
   },
   {
     id: 'app.changeEditorWidth',
