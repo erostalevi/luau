@@ -17,6 +17,7 @@
     LoaderCircle,
     Check,
     ListPlus,
+    ChevronRight,
   } from '@lucide/svelte';
   import { rpc } from '$lib/backend/rpc';
   import { t, relTime } from '$lib/i18n/index.svelte';
@@ -29,8 +30,19 @@
   import { openBoardTab } from '$lib/state/workspace.svelte';
   import { openExternal } from '$lib/app/helpers';
   import { startDrag } from '$lib/board/dnd.svelte';
-  import { integ, accountById, isIssueAccount, isJiraAccount, searchModeOf, loadMirrors } from '$lib/integrations/state.svelte';
-  import { clickSelect, dragKeys, emptySelection, selectAll } from '$lib/integrations/resultSelection';
+  import {
+    integ,
+    accountById,
+    isIssueAccount,
+    isJiraAccount,
+    searchModeOf,
+    loadMirrors,
+    isGroupCollapsed,
+    setGroupCollapsed,
+    loadBoardNames,
+  } from '$lib/integrations/state.svelte';
+  import { clickSelect, dragKeys, emptySelection, prune, selectAll } from '$lib/integrations/resultSelection';
+  import { groupIssues, groupStateKey, shortKey, visibleKeys, type IssueGroup } from '$lib/integrations/grouping';
   import * as A from '$lib/integrations/actions';
   import { errorText, serviceName } from '$lib/integrations/gate';
   import type { Account, RemoteIssue, SearchMode } from '$lib/integrations/types';
@@ -40,7 +52,13 @@
   const current = $derived(accountById(integ.account));
   const isJira = $derived(isJiraAccount(current));
   const mode = $derived<SearchMode>(searchModeOf(current));
-  const order = $derived(integ.results.map((i) => i.key));
+  // Results grouped by Jira project / Trello board; collapsed groups are
+  // remembered per account + query + project (ui-state).
+  const groups = $derived(groupIssues(integ.results, current?.provider, current ? integ.boardNames[current.id] : undefined));
+  const groupKey = (g: IssueGroup) => groupStateKey(current?.id ?? '', integ.resultsMode, integ.resultsQuery, g.id);
+  const collapsed = (g: IssueGroup) => isGroupCollapsed(groupKey(g));
+  /** Visible rows in display order: selection, ranges and drags follow it. */
+  const order = $derived(visibleKeys(groups, collapsed));
   const selected = $derived(new Set(integ.selection.keys));
   const modeOptions = $derived([
     { value: 'jql' as SearchMode, label: 'JQL', title: t('integrations.modeJqlTip') },
@@ -58,6 +76,43 @@
       void A.search();
     }
   });
+
+  $effect(() => {
+    if (current?.provider === 'trello') void loadBoardNames(current);
+  });
+
+  function toggleGroup(g: IssueGroup, collapse = !collapsed(g)) {
+    if (collapse === collapsed(g)) return;
+    setGroupCollapsed(groupKey(g), collapse);
+    // Hidden rows leave the selection (nothing invisible gets dragged / added).
+    if (collapse) integ.selection = prune(order, integ.selection);
+  }
+
+  /** Focusable rows (group headers + visible issues) in display order. */
+  function navItems(from: HTMLElement): HTMLElement[] {
+    return [...(from.closest('.results')?.querySelectorAll<HTMLElement>('[data-nav]') ?? [])];
+  }
+
+  function moveFocus(from: HTMLElement, delta: number) {
+    const items = navItems(from);
+    const i = items.indexOf(from);
+    items[Math.max(0, Math.min(items.length - 1, i + delta))]?.focus();
+  }
+
+  function groupKeydown(e: KeyboardEvent, g: IssueGroup) {
+    const el = e.currentTarget as HTMLElement;
+    if (e.key === 'ArrowLeft' && !collapsed(g)) toggleGroup(g, true);
+    else if (e.key === 'ArrowRight') {
+      if (collapsed(g)) toggleGroup(g, false);
+      else moveFocus(el, 1);
+    } else return;
+    e.preventDefault();
+  }
+
+  const displayKey = (i: RemoteIssue, g: IssueGroup) => {
+    const k = shortKey(i.key, g.id);
+    return k === i.key ? k : `#${k}`;
+  };
 
   function connectMenu(e: MouseEvent) {
     openMenuAt(e.currentTarget as HTMLElement, [
@@ -143,6 +198,21 @@
     } else if (e.key === 'Enter' && mod) {
       e.preventDefault();
       void A.addSelectedTo();
+    } else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !mod && !e.altKey) {
+      // Move between group headers and visible rows.
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-nav]');
+      if (el) {
+        e.preventDefault();
+        moveFocus(el, e.key === 'ArrowDown' ? 1 : -1);
+      }
+    } else if (e.key === 'ArrowLeft' && !mod) {
+      // From a row: back to its group header.
+      const row = (e.target as HTMLElement).closest<HTMLElement>('[data-issue]');
+      const head = row?.closest('.grp')?.querySelector<HTMLElement>('.grp-head');
+      if (head) {
+        e.preventDefault();
+        head.focus();
+      }
     }
   }
 
@@ -284,26 +354,48 @@
         {:else if !integ.results.length && !integ.searching}
           <p class="muted small pad">{t('integrations.noResults')}</p>
         {/if}
-        {#each integ.results as i (i.key)}
-          <button
-            class="issue"
-            class:sel={selected.has(i.key)}
-            aria-pressed={selected.has(i.key)}
-            data-issue={i.key}
-            onpointerdown={(e) => drag(e, i)}
-            onclick={(e) => rowClick(e, i)}
-            ondblclick={() => openExternal(i.url)}
-            oncontextmenu={(e) => issueMenu(e, i)}
-            use:tip={t('integrations.dragHint')}
-          >
-            <span class="check" aria-hidden="true"
-              >{#if selected.has(i.key)}<Check size={10} strokeWidth={3} />{/if}</span
+        {#each groups as g (g.id)}
+          {@const open = !collapsed(g)}
+          {@const label = g.label || t('integrations.noProject')}
+          <div class="grp" role="group" aria-label={label}>
+            <button
+              class="grp-head"
+              data-nav
+              aria-expanded={open}
+              onclick={() => toggleGroup(g)}
+              onkeydown={(e) => groupKeydown(e, g)}
+              use:tip={t('integrations.groupToggle')}
             >
-            <span class="dot {i.statusCategory}"></span>
-            <span class="key">{i.key}</span>
-            <span class="sum grow">{i.summary}</span>
-            {#if i.assignee}<span class="avatar" title={i.assignee.name}>{initials(i.assignee.name)}</span>{/if}
-          </button>
+              <span class="chev" class:open><ChevronRight size={12} strokeWidth={2} /></span>
+              <span class="grow grp-name">{label}</span>
+              <span class="grp-count" aria-label={t('integrations.groupCount', { count: g.issues.length })}>{g.issues.length}</span>
+            </button>
+            {#if open}
+              {#each g.issues as i (i.key)}
+                <button
+                  class="issue"
+                  class:sel={selected.has(i.key)}
+                  aria-pressed={selected.has(i.key)}
+                  aria-label={`${i.key} ${i.summary}`}
+                  data-issue={i.key}
+                  data-nav
+                  onpointerdown={(e) => drag(e, i)}
+                  onclick={(e) => rowClick(e, i)}
+                  ondblclick={() => openExternal(i.url)}
+                  oncontextmenu={(e) => issueMenu(e, i)}
+                  use:tip={`${i.key} · ${t('integrations.dragHint')}`}
+                >
+                  <span class="check" aria-hidden="true"
+                    >{#if selected.has(i.key)}<Check size={10} strokeWidth={3} />{/if}</span
+                  >
+                  <span class="dot {i.statusCategory}"></span>
+                  <span class="key">{displayKey(i, g)}</span>
+                  <span class="sum grow">{i.summary}</span>
+                  {#if i.assignee}<span class="avatar" title={i.assignee.name}>{initials(i.assignee.name)}</span>{/if}
+                </button>
+              {/each}
+            {/if}
+          </div>
         {/each}
         {#if integ.searching}<div class="pad muted small"><LoaderCircle size={13} class="spin" /> {t('integrations.searching')}</div>{/if}
         {#if integ.next && !integ.searching}
@@ -532,6 +624,47 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
+  }
+  .grp {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .grp-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 0 var(--sp-2) 0 4px;
+    border-radius: var(--r-xs);
+    text-align: left;
+    color: var(--ink-3);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.02em;
+  }
+  .grp-head:hover,
+  .grp-head:focus-visible {
+    color: var(--ink);
+    background: var(--bg-hover);
+  }
+  .grp-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .grp-count {
+    color: var(--ink-4);
+    font-weight: var(--fw-medium);
+  }
+  .chev {
+    display: grid;
+    place-items: center;
+    flex: none;
+    transition: transform var(--dur) var(--ease);
+  }
+  .chev.open {
+    transform: rotate(90deg);
   }
   .issue {
     display: flex;

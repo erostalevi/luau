@@ -47,9 +47,15 @@ function seedIssues(): RemoteIssue[] {
     ['Settings search highlights', 3, 1, 'Task', 'Low'],
     ['Slack: post card to channel', 0, 2, 'Story', 'Medium'],
   ];
-  return rows.map(([summary, s, who, type, priority], i) => {
+  // A second project so the panel shows more than one group.
+  const web: [string, number, number | null, string, string][] = [
+    ['Landing page hero copy', 0, 2, 'Task', 'Low'],
+    ['Pricing table on mobile', 1, 2, 'Bug', 'High'],
+  ];
+  const all = [...rows.map((r, i) => ['LUAU', 101 + i, r] as const), ...web.map((r, i) => ['WEB', 7 + i, r] as const)];
+  return all.map(([project, n, [summary, s, who, type, priority]], i) => {
     const st = STATUSES[s];
-    const key = `LUAU-${101 + i}`;
+    const key = `${project}-${n}`;
     return {
       key,
       id: String(10001 + i),
@@ -67,7 +73,7 @@ function seedIssues(): RemoteIssue[] {
       updated: new Date(Date.now() - i * 3_600_000).toISOString(),
       subtasks: [],
       attachments: [],
-      project: 'LUAU',
+      project,
     };
   });
 }
@@ -287,7 +293,10 @@ export function register(methods: Methods, api: MockApi) {
   };
   methods['remote.comments'] = (p) => comments.get(p.key) ?? [];
   methods['remote.users'] = (p) => PEOPLE.filter((u) => u.name.toLowerCase().includes(String(p.q).toLowerCase()));
-  methods['remote.projects'] = (): IdName[] => [{ id: '100', name: 'Luau', key: 'LUAU' }];
+  methods['remote.projects'] = (): IdName[] => [
+    { id: '100', name: 'Luau', key: 'LUAU' },
+    { id: '101', name: 'Website', key: 'WEB' },
+  ];
   methods['remote.issueTypes'] = (): IdName[] => ['Task', 'Story', 'Bug'].map((n, i) => ({ id: String(i + 1), name: n }));
   methods['remote.boards'] = (): IdName[] => [{ id: '7', name: 'Luau board', key: 'LUAU', detail: 'kanban' }];
 

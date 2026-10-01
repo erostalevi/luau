@@ -227,6 +227,10 @@ export async function search(more = false) {
     });
     integ.results = more ? [...integ.results, ...page.issues] : page.issues;
     integ.next = page.next;
+    if (!more) {
+      integ.resultsMode = mode;
+      integ.resultsQuery = integ.query;
+    }
     integ.selection = more
       ? prune(
           integ.results.map((i) => i.key),
