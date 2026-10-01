@@ -272,7 +272,7 @@ impl Core {
             &st.root.to_string_lossy(),
             &st.manifest.name,
             st.manifest.kind,
-            false,
+            st.manifest.extra.contains_key("mirror"),
         );
         if changed {
             self.save_registry();

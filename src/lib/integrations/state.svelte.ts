@@ -1,0 +1,97 @@
+// Integrations state: accounts, mirrors, card links (fed into each BoardModel's
+// `remote` map so the card face / editor / filters see live remote info).
+
+import { rpc, onCoreEvent } from '$lib/backend/rpc';
+import type { RemoteInfo } from '$lib/backend/types';
+import { boards } from '$lib/state/boards.svelte';
+import { activeCard } from '$lib/app/helpers';
+import { ctx } from '$lib/commands/context.svelte';
+import { integrationStatus } from './status.svelte';
+import type { Account, Mirror, RemoteIssue } from './types';
+
+export const integ = $state({
+  accounts: [] as Account[],
+  mirrors: [] as Mirror[],
+  loaded: false,
+  /** Panel: selected account id. */
+  account: '' as string,
+  query: '' as string,
+  results: [] as RemoteIssue[],
+  next: null as string | null,
+  searching: false,
+  error: '' as string,
+  lastSync: '' as string,
+});
+
+export function accountById(id: string | undefined | null): Account | undefined {
+  return integ.accounts.find((a) => a.id === id);
+}
+
+export const isIssueAccount = (a: Account) => a.provider !== 'slack';
+
+export async function loadAccounts() {
+  try {
+    integ.accounts = await rpc<Account[]>('integrations.accounts');
+  } catch {
+    integ.accounts = [];
+  }
+  if (!integ.accounts.some((a) => a.id === integ.account)) integ.account = integ.accounts.find(isIssueAccount)?.id ?? '';
+  integ.loaded = true;
+}
+
+export async function loadMirrors() {
+  try {
+    integ.mirrors = await rpc<Mirror[]>('integrations.mirrors');
+  } catch {
+    integ.mirrors = [];
+  }
+}
+
+function setLinks(boardId: string, links: Record<string, RemoteInfo>) {
+  const b = boards.get(boardId);
+  if (!b) return;
+  for (const id of [...b.remote.keys()]) if (!(id in links)) b.remote.delete(id);
+  for (const [id, info] of Object.entries(links)) b.remote.set(id, info);
+}
+
+const loadedBoards = new Set<string>();
+
+export async function loadLinks(boardId: string) {
+  try {
+    setLinks(boardId, await rpc<Record<string, RemoteInfo>>('remote.links', { board: boardId }));
+  } catch {
+    /* board closed */
+  }
+}
+
+export function initIntegrationState() {
+  void loadAccounts();
+  void loadMirrors();
+  onCoreEvent((e) => {
+    if (e.type !== 'custom') return;
+    const p = (e.payload ?? {}) as Record<string, unknown>;
+    if (e.name === 'integrations.links') setLinks(String(p.boardId), (p.links ?? {}) as Record<string, RemoteInfo>);
+    else if (e.name === 'integrations.accounts') void loadAccounts();
+    else if (e.name === 'integrations.mirrors') void loadMirrors();
+    else if (e.name === 'integrations.status') {
+      integ.lastSync = String(p.at ?? '');
+      integrationStatus.offline = p.offline ? integ.lastSync : '';
+    }
+  });
+  $effect.root(() => {
+    // Fetch links once per opened board.
+    $effect(() => {
+      for (const id of boards.keys()) {
+        if (!loadedBoards.has(id)) {
+          loadedBoards.add(id);
+          void loadLinks(id);
+        }
+      }
+    });
+    // `cardIsRemote` context key for `when` clauses and keybindings.
+    $effect(() => {
+      const c = activeCard();
+      ctx.cardIsRemote = !!(c && c.board.remote.get(c.id));
+    });
+  });
+}

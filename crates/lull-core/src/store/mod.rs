@@ -605,7 +605,19 @@ pub fn load_board(root: &Path, cache: Option<&HashMap<String, Node>>) -> Result<
             m
         }
     };
-    let read_only = (manifest.schema > SCHEMA).then(|| format!("newer_schema:{}", manifest.schema));
+    let read_only = (manifest.schema > SCHEMA)
+        .then(|| format!("newer_schema:{}", manifest.schema))
+        // Remote mirrors (integrations) are written only by their sync engine.
+        .or_else(|| {
+            manifest.extra.get("mirror").map(|m| {
+                format!(
+                    "mirror:{}",
+                    m.get("provider")
+                        .and_then(|p| p.as_str())
+                        .unwrap_or("remote")
+                )
+            })
+        });
 
     let mut ctx = LoadCtx {
         nodes: HashMap::new(),
