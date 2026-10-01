@@ -2,7 +2,7 @@
   // Left-panel search: query box with syntax, filter UI kept in two-way sync
   // with the text, case toggle, grouped results with highlighted snippets,
   // keyboard navigation and saved searches (openable as virtual boards).
-  import { tick, untrack } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import {
     Search,
@@ -55,6 +55,9 @@
   const groups = $derived(search.groupBy === 'lane' ? groupByLane(hits, t('searchPanel.noLane')) : groupByBoard(hits));
   const order = $derived(navOrder(groups, collapsed));
   const activeHit = $derived(order[Math.min(active, order.length - 1)]);
+
+  // Opening the Search section focuses the query box (like VS Code).
+  onMount(() => void tick().then(() => input?.focus()));
 
   // Requests from other features (palette "#tag", commands) and focus.
   $effect(() => {
