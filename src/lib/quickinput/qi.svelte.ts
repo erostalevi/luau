@@ -47,6 +47,8 @@ export interface PickOptions<T> {
   onActive?: (item: QuickItem<T> | undefined) => void;
   /** Prefix routing for the palette: typing a new prefix switches mode. */
   prefixRouter?: (text: string) => boolean;
+  /** Select the pre-filled value on open (default). `false` puts the caret at the end. */
+  selectAll?: boolean;
 }
 
 export interface InputOptions {

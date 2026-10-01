@@ -57,39 +57,41 @@
   --editor-w: 720px;
 
   /* light palette — "Hawaii sunset": warm sand, coral, hibiscus, dusk lavender
-     (defaults; primary/secondary shades overwritten at runtime) */
+     (defaults; primary/secondary shades overwritten at runtime).
+     Surfaces are kept near-neutral apricot cream with low-alpha, lavender-grey tints so the
+     sunset reads as an accent, not a wash. */
   --primary: #e9776a;
   --primary-strong: #d45f52;
-  --primary-soft: #fdeceb;
-  --primary-softer: #fef6f4;
+  --primary-soft: #fcefea;
+  --primary-softer: #fef7f4;
   --primary-ring: rgb(233 119 106 / 0.35);
   --on-primary: #ffffff;
   --secondary: #fdeadc;
   --secondary-strong: #f8d3b8;
   --secondary-ink: #8a5034;
-  --sunset: linear-gradient(120deg, #f6a77d 0%, #ef8a7c 38%, #ec8fb0 70%, #b99be0 100%);
+  --sunset: linear-gradient(120deg, #f2a878 0%, #ee9b80 38%, #e398b6 70%, #ad99dd 100%);
 
-  --bg: #fbf6f3;
-  --bg-elev: #fffdfc;
-  --bg-sunken: #f6eeea;
-  --bg-hover: rgb(90 50 60 / 0.045);
-  --bg-active: rgb(90 50 60 / 0.08);
-  --bg-glass: rgb(252 247 244 / 0.72);
-  --bg-sidebar: rgb(250 243 239 / 0.66);
-  --bg-lane: rgb(244 233 228 / 0.62);
-  --bg-card: #fffdfc;
-  --bg-overlay: rgb(40 22 30 / 0.28);
+  --bg: #fbf8f5;
+  --bg-elev: #fffefc;
+  --bg-sunken: #f5f1ec;
+  --bg-hover: rgb(70 55 80 / 0.045);
+  --bg-active: rgb(70 55 80 / 0.08);
+  --bg-glass: rgb(252 249 246 / 0.6);
+  --bg-sidebar: rgb(249 245 241 / 0.5);
+  --bg-lane: rgb(242 237 232 / 0.55);
+  --bg-card: #fffefc;
+  --bg-overlay: rgb(36 26 38 / 0.26);
   --ink: #2c2229;
   --ink-2: #554550;
-  --ink-3: #85727c;
+  --ink-3: #7a6873; /* AA (≥4.5:1) on bg, sunken and lane surfaces */
   --ink-4: #b3a3aa;
-  --line: rgb(90 50 60 / 0.09);
-  --line-strong: rgb(90 50 60 / 0.16);
+  --line: rgb(70 55 80 / 0.09);
+  --line-strong: rgb(70 55 80 / 0.16);
   --focus: var(--primary-ring);
-  --shadow-1: 0 1px 2px rgb(80 40 50 / 0.05), 0 1px 1px rgb(80 40 50 / 0.03);
-  --shadow-2: 0 2px 6px rgb(80 40 50 / 0.06), 0 8px 24px rgb(80 40 50 / 0.06);
-  --shadow-3: 0 12px 40px rgb(80 40 50 / 0.14), 0 2px 8px rgb(80 40 50 / 0.06);
-  --shadow-drag: 0 18px 50px rgb(80 40 50 / 0.22), 0 4px 12px rgb(80 40 50 / 0.1);
+  --shadow-1: 0 1px 2px rgb(60 45 70 / 0.05), 0 1px 1px rgb(60 45 70 / 0.03);
+  --shadow-2: 0 2px 6px rgb(60 45 70 / 0.06), 0 8px 24px rgb(60 45 70 / 0.06);
+  --shadow-3: 0 12px 40px rgb(60 45 70 / 0.14), 0 2px 8px rgb(60 45 70 / 0.06);
+  --shadow-drag: 0 18px 50px rgb(60 45 70 / 0.22), 0 4px 12px rgb(60 45 70 / 0.1);
   --danger: #df5f6f;
   --danger-soft: #fdebee;
   --warn: #d9a441;
@@ -103,34 +105,35 @@
 }
 
 :root[data-theme='dark'] {
-  /* "Hawaii dusk": deep plum night with coral and lavender highlights */
+  /* "Hawaii dusk": deep plum night with coral and lavender highlights.
+     Surfaces lean lavender-grey (less red) and the translucent layers are lighter. */
   --primary: #f39a8c;
   --primary-strong: #ffb6a8;
-  --primary-soft: rgb(243 154 140 / 0.16);
-  --primary-softer: rgb(243 154 140 / 0.08);
+  --primary-soft: rgb(243 154 140 / 0.14);
+  --primary-softer: rgb(243 154 140 / 0.07);
   --primary-ring: rgb(243 154 140 / 0.45);
   --on-primary: #2a1418;
   --secondary: rgb(247 190 150 / 0.12);
   --secondary-strong: rgb(247 190 150 / 0.24);
   --secondary-ink: #f6c6a4;
-  --sunset: linear-gradient(120deg, #f2a07c 0%, #e98579 38%, #d987a8 70%, #9d86cf 100%);
+  --sunset: linear-gradient(120deg, #f0ab80 0%, #e9988a 38%, #d396b4 70%, #a28fd4 100%);
 
-  --bg: #19141b;
-  --bg-elev: #221b25;
-  --bg-sunken: #140f16;
-  --bg-hover: rgb(255 240 245 / 0.05);
-  --bg-active: rgb(255 240 245 / 0.09);
-  --bg-glass: rgb(34 27 37 / 0.72);
-  --bg-sidebar: rgb(28 22 31 / 0.6);
-  --bg-lane: rgb(255 240 245 / 0.035);
-  --bg-card: #261e29;
+  --bg: #18151b;
+  --bg-elev: #211d25;
+  --bg-sunken: #131116;
+  --bg-hover: rgb(245 240 255 / 0.05);
+  --bg-active: rgb(245 240 255 / 0.09);
+  --bg-glass: rgb(33 29 37 / 0.62);
+  --bg-sidebar: rgb(27 24 31 / 0.5);
+  --bg-lane: rgb(245 240 255 / 0.035);
+  --bg-card: #252129;
   --bg-overlay: rgb(0 0 0 / 0.45);
   --ink: #f1e9ec;
   --ink-2: #cbbcc3;
   --ink-3: #988690;
   --ink-4: #66565f;
-  --line: rgb(255 240 245 / 0.07);
-  --line-strong: rgb(255 240 245 / 0.13);
+  --line: rgb(245 240 255 / 0.07);
+  --line-strong: rgb(245 240 255 / 0.13);
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-2: 0 2px 8px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.25);
   --shadow-3: 0 16px 48px rgb(0 0 0 / 0.45), 0 2px 8px rgb(0 0 0 / 0.3);

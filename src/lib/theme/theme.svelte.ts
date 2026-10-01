@@ -40,8 +40,8 @@ export function applyTheme() {
   if (dark) {
     st.setProperty('--primary', shade(p, 0.72, 0.9));
     st.setProperty('--primary-strong', shade(p, 0.8, 0.8));
-    st.setProperty('--primary-soft', withAlpha(shade(p, 0.72), 0.16));
-    st.setProperty('--primary-softer', withAlpha(shade(p, 0.72), 0.08));
+    st.setProperty('--primary-soft', withAlpha(shade(p, 0.72), 0.14));
+    st.setProperty('--primary-softer', withAlpha(shade(p, 0.72), 0.07));
     st.setProperty('--primary-ring', withAlpha(shade(p, 0.72), 0.45));
     st.setProperty('--on-primary', shade(p, 0.18, 0.6));
     st.setProperty('--secondary', withAlpha(shade(sec, 0.8, 3), 0.12));
@@ -50,8 +50,8 @@ export function applyTheme() {
   } else {
     st.setProperty('--primary', shade(p, 0.66));
     st.setProperty('--primary-strong', shade(p, 0.55, 1.1));
-    st.setProperty('--primary-soft', shade(p, 0.955, 0.35));
-    st.setProperty('--primary-softer', shade(p, 0.978, 0.2));
+    st.setProperty('--primary-soft', shade(p, 0.955, 0.28));
+    st.setProperty('--primary-softer', shade(p, 0.978, 0.16));
     st.setProperty('--primary-ring', withAlpha(shade(p, 0.66), 0.35));
     st.setProperty('--on-primary', lightness(p) > 0.8 ? shade(p, 0.25) : '#ffffff');
     const [r, g, b] = hexToRgb(sec);

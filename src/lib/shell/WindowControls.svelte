@@ -16,7 +16,7 @@
   });
 </script>
 
-<div class="wc no-drag">
+<div class="wc no-drag" data-tauri-drag-region="false">
   <button onclick={() => win.minimize()} aria-label={t('window.minimize')}><Minus size={15} strokeWidth={1.5} /></button>
   <button onclick={() => win.toggleMaximize()} aria-label={t('window.maximize')}>
     {#if maximized}<Copy size={13} strokeWidth={1.5} />{:else}<Square size={12} strokeWidth={1.5} />{/if}

@@ -6,6 +6,7 @@
   import Kbd from '$lib/components/Kbd.svelte';
   import { t } from '$lib/i18n/index.svelte';
   import { trapFocus } from '$lib/components/focusTrap';
+  import { initialSelection } from './caret';
 
   let input: HTMLInputElement | undefined = $state();
   let listEl: HTMLDivElement | undefined = $state();
@@ -54,7 +55,7 @@
     dynItems = [];
     void tick().then(() => {
       input?.focus();
-      if ((st?.opts as InputOptions)?.selectAll !== false) input?.select();
+      if (input) input.setSelectionRange(...initialSelection(input.value, (st?.opts as PickOptions<unknown> | InputOptions)?.selectAll));
       refreshDynamic();
       if (st?.mode === 'input') void validate();
     });

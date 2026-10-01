@@ -95,7 +95,7 @@
   }
 </script>
 
-<div class="strip drag-region" data-pane={pane.id} style:padding-left="{leading}px" role="tablist">
+<div class="strip drag-region" data-tauri-drag-region="deep" data-pane={pane.id} style:padding-left="{leading}px" role="tablist">
   <div class="tabs">
     {#each pane.tabs as tab, i (tab.id)}
       {@const Icon = icon(tab)}

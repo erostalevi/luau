@@ -255,11 +255,11 @@
         {:else}
           <button
             class="add-lane {orientation}"
+            aria-label={t('lanes.new')}
             onclick={() => (boardUi.newLane = { boardId: board.id, index: null })}
             use:tip={{ text: t('lanes.new'), command: 'lane.new' }}
           >
             <Plus size={16} />
-            {#if !lanes.length}{t('lanes.new')}{/if}
           </button>
         {/if}
       {/if}

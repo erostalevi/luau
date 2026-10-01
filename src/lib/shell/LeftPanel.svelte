@@ -41,7 +41,7 @@
 </script>
 
 <aside class="left" style:width="{ui.left.width}px">
-  <div class="top drag-region" class:mac={macChrome}>
+  <div class="top drag-region" data-tauri-drag-region="deep" class:mac={macChrome}>
     <span class="grow"></span>
     <button class="icon-btn no-drag" onclick={() => ((ui.left.visible = false), persistUi())} use:tip={{ text: t('panels.hide'), command: 'panel.toggle' }}>
       <PanelLeftClose size={16} strokeWidth={1.8} />

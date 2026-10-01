@@ -34,7 +34,7 @@
         <section class="pane" class:focused={ws.activePane === pane.id && ws.panes.length > 1}>
           <div class="pane-top">
             {#if i === 0 && !ui.left.visible}
-              <div class="reopen drag-region" class:mac={macChrome}>
+              <div class="reopen drag-region" data-tauri-drag-region="deep" class:mac={macChrome}>
                 <button
                   class="icon-btn no-drag"
                   onclick={() => ((ui.left.visible = true), persistUi())}
