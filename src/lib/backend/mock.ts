@@ -362,13 +362,49 @@ export function createMockTransport(): Transport {
       /* ignore */
     }
   };
-  const registry = (): Registry => ({
-    boards: [...boards.values()].map(
-      (b): BoardEntry => ({ id: b.id, path: b.root, name: b.name, kind: b.kind, pinned: b.id === 'broadmp', hidden: false, missing: false, mirror: false, lastSeen: Date.now() }),
-    ),
-    order: [],
-    mirrorOrder: [],
-  });
+  // Registry overrides (pin/hide/section/order) persisted like the real core's registry.
+  type RegOverlay = { entries: Record<string, { pinned?: boolean; hidden?: boolean; section?: string | null; removed?: boolean }>; order: string[]; mirrorOrder: string[] };
+  const regOverlay = (): RegOverlay => ls('registry', { entries: {}, order: [], mirrorOrder: [] }) as RegOverlay;
+  const registry = (): Registry => {
+    const o = regOverlay();
+    return {
+      boards: [...boards.values()]
+        .filter((b) => !o.entries[b.id]?.removed)
+        .map((b): BoardEntry => {
+          const e = o.entries[b.id] ?? {};
+          return {
+            id: b.id,
+            path: b.root,
+            name: b.name,
+            kind: b.kind,
+            pinned: e.pinned ?? b.id === 'broadmp',
+            hidden: e.hidden ?? false,
+            ...(e.section ? { section: e.section } : {}),
+            missing: false,
+            mirror: false,
+            lastSeen: Date.now(),
+          };
+        }),
+      order: o.order,
+      mirrorOrder: o.mirrorOrder,
+    };
+  };
+  const updateRegistry = (p: Record<string, any>) => {
+    const o = regOverlay();
+    if (typeof p.id === 'string') {
+      const e = (o.entries[p.id] ??= {});
+      if (p.remove) e.removed = true;
+      if (typeof p.pinned === 'boolean') e.pinned = p.pinned;
+      if (typeof p.hidden === 'boolean') e.hidden = p.hidden;
+      if (typeof p.section === 'string') e.section = p.section || null;
+    }
+    if (Array.isArray(p.order)) o.order = p.order;
+    if (Array.isArray(p.mirrorOrder)) o.mirrorOrder = p.mirrorOrder;
+    lsSet('registry', o);
+    const r = registry();
+    emit({ type: 'registryChanged', registry: r });
+    return r;
+  };
   const board = (id: string) => {
     const b = boards.get(id);
     if (!b) throw new RpcError('not_found', `board ${id}`);
@@ -392,7 +428,7 @@ export function createMockTransport(): Transport {
     'uiState.set': (p) => (lsSet('uiState', p.value), true),
     'fonts.list': () => ['Inter', 'Georgia', 'Helvetica Neue', 'Menlo', 'SF Pro Text', 'Times New Roman'],
     'registry.get': () => registry(),
-    'registry.update': () => registry(),
+    'registry.update': (p) => updateRegistry(p),
     'discovery.rescan': () => true,
     'board.open': (p) => {
       const b = p.id ? board(p.id) : [...boards.values()].find((x) => x.root === p.path);

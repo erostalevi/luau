@@ -38,6 +38,8 @@ export const commands: Command[] = [
     title: 'commands.explorer.toggleHidden',
     category: 'explorer',
     icon: Eye,
+    // Same setting as app.toggleHiddenBoards; kept for the explorer toolbar tooltip.
+    hidden: true,
     run: () => toggleShowHidden(),
   },
   {
