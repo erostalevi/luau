@@ -103,6 +103,9 @@ function match(stroke: string): { exact?: Keybinding; prefix: boolean } {
 
 export function handleKeydown(e: KeyboardEvent) {
   if (kb.recording || e.isComposing || ctxGet('dragging')) return;
+  // Dialogs, first-run, cheat sheet, color picker: they own the keyboard
+  // (a Backspace behind a confirm must not delete the selected card).
+  if (document.querySelector('[data-overlay]')) return;
   const stroke = eventToStroke(e);
   if (!stroke) return;
   const { exact, prefix } = match(stroke);

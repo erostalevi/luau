@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { setContext } from 'svelte';
+  import { setContext, onDestroy } from 'svelte';
   import { Columns3, Rows3, Search, Archive, Plus, MoreHorizontal, AlignVerticalSpaceAround, AlignHorizontalSpaceAround, ZoomIn, FolderSearch, Pencil, Repeat, Download, Diamond, TriangleAlert } from '@lucide/svelte';
   import type { BoardModel } from '$lib/state/boards.svelte';
   import { apply, newLaneId } from '$lib/state/boards.svelte';
@@ -53,6 +53,8 @@
   function onfocusin() {
     ctx.boardFocus = true;
   }
+  // WebKit does not fire focusout when a focused board unmounts (tab switch).
+  onDestroy(() => (ctx.boardFocus = false));
   function onfocusout(e: FocusEvent) {
     if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) ctx.boardFocus = false;
   }

@@ -9,6 +9,7 @@
   <div class="scrim" role="presentation" transition:fade={{ duration: 120 }} onpointerdown={() => closeColorDialog(false)}></div>
   <div
     class="dlg card-surface"
+    data-overlay
     role="dialog"
     aria-modal="true"
     tabindex="-1"

@@ -33,7 +33,7 @@
 
 {#if ui.firstRun}
   <div class="scrim" transition:fade={{ duration: 200 }}></div>
-  <div class="fr card-surface" role="dialog" aria-modal="true" transition:fly={{ y: 16, duration: 260 }}>
+  <div class="fr card-surface" data-overlay role="dialog" aria-modal="true" transition:fly={{ y: 16, duration: 260 }}>
     <div class="dots">{#each Array(steps) as _, i (i)}<span class:on={i === step}></span>{/each}</div>
     {#key step}
       <div class="body" in:fly={{ x: 24, duration: 220 }}>

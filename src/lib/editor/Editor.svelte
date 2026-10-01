@@ -325,6 +325,7 @@
     const content = await rpc<string>('card.read', { board: next.boardId, id: next.cardId }).catch(() => '');
     if (loadedFor !== key) return;
     target = next;
+    lastMtime = 0; // re-baselined by the external-change effect
     await mountEditor(content);
   }
 
@@ -381,7 +382,8 @@
     const ext = model?.externalTick ?? 0;
     void ext;
     untrack(() => {
-      if (!view || !lastMtime) {
+      // Switching cards: this is the next card's mtime, not an external change.
+      if (!view || !lastMtime || loadedFor !== `${boardId}/${cardId}` || targetOf(view)?.cardId !== cardId) {
         lastMtime = m;
         return;
       }

@@ -8,6 +8,7 @@ import { settings } from '$lib/settings/store.svelte';
 import { activeBoard, tabBoard } from '$lib/app/helpers';
 import { toast } from '$lib/state/toasts.svelte';
 import { t } from '$lib/i18n/index.svelte';
+import { ctx } from '$lib/commands/context.svelte';
 
 function zoom(delta: number | null) {
   const b = tabBoard();
@@ -20,7 +21,9 @@ function zoom(delta: number | null) {
 }
 
 async function undoRedo(which: 'undo' | 'redo') {
-  const b = activeBoard();
+  // Focus on a board tab means "this board", even with the sidebar editor open
+  // on another one.
+  const b = ctx.boardFocus ? tabBoard() : activeBoard();
   if (!b) return;
   const r = which === 'undo' ? await undo(b.id) : await redo(b.id);
   if (r?.done && r.label) toast.info(t(which === 'undo' ? 'toasts.undone' : 'toasts.redone', { label: r.label }), { timeout: 1600 });

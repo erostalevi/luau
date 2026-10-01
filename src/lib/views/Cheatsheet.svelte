@@ -19,6 +19,7 @@
   <div class="scrim" role="presentation" transition:fade={{ duration: 140 }} onpointerdown={() => (ui.cheatsheet = false)}></div>
   <div
     class="sheet card-surface"
+    data-overlay
     role="dialog"
     aria-modal="true"
     tabindex="-1"

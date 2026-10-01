@@ -1,6 +1,7 @@
 <script lang="ts">
   // Hosts the card editor either as a centered modal or a right sidebar
   // (user setting). The pinned sidebar follows the board selection.
+  import { untrack } from 'svelte';
   import { fade, fly, scale } from 'svelte/transition';
   import { ui, closeEditor, openEditor } from '$lib/state/ui.svelte';
   import { settings } from '$lib/settings/store.svelte';
@@ -22,12 +23,21 @@
     if (mode === 'modal') ctx.modalOpen = visible;
   });
 
-  // Pinned sidebar follows the focused card.
+  // Pinned sidebar follows the focused card — but a card the user just closed
+  // stays closed until the selection moves to another card.
+  let dismissed: string | null = null;
+  $effect(() => {
+    if (!ui.editor.open && ui.editor.cardId) dismissed = ui.editor.cardId;
+  });
   $effect(() => {
     if (mode !== 'sidebar' || !pinned || !active) return;
     const id = selection.focus;
     const bid = selection.boardId;
-    if (id && bid && boards.get(bid)?.nodes.get(id) && boards.get(bid)?.kind !== 'files' && (id !== ui.editor.cardId || !ui.editor.open)) openEditor(bid, id);
+    untrack(() => {
+      if (id !== dismissed) dismissed = null;
+      if (!id || !bid || id === dismissed) return;
+      if (boards.get(bid)?.nodes.get(id) && boards.get(bid)?.kind !== 'files' && (id !== ui.editor.cardId || !ui.editor.open)) openEditor(bid, id);
+    });
   });
 
   // Card deleted while open → close.
@@ -40,7 +50,7 @@
     // Let autocomplete / vim / search panels consume Escape first.
     const t = e.target as HTMLElement;
     if (t.closest('.cm-editor') && (document.querySelector('.cm-tooltip-autocomplete') || document.querySelector('.cm-panel') || t.closest('.cm-vim-insert'))) return;
-    if (document.querySelector('.menu, .qi')) return;
+    if (e.defaultPrevented || document.querySelector('.menu, .qi, [data-overlay]')) return;
     e.preventDefault();
     closeEditor();
   }

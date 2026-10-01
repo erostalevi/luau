@@ -282,3 +282,21 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Fix: plain text is derived from the card content (`markdown::parse`) on demand; the cache key is versioned
   (`v2|…`) so previously cached empty summaries are ignored.
 - Test: `basic_card_summary_is_not_empty_after_indexing`.
+
+## D7 — Editor/overlay focus issues (medium)
+
+- Files: `src/lib/editor/Editor.svelte`, `src/lib/editor/CardEditorHost.svelte`, `src/lib/board/BoardView.svelte`,
+  `src/lib/keybindings/resolver.svelte.ts`, `src/lib/commands/builtin/workspace.ts`, overlay roots
+  (`Dialogs.svelte`, `ColorDialog.svelte`, `Cheatsheet.svelte`, `FirstRun.svelte` get `data-overlay`).
+- False "changed outside" banner on card switch: the external-change effect ignores the first mtime it sees for a
+  newly loaded card and skips while the view still belongs to the previous card.
+- Esc in a confirm dialog no longer also closes the modal editor (host ignores Escape when it was already handled
+  or an overlay/menu/quick input is open).
+- Pinned sidebar editor can be closed: the "follow selection" effect no longer re-reads `open`, and a card the user
+  closed stays closed until the selection moves to another card.
+- Overlays own the keyboard: while a dialog, first-run, cheat sheet or color picker is open, global shortcuts are
+  suspended (e.g. Backspace behind a confirm no longer deletes the selected card).
+- `boardFocus` is cleared when a focused board unmounts (WebKit fires no focusout), so board single-key shortcuts
+  cannot act from a doc tab.
+- ⌘Z/⌘⇧Z with focus on a board tab act on that board even if the sidebar editor shows a card of another board.
+- Tests: `pnpm check`, vitest. Manual check recommended in the desktop app (F1).

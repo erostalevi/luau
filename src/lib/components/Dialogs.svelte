@@ -18,6 +18,7 @@
   <div class="scrim" transition:fade={{ duration: 150 }} role="presentation" onpointerdown={() => closeDialog(d.id, false)}></div>
   <div
     class="dialog card-surface"
+    data-overlay
     role="alertdialog"
     aria-modal="true"
     aria-labelledby="dlg-title-{d.id}"
