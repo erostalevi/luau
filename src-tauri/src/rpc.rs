@@ -347,6 +347,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         m => crate::exports::dispatch(app, core, window, m, p)
             .or_else(|| crate::integrations_rpc::dispatch_sync(app, core, window, m, p))
             .or_else(|| crate::ai_rpc::dispatch_sync(app, core, window, m, p))
+            .or_else(|| crate::history_rpc::dispatch_sync(app, core, window, m, p))
             .unwrap_or_else(|| Err(bad(format!("unknown method {m}")))),
     }
 }
