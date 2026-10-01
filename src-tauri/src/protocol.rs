@@ -41,7 +41,7 @@ pub fn handle(core: &Arc<Core>, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
             );
         }
     };
-    let path = match files::resolve_board_file(&root, rel) {
+    let path = match core.board_file(board, rel) {
         Ok(p) => p,
         Err(_) => return respond(StatusCode::FORBIDDEN, "text/plain", b"forbidden".to_vec()),
     };

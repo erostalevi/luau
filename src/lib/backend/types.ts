@@ -194,6 +194,8 @@ export interface BoardEntry {
   lastOpened?: number | null;
   lastSeen: number;
   duplicates?: string[];
+  /** Plain folder opened "as is" (read-only, no `.lull`). */
+  loose?: boolean;
 }
 
 export interface Registry {

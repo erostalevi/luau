@@ -389,6 +389,9 @@ impl Core {
             .get(id)
             .map(|e| PathBuf::from(&e.path))
             .ok_or_else(|| Error::not_found(id))?;
+        if self.registry.lock().get(id).is_some_and(|e| e.loose) && path.is_dir() {
+            return self.open_loose(&path);
+        }
         if !store::is_board(&path) {
             self.update_registry(|r| {
                 if let Some(e) = r.get_mut(id) {
@@ -1211,6 +1214,7 @@ impl Core {
                 }
                 for e in reg.boards.iter_mut() {
                     if !e.mirror
+                        && !e.loose
                         && !seen.contains(&e.id)
                         && !Path::new(&e.path).join(MARKER_DIR).exists()
                     {
@@ -1293,6 +1297,9 @@ impl Core {
 
     /// Resolve a file inside a board for the `lull://` protocol.
     pub fn board_file(&self, board: &str, rel: &str) -> Result<PathBuf> {
+        if let Some(p) = self.loose_board_file(board, rel) {
+            return p;
+        }
         let root = self.board_root(board)?;
         files::resolve_board_file(&root, rel)
     }

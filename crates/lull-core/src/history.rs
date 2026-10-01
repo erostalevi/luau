@@ -65,6 +65,9 @@ fn blob_path(root: &Path, hash: &str) -> PathBuf {
 /// Store content; returns its sha256 hash. Deduplicated by hash.
 pub fn put_blob(root: &Path, content: &str) -> Result<String> {
     let hash = sha256_hex(content.as_bytes());
+    if !has_marker(root) {
+        return Ok(hash);
+    }
     let p = blob_path(root, &hash);
     if !p.exists() {
         let mut enc = GzEncoder::new(Vec::new(), Compression::default());
@@ -89,7 +92,16 @@ pub fn get_blob(root: &Path, hash: &str) -> Result<String> {
     Ok(s)
 }
 
+/// History lives in the board marker dir; folders opened "as is" (no marker)
+/// have no history, and we never create a marker dir implicitly.
+fn has_marker(root: &Path) -> bool {
+    marker_dir(root).is_dir()
+}
+
 pub fn append(root: &Path, entry: &JournalEntry) -> Result<()> {
+    if !has_marker(root) {
+        return Ok(());
+    }
     let dir = history_dir(root);
     fs::create_dir_all(&dir).map_err(|e| Error::io(&dir, e))?;
     let day = entry.ts.get(..10).unwrap_or("unknown");
@@ -241,6 +253,7 @@ mod tests {
     #[test]
     fn blobs_roundtrip_and_dedupe() {
         let d = tempfile::tempdir().unwrap();
+        fs::create_dir_all(marker_dir(d.path())).unwrap();
         let h1 = put_blob(d.path(), "# Hello\n").unwrap();
         let h2 = put_blob(d.path(), "# Hello\n").unwrap();
         assert_eq!(h1, h2);
@@ -251,6 +264,7 @@ mod tests {
     #[test]
     fn append_and_query() {
         let d = tempfile::tempdir().unwrap();
+        fs::create_dir_all(marker_dir(d.path())).unwrap();
         for (i, kind) in ["createCard", "move", "edit"].iter().enumerate() {
             append(
                 d.path(),
@@ -287,5 +301,24 @@ mod tests {
             },
         );
         assert_eq!(ids.len(), 1);
+    }
+
+    #[test]
+    fn no_history_without_marker_dir() {
+        let d = tempfile::tempdir().unwrap();
+        let e = JournalEntry {
+            ts: now(),
+            board: "b1".into(),
+            kind: "edit".into(),
+            origin: Origin::You,
+            label: "x".into(),
+            ids: vec![],
+            details: Value::Null,
+            before: None,
+            after: None,
+        };
+        append(d.path(), &e).unwrap();
+        put_blob(d.path(), "x").unwrap();
+        assert!(!marker_dir(d.path()).exists());
     }
 }

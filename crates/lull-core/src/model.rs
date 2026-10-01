@@ -217,6 +217,18 @@ pub struct Node {
     pub group_extra: Map<String, Value>,
 }
 
+/// Real on-disk layout of a folder opened "as is" (no `.lull`, see `io::loose`).
+/// Normal boards derive every path from ids; loose boards map ids to paths.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct LooseLayout {
+    /// Node id → Markdown file (absolute). Group folders may have none.
+    pub files: HashMap<String, PathBuf>,
+    /// Lane or group id → folder (absolute).
+    pub dirs: HashMap<String, PathBuf>,
+    /// Content shown for nodes without a file (folder groups).
+    pub synthetic: HashMap<String, String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct BoardState {
     pub root: PathBuf,
@@ -228,6 +240,8 @@ pub struct BoardState {
     pub read_only: Option<String>,
     pub warnings: Vec<String>,
     pub version: u64,
+    /// Set for folders opened "as is" (`io::loose`); `None` for normal boards.
+    pub loose: Option<Box<LooseLayout>>,
 }
 
 impl BoardState {
@@ -259,6 +273,9 @@ impl BoardState {
     pub fn container_dir(&self, parent: &Parent) -> Option<PathBuf> {
         match parent {
             Parent::Root => Some(self.root.clone()),
+            Parent::Lane(k) | Parent::Card(k) if self.loose.is_some() => {
+                self.loose.as_ref()?.dirs.get(k).cloned()
+            }
             Parent::Lane(k) => Some(self.root.join(k)),
             Parent::Card(c) => {
                 let n = self.nodes.get(c)?;
@@ -269,6 +286,9 @@ impl BoardState {
 
     /// Absolute path of a node's Markdown file.
     pub fn node_file(&self, id: &str) -> Option<PathBuf> {
+        if let Some(l) = &self.loose {
+            return l.files.get(id).cloned();
+        }
         let n = self.nodes.get(id)?;
         let dir = self.container_dir(&n.parent)?;
         Some(if n.is_group {
@@ -280,6 +300,13 @@ impl BoardState {
 
     /// Directory holding the node's attachments.
     pub fn attachment_dir(&self, id: &str) -> Option<PathBuf> {
+        if let Some(l) = &self.loose {
+            return l
+                .dirs
+                .get(id)
+                .cloned()
+                .or_else(|| l.files.get(id)?.parent().map(PathBuf::from));
+        }
         let n = self.nodes.get(id)?;
         let dir = self.container_dir(&n.parent)?;
         Some(if n.is_group { dir.join(id) } else { dir })
