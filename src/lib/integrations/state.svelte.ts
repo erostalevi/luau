@@ -9,7 +9,8 @@ import { ctx } from '$lib/commands/context.svelte';
 import { integrationStatus } from './status.svelte';
 import { uiGet, uiSet } from '$lib/state/persist.svelte';
 import { emptySelection, type ListSelection } from './resultSelection';
-import type { Account, Mirror, RemoteIssue, SearchMode } from './types';
+import { setCollapsed } from './grouping';
+import type { Account, IdName, Mirror, RemoteIssue, SearchMode } from './types';
 
 export const integ = $state({
   accounts: [] as Account[],
@@ -25,6 +26,11 @@ export const integ = $state({
   lastSync: '' as string,
   /** Panel: selected result keys (list order) + range anchor. */
   selection: emptySelection() as ListSelection,
+  /** Panel: mode + query that produced `results` (keys the collapsed groups). */
+  resultsMode: 'jql' as SearchMode,
+  resultsQuery: '' as string,
+  /** Trello board names by account (group headers), loaded on demand. */
+  boardNames: {} as Record<string, Record<string, string>>,
 });
 
 export function accountById(id: string | undefined | null): Account | undefined {
@@ -44,6 +50,33 @@ export function searchModeOf(a: Account | undefined): SearchMode {
 
 export function setSearchMode(accountId: string, mode: SearchMode) {
   uiSet(MODE_KEY, { ...uiGet<Record<string, SearchMode>>(MODE_KEY, {}), [accountId]: mode });
+}
+
+const COLLAPSED_KEY = 'integrations.collapsedGroups';
+
+/** Whether a result group (account + query + project) is collapsed; persisted in ui-state. */
+export function isGroupCollapsed(key: string): boolean {
+  return uiGet<Record<string, true>>(COLLAPSED_KEY, {})[key] === true;
+}
+
+export function setGroupCollapsed(key: string, collapsed: boolean) {
+  uiSet(COLLAPSED_KEY, setCollapsed(uiGet<Record<string, true>>(COLLAPSED_KEY, {}), key, collapsed));
+}
+
+const boardNamesLoading = new Set<string>();
+
+/** Trello: fetch board names once per account so groups show names, not ids. */
+export async function loadBoardNames(a: Account) {
+  if (a.provider !== 'trello' || integ.boardNames[a.id] || boardNamesLoading.has(a.id)) return;
+  boardNamesLoading.add(a.id);
+  try {
+    const list = await rpc<IdName[]>('remote.projects', { account: a.id });
+    integ.boardNames[a.id] = Object.fromEntries(list.map((b) => [b.id, b.name]));
+  } catch {
+    /* offline: headers fall back to board ids */
+  } finally {
+    boardNamesLoading.delete(a.id);
+  }
 }
 
 export async function loadAccounts() {
