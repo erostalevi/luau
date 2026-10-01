@@ -89,3 +89,17 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   **Repair**, which (after confirmation) rewrites the manifest from the salvaged state and reopens the board.
 - Tests: `damaged_manifest_opens_read_only_without_rewrite_and_repairs` (truncated file stays byte-identical,
   id/name/lanes salvaged, one recovered copy after two loads, repair makes it writable).
+
+## C1 — Release build blocked by a Tauri version mismatch; DMG step
+
+- Files: `package.json`, `pnpm-lock.yaml` (`@tauri-apps/plugin-opener` → ^2.7.0), `src-tauri/Cargo.toml` (Tauri
+  crates pinned to the same major.minor as their npm packages), `scripts/check-tauri-versions.mjs` (new,
+  `pnpm check:tauri`), `.github/workflows/ci.yml` (runs it), `scripts/build.mjs`.
+- Cause: crates were declared as `"2"`, so a lockfile refresh pulled `tauri-plugin-opener` 2.7 while npm stayed on
+  2.6; `tauri build` refuses mismatched major.minor.
+- DMG: `bundle_dmg.sh` styles the DMG window through Finder AppleScript, which fails without automation
+  permission (sandboxed shells, SSH). Verified: `CI=true` (plain DMG) builds a 9.8 MB DMG. `build.mjs` now retries
+  with a plain DMG automatically, and builds without updater artifacts when `TAURI_SIGNING_PRIVATE_KEY` is unset
+  (local builds no longer need the signing key).
+- Tests: `pnpm tauri build` passes the version check without `--ignore-version-mismatches`; `pnpm check:tauri`
+  passes; `node scripts/build.mjs --localtarget --dry-run`.

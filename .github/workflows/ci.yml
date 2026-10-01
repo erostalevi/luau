@@ -35,6 +35,8 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
 
+      - name: Tauri npm/crate versions in step
+        run: pnpm check:tauri
       - name: Frontend type-check
         run: pnpm check
       - name: Frontend tests

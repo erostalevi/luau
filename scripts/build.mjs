@@ -45,10 +45,11 @@ function buildableHere(id) {
   return id === localTarget(); // Linux arm64 from x64 needs a cross sysroot: leave to CI
 }
 
-function run(cmd, cmdArgs) {
-  console.log(`\n$ ${cmd} ${cmdArgs.join(' ')}`);
+function run(cmd, cmdArgs, env = {}) {
+  const pre = Object.entries(env).map(([k, v]) => `${k}=${v} `).join('');
+  console.log(`\n$ ${pre}${cmd} ${cmdArgs.join(' ')}`);
   if (dry) return 0;
-  const r = spawnSync(cmd, cmdArgs, { stdio: 'inherit', shell: process.platform === 'win32' });
+  const r = spawnSync(cmd, cmdArgs, { stdio: 'inherit', shell: process.platform === 'win32', env: { ...process.env, ...env } });
   return r.status ?? 1;
 }
 
@@ -58,7 +59,19 @@ function build(id) {
   if (run('rustup', ['target', 'add', t.triple]) !== 0) return false;
   const tauriArgs = ['tauri', 'build', '--target', t.triple, '--bundles', t.bundles];
   if (debug) tauriArgs.push('--debug');
-  return run('pnpm', tauriArgs) === 0;
+  // Updater artifacts must be signed; local builds without the key skip them.
+  if (!process.env.TAURI_SIGNING_PRIVATE_KEY) {
+    console.log('\n(no TAURI_SIGNING_PRIVATE_KEY: building without updater artifacts)');
+    tauriArgs.push('-c', JSON.stringify({ bundle: { createUpdaterArtifacts: false } }));
+  }
+  if (run('pnpm', tauriArgs) === 0) return true;
+  // The DMG step styles its window through Finder (AppleScript). Without
+  // automation permission (sandboxes, SSH, CI) it fails; CI=true skips it.
+  if (t.os === 'darwin' && !process.env.CI) {
+    console.log('\nDMG styling failed (Finder automation not allowed?) — retrying with a plain DMG');
+    return run('pnpm', tauriArgs, { CI: 'true' }) === 0;
+  }
+  return false;
 }
 
 let ids;

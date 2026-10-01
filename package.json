@@ -16,6 +16,7 @@
     "format": "prettier --write \"src/**/*.{ts,svelte,css}\" && cargo fmt --all",
     "test": "vitest run",
     "i18n": "tsx scripts/i18n-check.mjs",
+    "check:tauri": "node scripts/check-tauri-versions.mjs",
     "test:rust": "cargo test --workspace",
     "test:all": "pnpm test && pnpm test:rust",
     "tauri": "tauri"
@@ -67,7 +68,7 @@
     "@tauri-apps/plugin-clipboard-manager": "^2.4.0",
     "@tauri-apps/plugin-dialog": "^2.8.0",
     "@tauri-apps/plugin-notification": "^2.5.0",
-    "@tauri-apps/plugin-opener": "^2.6.0",
+    "@tauri-apps/plugin-opener": "^2.7.0",
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.13.0",
     "@tauri-apps/plugin-window-state": "^2.5.0",
