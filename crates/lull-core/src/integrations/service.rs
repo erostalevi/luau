@@ -1474,7 +1474,37 @@ pub fn unlink(core: &Core, board: &str, card: &str) -> Result<()> {
 
 /// Background loop: pulls watched mirrors and refreshes linked-card strips of
 /// open boards every `integrations.watchIntervalSec` (default 60 s).
+/// Lets scheduled AI summaries post to Slack through the first connected Slack
+/// account. Scheduled delivery is configured explicitly by the user, so it
+/// skips the interactive confirmation but still honours the push toggle.
+pub fn register_slack_sender(core: &Arc<Core>) {
+    let weak = Arc::downgrade(core);
+    crate::ai::set_slack_sender(Box::new(move |channel: &str, text: &str| {
+        let core = weak
+            .upgrade()
+            .ok_or_else(|| Error::Other("app shutting down".into()))?;
+        ensure_allowed(&core, Direction::Push)?;
+        let account = super::accounts::load(&core.paths.config)
+            .into_iter()
+            .find(|a| a.provider == super::types::ProviderKind::Slack)
+            .ok_or_else(|| Error::NotFound("slack account".into()))?;
+        let (_, client) = provider::slack(&core.paths.config, &account.id)?;
+        let (channel, text) = (channel.to_string(), text.to_string());
+        // The caller may run inside an async runtime; post from a fresh thread.
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| Error::Other(e.to_string()))?;
+            rt.block_on(client.post(&channel, &text))
+        })
+        .join()
+        .map_err(|_| Error::Other("slack sender panicked".into()))?
+    }));
+}
+
 pub fn start_watcher(core: Arc<Core>) {
+    register_slack_sender(&core);
     std::thread::Builder::new()
         .name("lull-integrations".into())
         .spawn(move || {

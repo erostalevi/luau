@@ -152,7 +152,10 @@ pub fn dispatch_sync(
                 }
                 ok(lull_core::fsutil::atomic_write(&path, markdown.as_bytes())?)
             }
-            "ai.slackConnected" => ok(lull_core::ai::slack_connected()),
+            "ai.slackConnected" => ok(lull_core::ai::slack_connected()
+                && lull_core::integrations::accounts::load(&core.paths.config)
+                    .iter()
+                    .any(|a| a.provider == lull_core::integrations::types::ProviderKind::Slack)),
             _ => Err(RpcError {
                 code: "unknown".into(),
                 message: String::new(),
