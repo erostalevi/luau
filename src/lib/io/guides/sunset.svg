@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9b8e8"/>
+      <stop offset="0.45" stop-color="#f6b8b0"/>
+      <stop offset="1" stop-color="#fde2c4"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fd3d6"/>
+      <stop offset="1" stop-color="#7bb8c9"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#sky)"/>
+  <circle cx="320" cy="230" r="78" fill="#ffd8a8"/>
+  <circle cx="320" cy="230" r="58" fill="#ffc48c"/>
+  <rect y="230" width="640" height="130" fill="url(#sea)"/>
+  <g stroke="#fff" stroke-opacity="0.65" stroke-width="5" stroke-linecap="round">
+    <line x1="262" y1="252" x2="378" y2="252"/>
+    <line x1="280" y1="272" x2="360" y2="272"/>
+    <line x1="298" y1="292" x2="342" y2="292"/>
+  </g>
+  <g fill="none" stroke="#6f5a7e" stroke-width="5" stroke-linecap="round">
+    <path d="M96 232 C 104 170, 110 130, 132 96"/>
+    <path d="M132 96 c -26 -6, -48 4, -62 18 M132 96 c -10 -22, -34 -30, -54 -26 M132 96 c 18 -18, 44 -20, 62 -10 M132 96 c 26 2, 42 18, 48 36"/>
+  </g>
+  <text x="320" y="340" text-anchor="middle" font-family="-apple-system, Segoe UI, sans-serif" font-size="20" fill="#ffffff" fill-opacity="0.9">sunset.svg · an image attached to this card</text>
+</svg>

@@ -65,6 +65,9 @@ export function matchesFilter(d: DocItem, filter: string): boolean {
   return f.split(/\s+/).every((w) => hay.includes(w));
 }
 
+/** Natural, case-insensitive title order ("Doc 2" before "Doc 10"). */
+const byTitle = (a: DocItem, b: DocItem) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true });
+
 export function visibleDocs(
   all: DocItem[],
   opts: {
@@ -75,8 +78,6 @@ export function visibleDocs(
   },
 ): DocItem[] {
   const list = all.filter((d) => (opts.showArchived || !d.archived) && matchesFilter(d, opts.filter));
-  list.sort((a, b) =>
-    opts.sort === 'recent' ? b.mtime - a.mtime || a.title.localeCompare(b.title) : a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
-  );
+  list.sort((a, b) => (opts.sort === 'recent' ? b.mtime - a.mtime || byTitle(a, b) : byTitle(a, b)));
   return opts.limit ? list.slice(0, opts.limit) : list;
 }

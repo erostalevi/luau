@@ -90,15 +90,34 @@ export function register(methods: Record<string, (p: Record<string, any>) => unk
   };
   methods['templates.list'] = () => [];
   methods['board.createFromTemplate'] = (p) => {
-    const tpl = p.template as { kind: 'kanban' | 'files'; lanes: { name: string; cards: string[] }[]; notes: string[] };
+    const tpl = p.template as {
+      kind: 'kanban' | 'files';
+      lanes: { name: string; cards: string[] }[];
+      notes: string[];
+      assets?: { card: number; name: string; data: string }[];
+    };
     const snap = methods['board.create']({ path: p.path, name: p.name, kind: tpl.kind, lanes: [] }) as { header: { id: string } };
+    const ids = [...tpl.lanes.flatMap((l) => l.cards), ...tpl.notes].map(() => rid('c'));
+    // No files in the mock: assets become data URLs.
+    const mime = (n: string) =>
+      n.endsWith('.svg') ? 'image/svg+xml' : n.endsWith('.png') ? 'image/png' : n.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream';
+    let n = 0;
+    const fill = (text: string) => {
+      const i = n++;
+      return text
+        .replace(/\{\{card:(\d+)\}\}/g, (m, k: string) => ids[Number(k)] ?? m)
+        .replace(/\{\{asset:([^}]+)\}\}/g, (m, name: string) => {
+          const a = tpl.assets?.find((x) => x.card === i && x.name === name.trim());
+          return a ? `data:${mime(a.name)};base64,${a.data}` : m;
+        });
+    };
     const ops: unknown[] = [];
     for (const l of tpl.lanes) {
       const k = rid('k');
       ops.push({ op: 'createLane', id: k, name: l.name, index: null });
-      for (const c of l.cards) ops.push({ op: 'createCard', id: rid('c'), parent: { kind: 'lane', id: k }, index: null, content: c });
+      for (const c of l.cards) ops.push({ op: 'createCard', id: ids[n], parent: { kind: 'lane', id: k }, index: null, content: fill(c) });
     }
-    for (const c of tpl.notes) ops.push({ op: 'createCard', id: rid('c'), parent: { kind: 'root' }, index: null, content: c });
+    for (const c of tpl.notes) ops.push({ op: 'createCard', id: ids[n], parent: { kind: 'root' }, index: null, content: fill(c) });
     if (ops.length) methods['board.apply']({ board: snap.header.id, op: { op: 'batch', ops }, label: 'New board from template' });
     return api.snapshot(snap.header.id);
   };

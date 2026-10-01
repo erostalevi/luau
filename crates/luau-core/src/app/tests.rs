@@ -619,3 +619,62 @@ fn external_edits_are_not_overwritten_or_undone_away() {
     .unwrap();
     assert!(c.read_card(&b, &id).unwrap().contains("merged"));
 }
+
+#[test]
+fn template_links_cards_and_writes_assets() {
+    use crate::io::templates::{BoardTemplate, TemplateAsset, TemplateLane};
+    use base64::Engine;
+    let (d, c, _) = core();
+    let tpl = BoardTemplate {
+        kind: BoardKind::Kanban,
+        lanes: vec![
+            TemplateLane {
+                name: "Start".into(),
+                cards: vec![
+                    "# One\n\nSee [[{{card:1}}]] and ![pic]({{asset:pic.svg}}) {{other}}\n".into(),
+                ],
+            },
+            TemplateLane {
+                name: "Next".into(),
+                cards: vec!["# Two\n".into()],
+            },
+        ],
+        notes: vec![],
+        assets: vec![TemplateAsset {
+            card: 0,
+            name: "pic.svg".into(),
+            data: base64::engine::general_purpose::STANDARD.encode("<svg/>"),
+        }],
+    };
+    let snap = c
+        .create_from_template(&d.path().join("Guide"), "Guide", &tpl, false)
+        .unwrap();
+    let one = snap.nodes.iter().find(|n| n.title == "One").unwrap();
+    let two = snap.nodes.iter().find(|n| n.title == "Two").unwrap();
+    let text = c.read_card(&snap.header.id, &one.id).unwrap();
+    assert!(text.contains(&format!("[[{}]]", two.id)), "{text}");
+    assert!(text.contains("{{other}}"));
+    assert_eq!(one.attachments.len(), 1);
+    let file = &one.attachments[0].file;
+    assert!(file.starts_with(&format!("{}.", one.id)) && file.ends_with("-pic.svg"));
+    assert!(text.contains(&format!("]({file})")));
+    let lane_dir = d.path().join("Guide").join(&snap.lanes[0].id);
+    assert_eq!(
+        std::fs::read_to_string(lane_dir.join(file)).unwrap(),
+        "<svg/>"
+    );
+
+    // Assets must point at a template card and stay small.
+    let mut bad = tpl.clone();
+    bad.assets[0].card = 5;
+    assert!(
+        c.create_from_template(&d.path().join("Bad"), "Bad", &bad, false)
+            .is_err()
+    );
+    bad.assets[0].card = 0;
+    bad.assets[0].name = "../x.svg".into();
+    assert!(
+        c.create_from_template(&d.path().join("Bad2"), "Bad2", &bad, false)
+            .is_err()
+    );
+}

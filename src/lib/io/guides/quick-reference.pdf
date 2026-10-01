@@ -1,0 +1,54 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1430 >>
+stream
+0.99 0.85 0.75 rg 0 812 595 30 re f 0.96 0.72 0.69 rg 0 800 595 12 re f BT
+0.42 0.33 0.50 rg
+/F1 28 Tf 1 0 0 1 56 752 Tm (Luau quick reference) Tj
+0.25 0.25 0.30 rg
+/F1 14 Tf 1 0 0 1 56 728 Tm () Tj
+/F1 12 Tf 1 0 0 1 56 706 Tm (This PDF is an attachment of the guide card. Click it to open it in your PDF app.) Tj
+/F1 12 Tf 1 0 0 1 56 684 Tm () Tj
+/F1 13 Tf 1 0 0 1 56 661 Tm (Boards) Tj
+/F1 11 Tf 1 0 0 1 56 640 Tm (  Cmd+N new card    Cmd+Shift+N new lane    Cmd+F find in board) Tj
+/F1 11 Tf 1 0 0 1 56 619 Tm (  Enter open card   Space peek    Alt+Arrows move card    Tab nest) Tj
+/F1 11 Tf 1 0 0 1 56 598 Tm (  Cmd+Shift+L lanes as rows/columns    Cmd+Shift+A show archived) Tj
+/F1 12 Tf 1 0 0 1 56 576 Tm () Tj
+/F1 13 Tf 1 0 0 1 56 553 Tm (Editor) Tj
+/F1 11 Tf 1 0 0 1 56 532 Tm (  /  slash menu      [[  link a card      #tag   @person) Tj
+/F1 11 Tf 1 0 0 1 56 511 Tm (  Cmd+B bold   Cmd+I italic   Cmd+Shift+H highlight   Cmd+K link) Tj
+/F1 11 Tf 1 0 0 1 56 490 Tm (  Cmd+E preview      Cmd+Shift+V paste as plain text) Tj
+/F1 12 Tf 1 0 0 1 56 468 Tm () Tj
+/F1 13 Tf 1 0 0 1 56 445 Tm (Everywhere) Tj
+/F1 11 Tf 1 0 0 1 56 424 Tm (  Cmd+Shift+P command palette    Cmd+P quick open    Cmd+Shift+F search) Tj
+/F1 11 Tf 1 0 0 1 56 403 Tm (  Cmd+Z undo         Cmd+Shift+H history             Cmd+, settings) Tj
+/F1 12 Tf 1 0 0 1 56 381 Tm () Tj
+/F1 10 Tf 1 0 0 1 56 361 Tm (On Windows and Linux use Ctrl instead of Cmd.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001723 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1793
+%%EOF

@@ -54,4 +54,9 @@ describe('filter + sort', () => {
       }).map((x) => x.id),
     ).toEqual(['c2']);
   });
+  it('sorts numbered titles naturally', () => {
+    const docs = ['10 · Ten', '2 · Two', '1 · One'].map((title, i) => ({ id: `c${i}`, title, mtime: 1, archived: false }) as (typeof all)[number]);
+    expect(visibleDocs(docs, { filter: '', sort: 'title', showArchived: false }).map((x) => x.title)).toEqual(['1 · One', '2 · Two', '10 · Ten']);
+    expect(visibleDocs(docs, { filter: '', sort: 'recent', showArchived: false })[0].title).toBe('1 · One');
+  });
 });

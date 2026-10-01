@@ -8,7 +8,7 @@ import {
   buildSettingsBundle,
   isSecretKey,
   templateSpec,
-  NEW_BOARD_TEMPLATES,
+  BASIC_BOARD_TEMPLATES,
   formatBytes,
 } from './io';
 
@@ -47,7 +47,7 @@ describe('io helpers', () => {
   });
 
   it('builds valid templates for every id', () => {
-    for (const id of NEW_BOARD_TEMPLATES) {
+    for (const id of BASIC_BOARD_TEMPLATES) {
       const s = templateSpec(id, (k) => k.split('.').pop()!);
       if (s.kind === 'files') {
         expect(s.lanes).toEqual([]);

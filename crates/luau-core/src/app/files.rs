@@ -21,6 +21,31 @@ pub enum Source<'a> {
     Bytes(&'a [u8]),
 }
 
+/// `<card>.<token>[-<stem>].<ext>` for an attachment called `name`; `taken`
+/// says whether a candidate is already used.
+pub fn attachment_file_name(card: &str, name: &str, taken: impl Fn(&str) -> bool) -> String {
+    let (stem, ext) = match name.rsplit_once('.') {
+        Some((s, e))
+            if !e.is_empty() && e.len() <= 12 && e.chars().all(|c| c.is_ascii_alphanumeric()) =>
+        {
+            (s, e.to_ascii_lowercase())
+        }
+        _ => (name, "bin".to_string()),
+    };
+    let stem = sanitize_name(stem, 40);
+    loop {
+        let tok = attachment_token();
+        let f = if stem.is_empty() {
+            format!("{card}.{tok}.{ext}")
+        } else {
+            format!("{card}.{tok}-{stem}.{ext}")
+        };
+        if !taken(&f) {
+            return f;
+        }
+    }
+}
+
 /// Copy a file into the card's attachment folder. Returns the new attachment.
 pub fn add_attachment(
     store: &mut BoardStore,
@@ -32,26 +57,7 @@ pub fn add_attachment(
         .state
         .attachment_dir(card)
         .ok_or_else(|| Error::not_found(card))?;
-    let (stem, ext) = match name.rsplit_once('.') {
-        Some((s, e))
-            if !e.is_empty() && e.len() <= 12 && e.chars().all(|c| c.is_ascii_alphanumeric()) =>
-        {
-            (s, e.to_ascii_lowercase())
-        }
-        _ => (name, "bin".to_string()),
-    };
-    let stem = sanitize_name(stem, 40);
-    let file = loop {
-        let tok = attachment_token();
-        let f = if stem.is_empty() {
-            format!("{card}.{tok}.{ext}")
-        } else {
-            format!("{card}.{tok}-{stem}.{ext}")
-        };
-        if !dir.join(&f).exists() {
-            break f;
-        }
-    };
+    let file = attachment_file_name(card, name, |f| dir.join(f).exists());
     let dest = dir.join(&file);
     match src {
         Source::Path(p) => {

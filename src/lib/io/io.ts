@@ -96,17 +96,29 @@ export function buildSettingsBundle(settings: Record<string, unknown>, keybindin
 
 // ── Board templates ─────────────────────────────────────────────────────────
 
+/** A sample file attached to the `card`-th template card (lane cards, then notes). */
+export interface TemplateAsset {
+  card: number;
+  name: string;
+  /** Base64 content. */
+  data: string;
+}
+
 export interface TemplateSpec {
   kind: 'kanban' | 'files';
   lanes: { name: string; cards: string[] }[];
   notes: string[];
+  assets?: TemplateAsset[];
 }
 
-export const NEW_BOARD_TEMPLATES = ['kanbanBasic', 'sprint', 'personal', 'notes'] as const;
+export const BASIC_BOARD_TEMPLATES = ['kanbanBasic', 'sprint', 'personal', 'notes'] as const;
+export type BasicBoardTemplate = (typeof BASIC_BOARD_TEMPLATES)[number];
+/** Every "new board from template" choice; the guides live in `./guides` (loaded on demand). */
+export const NEW_BOARD_TEMPLATES = [...BASIC_BOARD_TEMPLATES, 'guideKanban', 'guideNotes'] as const;
 export type NewBoardTemplate = (typeof NEW_BOARD_TEMPLATES)[number];
 
 /** Template content; `tr(key)` returns localized text under `io.tpl.<id>.*`. */
-export function templateSpec(id: NewBoardTemplate, tr: (key: string) => string): TemplateSpec {
+export function templateSpec(id: BasicBoardTemplate, tr: (key: string) => string): TemplateSpec {
   const k = (s: string) => tr(`io.tpl.${id}.${s}`);
   const card = (title: string, body = '') => `# ${title}\n${body ? `\n${body}\n` : ''}`;
   switch (id) {

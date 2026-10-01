@@ -333,6 +333,11 @@
     overflow-y: auto;
     padding: 0 28px;
   }
+  /* .body scrolls: the editor fills it but never shrinks below its text,
+     or the sections under it would overlap the last lines. */
+  .body :global(.luau-editor) {
+    flex: 1 0 auto;
+  }
   .body :global(.luau-editor .cm-scroller) {
     overflow: visible;
   }

@@ -47,7 +47,8 @@
 - **Group cards:** drop a card onto another to nest it, as deep as you like.
 - **Files boards:** a tree of Markdown documents that open in tabs.
 - **Quick add**, multi-select (⇧-click, ⌘-drag lasso), find-in-board, per-board zoom.
-- **Board templates:** Kanban basic, Sprint, Personal, Notes.
+- **Board templates:** Kanban basic, Sprint, Personal, Notes, and two **guide boards** (kanban and notes) that
+  show every Markdown feature on real cards: *New board from template → Luau guide*.
 
 ### Editor
 - **Live preview** on CodeMirror 6 that renders:

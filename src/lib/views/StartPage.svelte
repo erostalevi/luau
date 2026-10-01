@@ -111,7 +111,7 @@
           <div class="row static">
             <span class="dot" class:ext={e.origin !== 'you'}></span>
             <span class="grow"
-              >{e.label}{#if entryTitle(e)}{' · '}<em>{entryTitle(e)}</em>{/if}</span
+              >{e.label}{#if entryTitle(e)}<span class="sep"> · </span><em>{entryTitle(e)}</em>{/if}</span
             >
             <span class="muted small">{relTime(e.ts)}</span>
           </div>

@@ -115,6 +115,14 @@ export default {
         welcomeBody: 'Cada documento é um arquivo Markdown nesta pasta. Ligue notas com [[ e um título.',
         ideas: 'Ideias',
       },
+      guideKanban: {
+        name: 'Guia do Luau (kanban)',
+        desc: 'Um tour por todos os recursos, como quadro kanban (em inglês)',
+      },
+      guideNotes: {
+        name: 'Guia do Luau (notas)',
+        desc: 'Um tour por todos os recursos, como documentos Markdown (em inglês)',
+      },
     },
   },
   commands: {

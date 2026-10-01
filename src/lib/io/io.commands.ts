@@ -49,6 +49,7 @@ import {
   type ImportMode,
   type ImportResult,
   type NewBoardTemplate,
+  type TemplateSpec,
 } from './io';
 
 const FORMAT_ICONS: Record<ExportFormat, Component<any>> = { html: FileCode2, pdf: Printer, md: FileText, mdBundle: Package, zip: FileArchive, json: Braces };
@@ -216,6 +217,14 @@ async function importFlow(args?: { path?: string }) {
 
 // ── Templates ───────────────────────────────────────────────────────────────
 
+async function specFor(id: NewBoardTemplate): Promise<TemplateSpec> {
+  if (id === 'guideKanban' || id === 'guideNotes') {
+    const { guideSpec } = await import('./guides');
+    return guideSpec(id);
+  }
+  return templateSpec(id, (k) => t(k));
+}
+
 async function newFromTemplate() {
   const res = await steps<[NewBoardTemplate, string, string]>([
     () =>
@@ -240,7 +249,7 @@ async function newFromTemplate() {
     const snap = await rpc<BoardSnapshot>('board.createFromTemplate', {
       path: joinPath(folder, name.trim()),
       name: name.trim(),
-      template: templateSpec(id, (k) => t(k)),
+      template: await specFor(id),
       git: settings.get<boolean>('files.gitInit') === true,
     });
     await openBoardTab(snap.header.id);

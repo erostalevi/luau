@@ -115,6 +115,14 @@ export default {
         welcomeBody: 'Each document is a plain Markdown file in this folder. Link notes with [[ and a title.',
         ideas: 'Ideas',
       },
+      guideKanban: {
+        name: 'Luau guide (kanban)',
+        desc: 'A tour of every feature, as a kanban board',
+      },
+      guideNotes: {
+        name: 'Luau guide (notes)',
+        desc: 'A tour of every feature, as Markdown documents',
+      },
     },
   },
   commands: {

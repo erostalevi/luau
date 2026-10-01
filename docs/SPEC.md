@@ -229,6 +229,11 @@ CodeMirror 6 with **live preview** (Obsidian/Notion-like). Markdown stays the so
   - **(A) Overwrite:** one undo step reverses it.
   - **(C) Use in place:** a foreign folder opens read-only, "as is".
 - **Templates:** Kanban basic, Sprint, Personal, Notes, plus per-board and global card templates.
+  - **Guide boards** (*Luau guide (kanban)* and *Luau guide (notes)*, English content): one card per feature,
+    with sample attachments (SVG, PNG, PDF) and working card links.
+  - A board template may attach files to its cards (`assets`: card index, name, base64; at most 20 files of
+    2 MiB each). Card text can use `{{card:N}}` (the id of the N-th template card) and `{{asset:NAME}}` (the
+    file name of that card's attachment); the core fills both in before writing.
 
 ## 9. Local AI and automation
 
