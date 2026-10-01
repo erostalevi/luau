@@ -14,7 +14,7 @@ use super::{
 use crate::brand::INDEX_JSON;
 use crate::error::{Error, Result};
 use crate::fsutil::{move_path, remove_path};
-use crate::ids::{IdKind, new_id};
+use crate::ids::{IdKind, is_id, new_id};
 use crate::model::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -160,10 +160,37 @@ pub(crate) fn trash_lane(store: &mut BoardStore, k: &str) -> Result<String> {
     Ok(tid)
 }
 
+/// Read and validate a trash entry. `entry.json` is untrusted (boards can be
+/// downloaded, synced or cloned), so its ids must be well-formed and the entry
+/// must describe the directory it lives in; otherwise paths derived from it
+/// could point outside the trash folder.
 pub fn read_entry(root: &Path, tid: &str) -> Result<TrashEntry> {
+    if !is_id(tid, IdKind::Trash) {
+        return Err(Error::invalid(format!("bad trash id: {tid}")));
+    }
     let p = entry_dir(root, tid).join("entry.json");
     let text = fs::read_to_string(&p).map_err(|e| Error::io(&p, e))?;
-    serde_json::from_str(&text).map_err(|e| Error::Json { path: p, source: e })
+    let e: TrashEntry = serde_json::from_str(&text).map_err(|e| Error::Json {
+        path: p.clone(),
+        source: e,
+    })?;
+    validate_entry(&e, tid)?;
+    Ok(e)
+}
+
+fn validate_entry(e: &TrashEntry, tid: &str) -> Result<()> {
+    if e.id != tid {
+        return Err(Error::invalid("trash entry does not match its folder"));
+    }
+    let item_ok = match e.kind {
+        TrashKind::Node => is_id(&e.item_id, IdKind::Card),
+        TrashKind::Lane => is_id(&e.item_id, IdKind::Lane),
+        TrashKind::Orphan => true,
+    };
+    if !item_ok {
+        return Err(Error::invalid("bad trashed item id"));
+    }
+    Ok(())
 }
 
 pub(crate) fn restore(store: &mut BoardStore, tid: &str, ch: &mut Changes) -> Result<Restored> {
@@ -291,6 +318,10 @@ fn pick_restore_parent(store: &BoardStore, wanted: Option<&Parent>) -> Result<Pa
 
 /// All trash entries, newest first.
 pub fn list(root: &Path) -> Vec<TrashEntry> {
+    // A symlinked trash folder could point anywhere; never walk it.
+    if fs::symlink_metadata(trash_root(root)).is_ok_and(|m| m.file_type().is_symlink()) {
+        return Vec::new();
+    }
     let mut out: Vec<TrashEntry> = fs::read_dir(trash_root(root))
         .map(|rd| {
             rd.flatten()
@@ -308,9 +339,11 @@ pub fn purge(root: &Path, ttl_days: u32, all: bool) -> Result<usize> {
     let cutoff = chrono::Utc::now() - chrono::Duration::days(ttl_days as i64);
     let mut n = 0;
     for e in list(root) {
+        // An unreadable timestamp never counts as expired: deleting early is
+        // irreversible, keeping a little longer is not.
         let old = chrono::DateTime::parse_from_rfc3339(&e.deleted_at)
             .map(|d| d < cutoff)
-            .unwrap_or(true);
+            .unwrap_or(false);
         if all || old {
             remove_path(&entry_dir(root, &e.id))?;
             n += 1;
@@ -331,4 +364,72 @@ pub fn purge(root: &Path, ttl_days: u32, all: bool) -> Result<usize> {
         }
     }
     Ok(n)
+}
+
+#[cfg(test)]
+mod safety_tests {
+    use super::*;
+
+    fn write_entry(root: &Path, dir: &str, json: serde_json::Value) {
+        let d = trash_root(root).join(dir);
+        fs::create_dir_all(&d).unwrap();
+        fs::write(d.join("entry.json"), json.to_string()).unwrap();
+    }
+
+    fn entry_json(id: &str, item: &str, deleted_at: &str) -> serde_json::Value {
+        serde_json::json!({"id": id, "kind": "node", "itemId": item, "title": "x", "parent": null,
+            "index": 0, "isGroup": false, "count": 1, "deletedAt": deleted_at, "boardId": "b000001"})
+    }
+
+    #[test]
+    fn purge_never_follows_ids_from_entry_json() {
+        let t = tempfile::tempdir().unwrap();
+        let root = t.path().join("board");
+        let victim = t.path().join("victim");
+        fs::create_dir_all(&victim).unwrap();
+        fs::write(victim.join("keep.txt"), "x").unwrap();
+        // Absolute path, traversal and a mismatching id: all must be ignored.
+        write_entry(
+            &root,
+            "t000001",
+            entry_json(&victim.to_string_lossy(), "c000001", "x"),
+        );
+        write_entry(
+            &root,
+            "t000002",
+            entry_json("../../victim", "c000002", "2000-01-01T00:00:00Z"),
+        );
+        write_entry(
+            &root,
+            "t000003",
+            entry_json("t000004", "c000003", "2000-01-01T00:00:00Z"),
+        );
+        write_entry(
+            &root,
+            "not-an-id",
+            entry_json("not-an-id", "c000005", "2000-01-01T00:00:00Z"),
+        );
+        assert!(list(&root).is_empty());
+        purge(&root, 7, true).unwrap();
+        assert!(victim.join("keep.txt").exists());
+    }
+
+    #[test]
+    fn unreadable_timestamp_is_not_expired_and_bad_item_ids_are_rejected() {
+        let t = tempfile::tempdir().unwrap();
+        let root = t.path().join("board");
+        write_entry(
+            &root,
+            "t000001",
+            entry_json("t000001", "c000001", "garbage"),
+        );
+        write_entry(
+            &root,
+            "t000002",
+            entry_json("t000002", "../../etc", "2000-01-01T00:00:00Z"),
+        );
+        assert_eq!(list(&root).len(), 1);
+        assert_eq!(purge(&root, 7, false).unwrap(), 0);
+        assert!(trash_root(&root).join("t000001").exists());
+    }
 }

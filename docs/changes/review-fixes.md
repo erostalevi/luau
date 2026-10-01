@@ -46,3 +46,16 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   delegates. Other `journal_entry` callers were checked: they drop the board lock first.
 - Tests: regression test back-dates a pending edit by 61 s and asserts the next `apply` returns within 10 s and
   journals an `edit` entry. Reproduced before the fix with the out-of-repo harness (edit #60 hung).
+
+## B2 — Trash purge/restore trusted ids from `entry.json` (critical)
+
+- File: `crates/luau-core/src/store/trash.rs` (+ `safety_tests`).
+- Cause: `purge` and `restore` built paths from `entry.id` / `entry.item_id` read from `entry.json`, without
+  validation; `join` with an absolute path replaces the base, so a crafted board deleted arbitrary folders on open.
+  Unparseable `deletedAt` counted as expired.
+- Fix: `read_entry` requires the folder name to be a valid trash id, the entry's `id` to equal the folder name and
+  `itemId` to be a valid card/lane id (orphans excepted). `list` skips invalid entries and refuses a symlinked
+  trash folder. An unparseable timestamp is now *not* expired (late deletion is reversible, early is not).
+  `remove_path` already uses `symlink_metadata`, so links are removed, never followed.
+- Tests: absolute id, `../` id, mismatching id, non-id folder, bad item id and garbage timestamp; the victim
+  folder outside the board survives `purge(all=true)`.
