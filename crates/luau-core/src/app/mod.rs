@@ -522,21 +522,33 @@ impl Core {
     pub fn undo(&self, board: &str) -> Result<UndoResult> {
         self.flush_edits(Some(board));
         let b = self.board(board)?;
-        let top_is_external = matches!(
-            b.lock().peek_undo(),
-            Some(UndoEntry {
-                op: Op::External { .. },
-                ..
-            })
-        );
-        if top_is_external {
-            let entry = b.lock().take_undo().unwrap();
+        // Peek and pop under one lock: concurrent undos must not race.
+        let external = {
+            let mut s = b.lock();
+            let top = matches!(
+                s.peek_undo(),
+                Some(UndoEntry {
+                    op: Op::External { .. },
+                    ..
+                })
+            );
+            if top { s.take_undo() } else { None }
+        };
+        if let Some(entry) = external {
             let Op::External { token } = &entry.op else {
-                unreachable!()
+                return Err(Error::Other("undo stack changed".into()));
             };
             let token = token.clone();
             let label = entry.label.clone();
-            let inverse = self.run_cross(&token)?;
+            let inverse = match self.run_cross(&token) {
+                Ok(i) => i,
+                Err(e) => {
+                    if e.is_transient() {
+                        b.lock().push_undo(entry);
+                    }
+                    return Err(e);
+                }
+            };
             b.lock().push_redo(UndoEntry {
                 label: label.clone(),
                 op: Op::External {
@@ -579,20 +591,31 @@ impl Core {
 
     pub fn redo(&self, board: &str) -> Result<UndoResult> {
         let b = self.board(board)?;
-        let top_is_external = matches!(
-            b.lock().peek_redo(),
-            Some(UndoEntry {
-                op: Op::External { .. },
-                ..
-            })
-        );
-        if top_is_external {
-            let entry = b.lock().take_redo().unwrap();
+        let external = {
+            let mut s = b.lock();
+            let top = matches!(
+                s.peek_redo(),
+                Some(UndoEntry {
+                    op: Op::External { .. },
+                    ..
+                })
+            );
+            if top { s.take_redo() } else { None }
+        };
+        if let Some(entry) = external {
             let Op::External { token } = &entry.op else {
-                unreachable!()
+                return Err(Error::Other("redo stack changed".into()));
             };
             let token = token.clone();
-            let inverse = self.run_cross(&token)?;
+            let inverse = match self.run_cross(&token) {
+                Ok(i) => i,
+                Err(e) => {
+                    if e.is_transient() {
+                        b.lock().push_redo(entry);
+                    }
+                    return Err(e);
+                }
+            };
             b.lock().push_undo(UndoEntry {
                 label: entry.label.clone(),
                 op: Op::External {

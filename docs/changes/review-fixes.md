@@ -122,3 +122,15 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Tests: `grants::tests::normalization_and_subtrees`; clippy; svelte-check. Manual native-dialog test pending in F1.
 - Risk: a flow that passes a path not obtained from a picker now fails with `forbidden_path` (toast). The web
   build is unaffected (mock backend).
+
+## C3 — Concurrent undo/redo could panic; failed undo lost its step (high)
+
+- Files: `crates/luau-core/src/app/mod.rs` (`undo`, `redo`), `store/mod.rs` (`BoardStore::undo/redo`),
+  `error.rs` (`Error::is_transient`), tests in `app/tests.rs`.
+- Cause: the cross-board branch peeked and popped under two separate locks (`take_undo().unwrap()`,
+  `unreachable!()`), so two concurrent ⌘Z could panic — fatal with `panic = "abort"`. Entries were popped before
+  applying, so any failure lost the step.
+- Fix: peek+pop under one lock, no `unwrap`/`unreachable`. On failure the entry is pushed back when the error is
+  transient (I/O, read-only, other); permanent errors (not found, conflict, invalid — e.g. the trash entry was
+  purged) drop the step so undo is never stuck on it.
+- Tests: `concurrent_undo_redo_never_panics` (6 threads × 30 undo/redo), `failed_undo_keeps_its_step_when_transient`.

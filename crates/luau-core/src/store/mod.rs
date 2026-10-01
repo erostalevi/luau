@@ -299,7 +299,17 @@ impl BoardStore {
         let Some(entry) = self.undo.pop() else {
             return Ok(None);
         };
-        let applied = self.apply(entry.op)?;
+        let applied = match self.apply(entry.op.clone()) {
+            Ok(a) => a,
+            Err(e) => {
+                // Keep the step when retrying may work; drop it when it can
+                // never apply again (e.g. its trash entry was purged).
+                if e.is_transient() {
+                    self.undo.push(entry);
+                }
+                return Err(e);
+            }
+        };
         self.redo.push(UndoEntry {
             label: entry.label.clone(),
             op: applied.inverse.clone(),
@@ -312,7 +322,15 @@ impl BoardStore {
         let Some(entry) = self.redo.pop() else {
             return Ok(None);
         };
-        let applied = self.apply(entry.op)?;
+        let applied = match self.apply(entry.op.clone()) {
+            Ok(a) => a,
+            Err(e) => {
+                if e.is_transient() {
+                    self.redo.push(entry);
+                }
+                return Err(e);
+            }
+        };
         self.undo.push(UndoEntry {
             label: entry.label.clone(),
             op: applied.inverse.clone(),

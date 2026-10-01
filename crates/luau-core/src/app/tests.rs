@@ -358,3 +358,83 @@ fn long_edit_session_flush_does_not_deadlock() {
     let h = c.history(&b, &HistoryFilter::default()).unwrap();
     assert!(h.iter().any(|e| e.kind == "edit"));
 }
+
+#[test]
+fn concurrent_undo_redo_never_panics() {
+    let (d, c, _) = core();
+    let snap = c
+        .create_board(
+            &d.path().join("U"),
+            "U",
+            BoardKind::Kanban,
+            &["A".into()],
+            false,
+        )
+        .unwrap();
+    let b = snap.header.id.clone();
+    let lane = snap.lanes[0].id.clone();
+    for i in 0..40 {
+        c.apply(
+            &b,
+            Op::CreateCard {
+                id: c.new_card_id(),
+                parent: Parent::Lane(lane.clone()),
+                index: None,
+                content: format!("# {i}\n"),
+            },
+            "New",
+            None,
+        )
+        .unwrap();
+    }
+    let hs: Vec<_> = (0..6)
+        .map(|k| {
+            let (c, b) = (c.clone(), b.clone());
+            std::thread::spawn(move || {
+                for _ in 0..30 {
+                    let _ = if k % 2 == 0 { c.undo(&b) } else { c.redo(&b) };
+                }
+            })
+        })
+        .collect();
+    for h in hs {
+        h.join().expect("undo/redo thread panicked");
+    }
+    // Stacks stay consistent: the remaining steps can still be undone.
+    while c.undo(&b).unwrap().done {}
+    assert!(c.snapshot(&b).unwrap().lanes[0].order.is_empty());
+}
+
+#[test]
+fn failed_undo_keeps_its_step_when_transient() {
+    let (d, c, _) = core();
+    let snap = c
+        .create_board(
+            &d.path().join("R"),
+            "R",
+            BoardKind::Kanban,
+            &["A".into()],
+            false,
+        )
+        .unwrap();
+    let b = snap.header.id.clone();
+    let id = c.new_card_id();
+    c.apply(
+        &b,
+        Op::CreateCard {
+            id: id.clone(),
+            parent: Parent::Lane(snap.lanes[0].id.clone()),
+            index: None,
+            content: "# x\n".into(),
+        },
+        "New",
+        None,
+    )
+    .unwrap();
+    let store = c.board(&b).unwrap();
+    store.lock().state.read_only = Some("test".into());
+    assert!(c.undo(&b).is_err());
+    store.lock().state.read_only = None;
+    assert!(c.undo(&b).unwrap().done, "step was kept");
+    assert!(c.snapshot(&b).unwrap().nodes.is_empty());
+}

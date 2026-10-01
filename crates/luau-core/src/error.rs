@@ -27,6 +27,15 @@ pub enum Error {
 }
 
 impl Error {
+    /// Errors that may go away on retry (disk, permissions, read-only mode).
+    /// Undo/redo keep their step for these instead of dropping it.
+    pub fn is_transient(&self) -> bool {
+        matches!(
+            self,
+            Error::Io { .. } | Error::ReadOnly(_) | Error::Other(_)
+        )
+    }
+
     pub fn io(path: impl Into<PathBuf>, source: std::io::Error) -> Self {
         Error::Io {
             path: path.into(),
