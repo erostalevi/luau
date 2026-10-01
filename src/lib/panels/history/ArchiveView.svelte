@@ -42,10 +42,17 @@
 </script>
 
 <div class="selects">
-  <select class="field slim" value={boardId} onchange={(ev) => (hist.board = (ev.currentTarget as HTMLSelectElement).value)} aria-label={t('history.board')}>
+  <select
+    class="field slim board"
+    value={boardId}
+    onchange={(ev) => (hist.board = (ev.currentTarget as HTMLSelectElement).value)}
+    aria-label={t('history.board')}
+  >
     {#each boardsList as b (b.id)}<option value={b.id}>{b.name}</option>{/each}
   </select>
-  <button class="btn ghost sm" disabled={!cards.length && !lanes.length} onclick={all}><ArchiveRestore size={14} />{t('history.archive.unarchiveAll')}</button>
+  <button class="btn ghost sm all" disabled={!cards.length && !lanes.length} onclick={all} title={t('history.archive.unarchiveAll')}
+    ><ArchiveRestore size={14} /><span class="btn-label">{t('history.archive.unarchiveAll')}</span></button
+  >
 </div>
 
 <div class="list">
@@ -111,16 +118,34 @@
 <style>
   .selects {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     padding: 0 10px 8px;
+    min-width: 0;
   }
   .field.slim {
-    flex: 1;
     min-width: 0;
     height: 28px;
-    padding-top: 0;
-    padding-bottom: 0;
+    padding: 0 24px 0 8px;
+    background-position: right 6px center;
     font-size: var(--fs-sm);
+    text-overflow: ellipsis;
+  }
+  .board {
+    flex: 1 1 110px;
+  }
+  .all {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 0 8px;
+  }
+  .all :global(svg) {
+    flex-shrink: 0;
+  }
+  .btn-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .list {
     flex: 1;

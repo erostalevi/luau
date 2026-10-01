@@ -61,21 +61,28 @@
 </script>
 
 <div class="selects">
-  <select class="field slim" value={board} onchange={(ev) => (hist.board = (ev.currentTarget as HTMLSelectElement).value)} aria-label={t('history.board')}>
+  <select
+    class="field slim board"
+    value={board}
+    onchange={(ev) => (hist.board = (ev.currentTarget as HTMLSelectElement).value)}
+    aria-label={t('history.board')}
+  >
     {#each boardsList as b (b.id)}<option value={b.id}>{b.name}</option>{/each}
   </select>
   <label class="ttl" use:tip={t('settings.keys.trash.ttlDays.desc')}>
-    <span>{t('history.trash.keepFor')}</span>
-    <select class="field slim" value={String(ttl)} onchange={(ev) => setTtl((ev.currentTarget as HTMLSelectElement).value)}>
+    <span class="ttl-label">{t('history.trash.keepFor')}</span>
+    <select class="field slim ttl-select" value={String(ttl)} onchange={(ev) => setTtl((ev.currentTarget as HTMLSelectElement).value)}>
       {#each ttlOptions as d (d)}<option value={String(d)}>{t('history.trash.days', { count: d })}</option>{/each}
     </select>
   </label>
 </div>
 
 <div class="actions">
-  <button class="btn ghost sm" disabled={!board} onclick={() => void cleanupTrash([board])}><Eraser size={14} />{t('history.trash.cleanup')}</button>
-  <button class="btn ghost sm danger" disabled={!entries.length} onclick={() => void emptyTrash(board)}
-    ><Flame size={14} />{t('history.trash.emptyTrash')}</button
+  <button class="btn ghost sm" disabled={!board} onclick={() => void cleanupTrash([board])} title={t('history.trash.cleanup')}
+    ><Eraser size={14} /><span class="btn-label">{t('history.trash.cleanup')}</span></button
+  >
+  <button class="btn sm danger" disabled={!entries.length} onclick={() => void emptyTrash(board)} title={t('history.trash.emptyTrash')}
+    ><Flame size={14} /><span class="btn-label">{t('history.trash.emptyTrash')}</span></button
   >
 </div>
 
@@ -130,34 +137,73 @@
 <style>
   .selects {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     padding: 0 10px 6px;
+    min-width: 0;
   }
   .field.slim {
-    flex: 1;
     min-width: 0;
     height: 28px;
-    padding-top: 0;
-    padding-bottom: 0;
+    padding: 0 24px 0 8px;
+    background-position: right 6px center;
     font-size: var(--fs-sm);
+    text-overflow: ellipsis;
+  }
+  .board {
+    flex: 1 1 120px;
   }
   .ttl {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 1;
+    flex: 1 1 120px;
     min-width: 0;
     font-size: var(--fs-xs);
     color: var(--ink-3);
+  }
+  .ttl-label {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  /* Wide enough to always show its value ("7 days"), never squeezed to an empty pill. */
+  .ttl-select {
+    flex: 1 0 auto;
+    width: auto;
+    min-width: 76px;
   }
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
-    padding: 0 6px 6px;
+    padding: 0 10px 6px;
+    min-width: 0;
   }
+  .actions .btn {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .actions .btn :global(svg) {
+    flex-shrink: 0;
+  }
+  .btn-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .actions .btn.ghost {
+    padding: 0 8px;
+  }
+  /* Destructive, readable in both themes (plain --danger on its soft tint is below AA in light). */
   .btn.danger {
-    color: var(--danger);
+    background: var(--danger-soft);
+    color: color-mix(in oklab, var(--danger) 72%, var(--ink));
+  }
+  .btn.danger:disabled {
+    opacity: 0.6;
   }
   .list {
     flex: 1;

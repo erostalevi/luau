@@ -606,7 +606,8 @@
   }
   .examples {
     display: grid;
-    grid-template-columns: auto 1fr;
+    /* The example column shrinks (ellipsis) before the description gets too narrow to read. */
+    grid-template-columns: minmax(0, auto) minmax(72px, 1fr);
     gap: 2px 10px;
     margin-top: 8px;
   }
@@ -632,8 +633,13 @@
     font-size: 11px;
     font-variant-ligatures: none;
     white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .ex span {
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: var(--ink-3);
     font-size: var(--fs-xs);
     line-height: 1.35;
