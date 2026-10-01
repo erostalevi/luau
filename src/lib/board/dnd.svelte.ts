@@ -13,6 +13,7 @@ import { rpc } from '$lib/backend/rpc';
 import { toast } from '$lib/state/toasts.svelte';
 import { t } from '$lib/i18n/index.svelte';
 import { boardUi } from './boardUi.svelte';
+import { ctx as cmdCtx } from '$lib/commands/context.svelte';
 
 export type DragKind = 'cards' | 'lane' | 'external';
 
@@ -173,7 +174,7 @@ function computeTarget(x: number, y: number): DropTarget | null {
       return { type: 'tree', boardId, parent: into, before: null, zone: 'into', cardId: id, el: tree, valid: validFor(boardId, into, id) };
     }
     const zone: Zone = rel <= 0.3 ? 'before' : 'after';
-    const before = zone === 'before' ? id : (tree.dataset.next ?? null);
+    const before = zone === 'before' ? id : nextUndraggedSibling(tree, src.ids ?? []);
     return { type: 'tree', boardId, parent, before, zone, cardId: id, el: tree, valid: validFor(boardId, parent) };
   }
 
@@ -407,6 +408,19 @@ async function drop(src: DragSource, tg: DropTarget) {
   }
 }
 
+/** "After" in the explorer tree: the next sibling row that is not being dragged
+ *  (dropping "before" a dragged card makes the move fail). */
+function nextUndraggedSibling(row: HTMLElement, dragged: string[]): string | null {
+  let next = row.dataset.next ?? null;
+  if (!next || !dragged.includes(next)) return next;
+  const same = [...document.querySelectorAll<HTMLElement>('[data-tree][data-id]')].filter(
+    (r) => r.dataset.board === row.dataset.board && r.dataset.parentKind === row.dataset.parentKind && r.dataset.parentId === row.dataset.parentId,
+  );
+  const ids = same.map((r) => r.dataset.id!);
+  for (let i = ids.indexOf(row.dataset.id!) + 1; i < ids.length; i++) if (!dragged.includes(ids[i])) return ids[i];
+  return null;
+}
+
 /** Begin tracking a potential drag from a pointerdown. */
 export function startDrag(e: PointerEvent, source: DragSource, sourceEl: HTMLElement | null, scrollEls: HTMLElement[] = []) {
   if (e.button !== 0) return;
@@ -418,6 +432,7 @@ export function startDrag(e: PointerEvent, source: DragSource, sourceEl: HTMLEle
       if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
       started = true;
       dnd.active = true;
+      cmdCtx.dragging = true;
       dnd.source = source;
       dnd.count = source.ids?.length ?? 1;
       scrollers = [...scrollEls, ...document.querySelectorAll<HTMLElement>('[data-autoscroll]')];
@@ -432,32 +447,46 @@ export function startDrag(e: PointerEvent, source: DragSource, sourceEl: HTMLEle
   const up = async (ev: PointerEvent) => {
     teardown();
     if (!started) return;
+    // Swallow the click the browser fires right after this pointerup — and
+    // only that one (registered before any await; dropped if it never comes).
+    const swallow = (c: MouseEvent) => c.stopPropagation();
+    window.addEventListener('click', swallow, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0);
     update(ev.clientX, ev.clientY);
     const tg = dnd.target;
     const src = dnd.source;
+    cancel();
+    if (src && tg?.valid) await drop(src, tg).catch((err) => toast.error(String(err)));
+  };
+  /** Abort without dropping (Escape, pointer cancelled, window lost focus). */
+  const cancel = () => {
+    teardown();
     cleanup();
     dnd.source = null;
     dnd.target = null;
-    if (src && tg?.valid) await drop(src, tg).catch((err) => toast.error(String(err)));
-    // Swallow the click that follows a drag.
-    window.addEventListener('click', (c) => c.stopPropagation(), { capture: true, once: true });
+    cmdCtx.dragging = false;
   };
   const key = (ev: KeyboardEvent) => {
     if (ev.key === 'Escape' && started) {
       ev.preventDefault();
       ev.stopPropagation();
-      teardown();
-      cleanup();
-      dnd.source = null;
-      dnd.target = null;
+      cancel();
     }
+  };
+  const abort = () => {
+    if (started) cancel();
+    else teardown();
   };
   const teardown = () => {
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', abort);
+    window.removeEventListener('blur', abort);
     window.removeEventListener('keydown', key, true);
   };
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', abort);
+  window.addEventListener('blur', abort);
   window.addEventListener('keydown', key, true);
 }

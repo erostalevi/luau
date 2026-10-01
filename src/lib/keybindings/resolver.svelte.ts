@@ -102,7 +102,7 @@ function match(stroke: string): { exact?: Keybinding; prefix: boolean } {
 }
 
 export function handleKeydown(e: KeyboardEvent) {
-  if (kb.recording || e.isComposing) return;
+  if (kb.recording || e.isComposing || ctxGet('dragging')) return;
   const stroke = eventToStroke(e);
   if (!stroke) return;
   const { exact, prefix } = match(stroke);

@@ -181,3 +181,18 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   new in-editor alternatives: macOS ⌃- / ⌃⇧-, Windows/Linux Alt+←/→. `mod+shift+l` (orientation) is not active in
   the editor (select all matches). Emacs preset `alt+x` and `ctrl+x ctrl+f` are disabled while typing (Cut and ≈).
 - Tests: `keys.test.ts` (AZERTY, QWERTZ, ⌥N, Cyrillic, digits, AltGr, real Ctrl+Alt); vitest total passes.
+
+## C7 — Drag and drop: swallowed click, stuck drags, Escape side effect, tree "after" target (high)
+
+- Files: `src/lib/board/dnd.svelte.ts`, `src/lib/commands/context.svelte.ts` (`dragging`),
+  `src/lib/keybindings/resolver.svelte.ts`.
+- The post-drag click guard is registered synchronously on pointerup (before the drop RPC) and removed on the next
+  tick, so it only swallows the click the browser synthesizes for that pointerup — never a later real click.
+- `pointercancel` and window `blur` (alt-tab, Mission Control, release outside the window) cancel the drag like
+  Escape; no ghost or listeners are left behind.
+- While dragging, the keybinding resolver is suspended (`ctx.dragging`), so Escape cancels the drag without also
+  running `board.clearSelection`.
+- Explorer tree "after" zone: when the next sibling row is itself being dragged, the next undragged sibling is used
+  (dropping "before" a moving card failed and forced a reload).
+- Tests: web build — drag a card across lanes, then click another card: the editor opens (was swallowed);
+  `pnpm check`, vitest.

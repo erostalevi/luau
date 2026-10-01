@@ -9,6 +9,8 @@ export const ctx = $state<Record<string, unknown>>({
   inputFocus: false,
   /** A button/link/select has focus: Enter/Space/Tab must keep their native meaning. */
   buttonFocus: false,
+  /** A drag is in progress: shortcuts are suspended (Escape cancels the drag). */
+  dragging: false,
   paletteOpen: false,
   modalOpen: false,
   explorerFocus: false,
