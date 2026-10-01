@@ -3,7 +3,8 @@
 
 import { rpc, RpcError } from '$lib/backend/rpc';
 import type { Parent, RemoteInfo } from '$lib/backend/types';
-import { boards } from '$lib/state/boards.svelte';
+import { boards, openBoard } from '$lib/state/boards.svelte';
+import { registry } from '$lib/state/registry.svelte';
 import { activeBoard, activeCard, openExternal, pickFile } from '$lib/app/helpers';
 import { openCard } from '$lib/app/open';
 import { quickPick, pickOne, inputBox, steps, BACK, type QuickItem } from '$lib/quickinput/qi.svelte';
@@ -12,8 +13,9 @@ import { toast } from '$lib/state/toasts.svelte';
 import { settings } from '$lib/settings/store.svelte';
 import { t } from '$lib/i18n/index.svelte';
 import { runGated, errorText } from './gate';
-import { integ, loadAccounts, loadLinks, loadMirrors, isIssueAccount, accountById } from './state.svelte';
-import type { Account, IdName, MirrorSource, ProviderKind, RemoteIssue, Transition } from './types';
+import { integ, loadAccounts, loadLinks, loadMirrors, isIssueAccount, isJiraAccount, accountById, searchModeOf, setSearchMode } from './state.svelte';
+import { capKeys, emptySelection, prune, MAX_LINK_MANY } from './resultSelection';
+import type { Account, IdName, LinkManyResult, MirrorSource, ProviderKind, RemoteIssue, SavedQuery, SearchMode, Transition } from './types';
 import type { RemoteUser } from '$lib/backend/types';
 
 export interface CardRef {
@@ -203,25 +205,55 @@ export async function removeAccount(a: Account) {
 
 // --- search ------------------------------------------------------------------------
 
+/** Server message of a rejected query (`remote_bad_request:<message>`), or null. */
+function badRequestDetail(e: unknown): string | null {
+  const raw = e instanceof Error ? e.message : String(e);
+  const m = /remote_bad_request:(.*)$/s.exec(raw);
+  return m ? m[1].trim() : null;
+}
+
 export async function search(more = false) {
   const a = accountById(integ.account);
   if (!a) return;
+  const mode = searchModeOf(a);
   integ.searching = true;
   integ.error = '';
   try {
     const page = await rpc<{ issues: RemoteIssue[]; next: string | null }>('remote.search', {
       account: a.id,
       query: integ.query,
+      mode,
       next: more ? integ.next : null,
     });
     integ.results = more ? [...integ.results, ...page.issues] : page.issues;
     integ.next = page.next;
+    integ.selection = more
+      ? prune(
+          integ.results.map((i) => i.key),
+          integ.selection,
+        )
+      : emptySelection();
   } catch (e) {
-    integ.error = errorText(e);
-    if (!more) integ.results = [];
+    const detail = badRequestDetail(e);
+    integ.error =
+      detail && isJiraAccount(a) && integ.query.trim()
+        ? t(mode === 'jql' ? 'integrations.invalidJql' : 'integrations.searchRejected', { detail })
+        : errorText(e);
+    if (!more) {
+      integ.results = [];
+      integ.selection = emptySelection();
+    }
   } finally {
     integ.searching = false;
   }
+}
+
+/** Switch the panel between JQL and plain-text search (Jira only) and re-run it. */
+export function setMode(mode: SearchMode) {
+  const a = accountById(integ.account);
+  if (!a || !isJiraAccount(a) || searchModeOf(a) === mode) return;
+  setSearchMode(a.id, mode);
+  if (integ.query.trim()) void search();
 }
 
 export async function saveQuery() {
@@ -229,9 +261,18 @@ export async function saveQuery() {
   if (!a || !integ.query.trim()) return;
   const name = await inputBox({ title: t('integrations.saveQuery'), prompt: t('integrations.saveQueryPrompt'), value: integ.query.slice(0, 40) });
   if (typeof name !== 'string' || !name.trim()) return;
-  const saved = [...a.savedQueries.filter((q) => q.name !== name.trim()), { name: name.trim(), query: integ.query }];
+  const saved = [...a.savedQueries.filter((q) => q.name !== name.trim()), { name: name.trim(), query: integ.query, mode: searchModeOf(a) }];
   await busy(t('integrations.saveQuery'), () => rpc('integrations.update', { account: a.id, patch: { savedQueries: saved } }));
   await loadAccounts();
+}
+
+/** Run a saved query in the mode it was saved with. */
+export function runSaved(q: SavedQuery) {
+  const a = accountById(integ.account);
+  if (!a) return;
+  if (isJiraAccount(a)) setSearchMode(a.id, q.mode ?? 'jql');
+  integ.query = q.query;
+  void search();
 }
 
 export async function removeQuery(name: string) {
@@ -264,6 +305,55 @@ export async function linkIssue(account: string, key: string, board: string, par
       toast.warn(t('integrations.alreadyOnBoard', { key }), { action: { label: t('integrations.jumpToExisting'), run: () => void openCard(board, m[1]) } });
     } else toast.error(t('integrations.failed', { action: key, message: errorText(e) }));
   }
+}
+
+/** Linked copies of several issues at one drop position, in list order, as
+ *  one undo step (`remote.linkMany` → one `Op::Batch`). Capped at 100. */
+export async function linkMany(account: string, keys: string[], board: string, parent: Parent, before: string | null) {
+  const { keys: list, capped } = capKeys(keys);
+  if (capped) toast.warn(t('integrations.tooMany', { max: MAX_LINK_MANY }));
+  if (!list.length) return;
+  try {
+    const r = await rpc<LinkManyResult>('remote.linkMany', { account, keys: list, board, parent, before });
+    if (r.created.length)
+      toast.success(t('integrations.linkedMany', { count: r.created.length }), {
+        action: { label: t('integrations.open'), run: () => void openCard(board, r.created[0]) },
+      });
+    if (r.skipped.length) {
+      const first = r.skipped[0];
+      toast.warn(t('integrations.skippedMany', { count: r.skipped.length, keys: r.skipped.map((s) => s.key).join(', ') }), {
+        action: { label: t('integrations.jumpToExisting'), run: () => void openCard(board, first.card) },
+      });
+    }
+    if (r.missing.length) toast.warn(t('integrations.missingMany', { count: r.missing.length, keys: r.missing.join(', ') }));
+  } catch (e) {
+    toast.error(t('integrations.failed', { action: t('integrations.addSelected'), message: errorText(e) }));
+  }
+}
+
+/** Keyboard alternative to dragging: pick a board and a lane (or top level),
+ *  then add the selected results at the end. */
+export async function addSelectedTo() {
+  const a = accountById(integ.account);
+  const keys = integ.selection.keys;
+  if (!a || !keys.length) return void toast.info(t('integrations.selectFirst'));
+  const r = await steps<[string, Parent]>([
+    () =>
+      pickOne(
+        registry.data.boards.filter((x) => !x.hidden && !x.missing && !x.mirror).map((x) => ({ label: x.name, value: x.id })),
+        { title: t('integrations.addSelectedTitle', { count: keys.length }), step: 1, totalSteps: 2 },
+      ),
+    async ([boardId]) => {
+      const b = boards.get(boardId) ?? (await openBoard({ id: boardId }));
+      const items: QuickItem<Parent>[] =
+        b.kind === 'files'
+          ? [{ label: t('cards.topLevel'), value: { kind: 'root' } }]
+          : b.lanes.filter((l) => !l.archived).map((l) => ({ label: l.name, value: { kind: 'lane', id: l.id } as Parent }));
+      return pickOne(items, { title: t('cards.pickDestination'), step: 2, totalSteps: 2 });
+    },
+  ]);
+  if (!r) return;
+  await linkMany(a.id, keys, r[0], r[1], null);
 }
 
 export async function copyFromMirror(from: string, ids: string[], to: string, parent: Parent, before: string | null) {
@@ -457,13 +547,15 @@ export async function mirrorBoard(accountId?: string, preset?: MirrorSource, pre
   let name = presetName ?? '';
   if (!source) {
     const choices: QuickItem<'board' | 'query'>[] = [{ label: t('integrations.mirror.fromBoard'), value: 'board' }];
-    if (a.provider !== 'trello') choices.push({ label: t('integrations.mirror.fromQuery'), description: integ.query || a.defaultQuery || '', value: 'query' });
+    // Plain-text panel searches are not JQL: only prefill a JQL query.
+    const jql = searchModeOf(a) === 'jql' ? integ.query : '';
+    if (a.provider !== 'trello') choices.push({ label: t('integrations.mirror.fromQuery'), description: jql || a.defaultQuery || '', value: 'query' });
     const how = choices.length > 1 ? await pickOne(choices, { title: t('commands.integrations.mirrorBoard') }) : 'board';
     if (!how || how === BACK) return;
     if (how === 'query') {
       const q = await inputBox({
         title: t('integrations.mirror.fromQuery'),
-        value: integ.query || a.defaultQuery || '',
+        value: jql || a.defaultQuery || '',
         validate: (v) => (v.trim() ? null : t('integrations.mirror.queryRequired')),
       });
       if (typeof q !== 'string') return;

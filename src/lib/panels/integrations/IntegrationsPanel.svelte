@@ -1,26 +1,51 @@
 <script lang="ts">
   // Integrations panel: accounts, connect flows, remote search (JQL / Trello
   // query) with saved queries, a draggable issue list, mirrors with watch toggles.
-  import { Plug, Search, Bookmark, X, MoreHorizontal, RefreshCw, Trash2, Copy, Eye, Send, ShieldAlert, Diamond, LoaderCircle } from '@lucide/svelte';
+  import {
+    Plug,
+    Search,
+    Bookmark,
+    X,
+    MoreHorizontal,
+    RefreshCw,
+    Trash2,
+    Copy,
+    Eye,
+    Send,
+    ShieldAlert,
+    Diamond,
+    LoaderCircle,
+    Check,
+    ListPlus,
+  } from '@lucide/svelte';
   import { rpc } from '$lib/backend/rpc';
   import { t, relTime } from '$lib/i18n/index.svelte';
   import { tip } from '$lib/components/tooltip';
   import Toggle from '$lib/components/Toggle.svelte';
+  import Segmented from '$lib/components/Segmented.svelte';
   import { openMenuAt } from '$lib/state/menu.svelte';
   import { settings } from '$lib/settings/store.svelte';
   import { toast } from '$lib/state/toasts.svelte';
   import { openBoardTab } from '$lib/state/workspace.svelte';
   import { openExternal } from '$lib/app/helpers';
   import { startDrag } from '$lib/board/dnd.svelte';
-  import { integ, accountById, isIssueAccount, loadMirrors } from '$lib/integrations/state.svelte';
+  import { integ, accountById, isIssueAccount, isJiraAccount, searchModeOf, loadMirrors } from '$lib/integrations/state.svelte';
+  import { clickSelect, dragKeys, emptySelection, selectAll } from '$lib/integrations/resultSelection';
   import * as A from '$lib/integrations/actions';
   import { errorText, serviceName } from '$lib/integrations/gate';
-  import type { Account, RemoteIssue } from '$lib/integrations/types';
+  import type { Account, RemoteIssue, SearchMode } from '$lib/integrations/types';
 
   const issueAccounts = $derived(integ.accounts.filter(isIssueAccount));
   const slackAccounts = $derived(integ.accounts.filter((a) => a.provider === 'slack'));
   const current = $derived(accountById(integ.account));
-  const isJira = $derived(current?.provider === 'jiraCloud' || current?.provider === 'jiraServer');
+  const isJira = $derived(isJiraAccount(current));
+  const mode = $derived<SearchMode>(searchModeOf(current));
+  const order = $derived(integ.results.map((i) => i.key));
+  const selected = $derived(new Set(integ.selection.keys));
+  const modeOptions = $derived([
+    { value: 'jql' as SearchMode, label: 'JQL', title: t('integrations.modeJqlTip') },
+    { value: 'text' as SearchMode, label: t('integrations.modeText'), title: t('integrations.modeTextTip') },
+  ]);
   const allowPush = $derived(settings.get<boolean>('integrations.allowPush') === true);
   const allowPull = $derived(settings.get<boolean>('integrations.allowPull') !== false);
   let lastSearched = '';
@@ -75,14 +100,61 @@
 
   function drag(e: PointerEvent, i: RemoteIssue) {
     if (!current) return;
+    const keys = dragKeys(order, integ.selection, i.key);
+    if (keys.length > 1) {
+      startDrag(
+        e,
+        {
+          kind: 'external',
+          payload: { type: 'remoteIssues', account: current.id, keys },
+          label: t('integrations.dragMany', { count: keys.length }),
+          count: keys.length,
+        },
+        null,
+      );
+      return;
+    }
     startDrag(e, { kind: 'external', payload: { type: 'remoteIssue', account: current.id, key: i.key }, label: `${i.key} · ${i.summary}` }, null);
+  }
+
+  function rowClick(e: MouseEvent, i: RemoteIssue) {
+    const onCheck = !!(e.target as HTMLElement).closest('.check');
+    const toggle = onCheck || e.metaKey || e.ctrlKey;
+    integ.selection = clickSelect(order, integ.selection, i.key, { toggle, range: e.shiftKey });
+  }
+
+  function listKey(e: KeyboardEvent) {
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      e.stopPropagation();
+      integ.selection = selectAll(order);
+    } else if (e.key === 'Escape' && integ.selection.keys.length) {
+      e.preventDefault();
+      e.stopPropagation();
+      integ.selection = emptySelection();
+    } else if (e.key === ' ') {
+      // Space toggles the focused row (keyboard multi-select).
+      const key = (e.target as HTMLElement).closest<HTMLElement>('[data-issue]')?.dataset.issue;
+      if (key) {
+        e.preventDefault();
+        integ.selection = clickSelect(order, integ.selection, key, { toggle: true, range: e.shiftKey });
+      }
+    } else if (e.key === 'Enter' && mod) {
+      e.preventDefault();
+      void A.addSelectedTo();
+    }
   }
 
   function issueMenu(e: MouseEvent, i: RemoteIssue) {
     e.preventDefault();
+    if (!selected.has(i.key)) integ.selection = clickSelect(order, integ.selection, i.key);
+    const n = integ.selection.keys.length;
     openMenuAt(e.currentTarget as HTMLElement, [
       { label: t('commands.remote.openInBrowser'), run: () => void openExternal(i.url) },
       { label: t('integrations.copyKey'), run: () => void navigator.clipboard?.writeText(i.key) },
+      { separator: true },
+      { label: t('integrations.addSelectedTitle', { count: n }), run: () => void A.addSelectedTo() },
     ]);
   }
 
@@ -147,15 +219,31 @@
 
     {#if current}
       <section class="search">
+        <div class="modes">
+          {#if isJira}
+            <Segmented size="sm" options={modeOptions} value={mode} onchange={(v) => A.setMode(v)} />
+          {:else}
+            <!-- Trello: plain text only. `inert` keeps the control out of the tab
+                 order and hit-testing; the wrapper still shows the tooltip. -->
+            <span class="modes-off" role="group" aria-disabled="true" aria-label={t('integrations.modeTrelloTip')} use:tip={t('integrations.modeTrelloTip')}>
+              <span class="contents" inert><Segmented size="sm" options={modeOptions} value="text" /></span>
+            </span>
+          {/if}
+        </div>
         <div class="qbox">
           <Search size={14} class="muted" />
           <textarea
             class="q"
+            class:text={mode === 'text'}
             rows="1"
             bind:value={integ.query}
             onkeydown={onKey}
-            placeholder={isJira ? current.defaultQuery || t('integrations.jqlPlaceholder') : t('integrations.trelloPlaceholder')}
-            aria-label={isJira ? 'JQL' : t('integrations.search')}
+            placeholder={!isJira
+              ? t('integrations.trelloPlaceholder')
+              : mode === 'text'
+                ? t('integrations.textPlaceholder')
+                : current.defaultQuery || t('integrations.jqlPlaceholder')}
+            aria-label={isJira && mode === 'jql' ? 'JQL' : t('integrations.search')}
             spellcheck="false"></textarea>
           {#if integ.query}
             <button
@@ -181,34 +269,36 @@
             }}>{isJira ? t('integrations.myOpenIssues') : t('integrations.allCards')}</button
           >
           {#each current.savedQueries as q (q.name)}
-            <span class="chip saved-q" class:on={integ.query === q.query}>
-              <button
-                onclick={() => {
-                  integ.query = q.query;
-                  void A.search();
-                }}
-                use:tip={q.query}>{q.name}</button
-              >
+            <span class="chip saved-q" class:on={integ.query === q.query && (!isJira || (q.mode ?? 'jql') === mode)}>
+              <button onclick={() => A.runSaved(q)} use:tip={q.query}>{q.name}</button>
               <button class="x" onclick={() => A.removeQuery(q.name)} aria-label={t('common.remove')}><X size={10} /></button>
             </span>
           {/each}
         </div>
       </section>
 
-      <section class="results" aria-busy={integ.searching}>
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <section class="results" aria-busy={integ.searching} role="group" aria-label={t('integrations.results')} onkeydown={listKey}>
         {#if integ.error}
-          <p class="err small">{integ.error}</p>
+          <p class="err small" role="alert">{integ.error}</p>
         {:else if !integ.results.length && !integ.searching}
           <p class="muted small pad">{t('integrations.noResults')}</p>
         {/if}
         {#each integ.results as i (i.key)}
           <button
             class="issue"
+            class:sel={selected.has(i.key)}
+            aria-pressed={selected.has(i.key)}
+            data-issue={i.key}
             onpointerdown={(e) => drag(e, i)}
-            onclick={() => openExternal(i.url)}
+            onclick={(e) => rowClick(e, i)}
+            ondblclick={() => openExternal(i.url)}
             oncontextmenu={(e) => issueMenu(e, i)}
             use:tip={t('integrations.dragHint')}
           >
+            <span class="check" aria-hidden="true"
+              >{#if selected.has(i.key)}<Check size={10} strokeWidth={3} />{/if}</span
+            >
             <span class="dot {i.statusCategory}"></span>
             <span class="key">{i.key}</span>
             <span class="sum grow">{i.summary}</span>
@@ -218,6 +308,18 @@
         {#if integ.searching}<div class="pad muted small"><LoaderCircle size={13} class="spin" /> {t('integrations.searching')}</div>{/if}
         {#if integ.next && !integ.searching}
           <button class="btn ghost sm more" onclick={() => A.search(true)}>{t('integrations.loadMore')}</button>
+        {/if}
+        {#if integ.selection.keys.length}
+          <div class="selbar" role="status">
+            <span class="grow">{t('integrations.selectedCount', { count: integ.selection.keys.length })}</span>
+            <button class="btn soft sm" onclick={() => A.addSelectedTo()}><ListPlus size={13} /> {t('integrations.addSelected')}</button>
+            <button
+              class="icon-btn sm"
+              onclick={() => (integ.selection = emptySelection())}
+              use:tip={t('integrations.clearSelection')}
+              aria-label={t('integrations.clearSelection')}><X size={13} /></button
+            >
+          </div>
         {/if}
       </section>
     {/if}
@@ -447,6 +549,66 @@
   .issue:hover,
   .issue:focus-visible {
     background: var(--bg-hover);
+  }
+  .issue.sel {
+    background: var(--primary-softer);
+  }
+  .check {
+    display: inline-grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    flex: none;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1.5px var(--ink-4);
+    color: var(--on-primary);
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease);
+    cursor: pointer;
+  }
+  .issue:hover .check,
+  .issue:focus-visible .check,
+  .results:has(.sel) .check {
+    opacity: 1;
+  }
+  .issue.sel .check {
+    opacity: 1;
+    background: var(--primary);
+    box-shadow: none;
+  }
+  .modes {
+    display: flex;
+    margin-bottom: var(--sp-2);
+  }
+  .modes-off {
+    display: inline-flex;
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .contents {
+    display: contents;
+  }
+  .q.text {
+    font-family: inherit;
+    font-size: var(--fs-sm);
+  }
+  .selbar {
+    /* Below the list (never shifts the rows being clicked), pinned to the
+       bottom of the scrolling panel while the list is long. */
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-top: var(--sp-1);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 4px 4px 4px var(--sp-2);
+    border-radius: var(--r-sm);
+    /* Opaque: rows scroll underneath while it is stuck. */
+    background: linear-gradient(var(--primary-softer), var(--primary-softer)), var(--bg-elev);
+    box-shadow: 0 0 0 1px var(--primary-softer);
+    color: var(--primary-strong);
+    font-size: var(--fs-xs);
   }
   .issue .key {
     font-family: var(--font-mono);

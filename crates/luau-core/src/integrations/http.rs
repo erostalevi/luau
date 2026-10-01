@@ -33,6 +33,76 @@ pub fn remote_err(status: StatusCode) -> Error {
     }
 }
 
+/// Longest server message kept from a `400` body.
+const MAX_SERVER_MESSAGE: usize = 300;
+/// Largest `400` body read to extract a message.
+const MAX_ERROR_BODY: usize = 64 * 1024;
+
+/// Human-readable message from a `400 Bad Request` body (e.g. invalid JQL),
+/// sanitized for display: JSON `errorMessages` / `errors` (Jira) or
+/// `message` / short plain text (Trello). Control characters and markup
+/// brackets are dropped and the text is capped. Never logged.
+pub fn server_message(body: &[u8]) -> Option<String> {
+    let raw = match serde_json::from_slice::<Value>(body) {
+        Ok(v) => {
+            let mut parts: Vec<String> = Vec::new();
+            if let Some(a) = v.get("errorMessages").and_then(Value::as_array) {
+                parts.extend(a.iter().filter_map(Value::as_str).map(str::to_string));
+            }
+            if let Some(o) = v.get("errors").and_then(Value::as_object) {
+                parts.extend(o.values().filter_map(Value::as_str).map(str::to_string));
+            }
+            for k in ["message", "error"] {
+                if parts.is_empty()
+                    && let Some(m) = v.get(k).and_then(Value::as_str)
+                {
+                    parts.push(m.to_string());
+                }
+            }
+            parts.join(" ")
+        }
+        Err(_) => {
+            let t = std::str::from_utf8(body).ok()?;
+            // HTML error pages are not shown.
+            if t.trim_start().starts_with('<') {
+                return None;
+            }
+            t.to_string()
+        }
+    };
+    let mut out = String::new();
+    let mut n = 0;
+    for c in raw.chars() {
+        if n >= MAX_SERVER_MESSAGE {
+            out.push('…');
+            break;
+        }
+        if c.is_control() || c.is_whitespace() {
+            if !out.is_empty() && !out.ends_with(' ') {
+                out.push(' ');
+                n += 1;
+            }
+        } else if !matches!(c, '<' | '>') {
+            out.push(c);
+            n += 1;
+        }
+    }
+    let out = out.trim().to_string();
+    (!out.is_empty()).then_some(out)
+}
+
+/// Read at most `max` bytes of a body (chunked bodies have no length to check).
+async fn read_capped(mut r: reqwest::Response, max: usize) -> Vec<u8> {
+    let mut out = Vec::new();
+    while out.len() < max {
+        match r.chunk().await {
+            Ok(Some(c)) => out.extend_from_slice(&c[..c.len().min(max - out.len())]),
+            _ => break,
+        }
+    }
+    out
+}
+
 fn net_err(e: &reqwest::Error) -> Error {
     if e.is_redirect() {
         Error::invalid("redirect_not_allowed")
@@ -193,8 +263,17 @@ impl Http {
                     tokio::time::sleep(d).await;
                 }
                 Ok(r) => {
-                    tracing::info!("remote {} {} → {}", method, url.path(), r.status().as_u16());
-                    return Err(remote_err(r.status()));
+                    let status = r.status();
+                    tracing::info!("remote {} {} → {}", method, url.path(), status.as_u16());
+                    if status == StatusCode::BAD_REQUEST
+                        && r.content_length()
+                            .is_none_or(|l| l as usize <= MAX_ERROR_BODY)
+                        && let Some(m) = server_message(&read_capped(r, MAX_ERROR_BODY).await)
+                    {
+                        // Shown to the user (e.g. invalid JQL), never logged.
+                        return Err(Error::invalid(format!("remote_bad_request:{m}")));
+                    }
+                    return Err(remote_err(status));
                 }
                 Err(e) if !e.is_redirect() && attempt < 2 => {
                     tokio::time::sleep(backoff_delay(attempt, None, jitter())).await;
@@ -280,6 +359,40 @@ mod tests {
             Duration::from_millis(500)
         );
         assert!(backoff_delay(40, None, 0.0) <= Duration::from_millis(500 * 64));
+    }
+
+    #[test]
+    fn server_message_from_bad_request_bodies() {
+        let jira = br#"{"errorMessages":["Error in the JQL Query: Expecting ')' but got the end of the query."],"errors":{}}"#;
+        assert_eq!(
+            server_message(jira).unwrap(),
+            "Error in the JQL Query: Expecting ')' but got the end of the query."
+        );
+        let fields = br#"{"errorMessages":[],"errors":{"jql":"Field 'foo' does not exist."}}"#;
+        assert_eq!(
+            server_message(fields).unwrap(),
+            "Field 'foo' does not exist."
+        );
+        assert_eq!(
+            server_message(br#"{"message":"invalid query"}"#).unwrap(),
+            "invalid query"
+        );
+        assert_eq!(
+            server_message(b"invalid value for query").unwrap(),
+            "invalid value for query"
+        );
+        // Control characters / markup brackets are stripped, whitespace collapsed.
+        assert_eq!(
+            server_message(b"bad\n\t <b>x</b>\x00 ok").unwrap(),
+            "bad bx/b ok"
+        );
+        assert_eq!(server_message(b"<html><body>Bad</body></html>"), None);
+        assert_eq!(server_message(br#"{"errorMessages":[]}"#), None);
+        assert_eq!(server_message(b""), None);
+        let long = format!(r#"{{"errorMessages":["{}"]}}"#, "x".repeat(1000));
+        let m = server_message(long.as_bytes()).unwrap();
+        assert_eq!(m.chars().count(), MAX_SERVER_MESSAGE + 1);
+        assert!(m.ends_with('…'));
     }
 
     #[test]

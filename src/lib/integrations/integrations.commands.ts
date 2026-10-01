@@ -14,6 +14,7 @@ import {
   Unlink,
   RefreshCw,
   Copy,
+  ListPlus,
 } from '@lucide/svelte';
 import type { Command } from '$lib/commands/registry.svelte';
 import { contribute } from '$lib/contributions/registry.svelte';
@@ -24,7 +25,7 @@ import RemoteStrip from './RemoteStrip.svelte';
 import RemoteHeader from './RemoteHeader.svelte';
 import { initIntegrationState } from './state.svelte';
 import * as A from './actions';
-import type { IssueDragPayload } from './types';
+import type { IssueDragPayload, IssuesDragPayload } from './types';
 
 export const commands: Command[] = [
   { id: 'integrations.connectJira', title: 'commands.integrations.connectJira', category: 'jira', icon: Plug, run: () => A.connectJira() },
@@ -65,6 +66,13 @@ export const commands: Command[] = [
   { id: 'remote.toggleAllowPush', title: 'commands.remote.toggleAllowPush', category: 'integrations', run: () => A.toggleAllow('push') },
   { id: 'remote.toggleAllowPull', title: 'commands.remote.toggleAllowPull', category: 'integrations', run: () => A.toggleAllow('pull') },
   { id: 'slack.post', title: 'commands.slack.post', category: 'slack', icon: Send, run: () => A.postToSlack() },
+  {
+    id: 'integrations.addSelectedTo',
+    title: 'commands.integrations.addSelectedTo',
+    category: 'integrations',
+    icon: ListPlus,
+    run: () => A.addSelectedTo(),
+  },
 ];
 
 export function init() {
@@ -113,6 +121,11 @@ export function init() {
   onExternalDrop('remoteIssue', (src, tg) => {
     const p = src.payload as IssueDragPayload;
     return A.linkIssue(p.account, p.key, tg.boardId, tg.parent, tg.before);
+  });
+  // Several selected rows dragged at once → one batch of linked copies.
+  onExternalDrop('remoteIssues', (src, tg) => {
+    const p = src.payload as IssuesDragPayload;
+    return A.linkMany(p.account, p.keys, tg.boardId, tg.parent, tg.before);
   });
   // Cards dragged out of a mirror board → linked copies.
   onExternalDrop('copyFromMirror', (src, tg) => A.copyFromMirror(src.boardId!, src.ids ?? [], tg.boardId, tg.parent, tg.before));

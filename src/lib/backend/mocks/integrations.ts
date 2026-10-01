@@ -266,7 +266,20 @@ export function register(methods: Methods, api: MockApi) {
   methods['integrations.mirrors'] = () => mirrors;
   methods['integrations.tick'] = () => true;
 
-  methods['remote.search'] = (p) => ({ issues: search(p.query ?? ''), next: null, total: null });
+  methods['remote.search'] = (p) => {
+    const q = String(p.query ?? '');
+    if (p.mode === 'text' && q.trim()) {
+      // Plain text: the real core builds `text ~ "…"`; the mock matches literally.
+      const needle = q.trim().toLowerCase();
+      return { issues: issues.filter((i) => `${i.key} ${i.summary} ${i.descriptionMd}`.toLowerCase().includes(needle)), next: null, total: null };
+    }
+    // Mimic Jira's 400 for broken JQL (unbalanced quotes / parentheses).
+    const quotes = (q.match(/"/g) ?? []).length;
+    const parens = (q.match(/\(/g) ?? []).length - (q.match(/\)/g) ?? []).length;
+    if (quotes % 2 || parens)
+      throw new RpcError('invalid', `invalid operation: remote_bad_request:Error in the JQL Query: ${quotes % 2 ? 'missing closing quote' : "Expecting ')'"}.`);
+    return { issues: search(q), next: null, total: null };
+  };
   methods['remote.issue'] = (p) => issue(p.key);
   methods['remote.transitions'] = (p): Transition[] => {
     const i = issue(p.key);
@@ -296,6 +309,43 @@ export function register(methods: Methods, api: MockApi) {
     links.set(p.board, { ...(links.get(p.board) ?? {}), [id]: info(i) });
     emitLinks(p.board);
     return id;
+  };
+  // Many issues → one `batch` op (one undo step), list order kept.
+  methods['remote.linkMany'] = (p) => {
+    const keys = [...new Set((p.keys as string[]).map((k) => k.trim()).filter(Boolean))];
+    if (!keys.length) throw new RpcError('invalid', 'invalid operation: no_issues');
+    if (keys.length > 100) throw new RpcError('invalid', 'invalid operation: too_many_issues:100');
+    const map = links.get(p.board) ?? {};
+    // Like the core: only links whose card is still on the board count (undo keeps the entries).
+    const snap0 = api.snapshot(p.board);
+    const live = new Set(snap0.nodes.map((n) => n.id));
+    const byKey = new Map(
+      Object.entries(map)
+        .filter(([card]) => live.has(card))
+        .map(([card, r]) => [r.key, card]),
+    );
+    const skipped = keys.filter((k) => byKey.has(k)).map((key) => ({ key, card: byKey.get(key)! }));
+    const todo = keys.filter((k) => !byKey.has(k));
+    const found = todo.map((k) => issues.find((x) => x.key === k)).filter((x): x is RemoteIssue => !!x);
+    const missing = todo.filter((k) => !issues.some((x) => x.key === k));
+    if (!found.length) return { created: [], skipped, missing };
+    const snap = api.snapshot(p.board);
+    const parent = p.parent;
+    const list = parent.kind === 'lane' ? (snap.lanes.find((l) => l.id === parent.id)?.order ?? []) : parent.kind === 'root' ? snap.rootOrder : [];
+    const at = p.before ? list.indexOf(p.before) : -1;
+    const created: string[] = [];
+    const ops = found.map((i, n) => {
+      let id = methods['board.newCardId']({}) as string;
+      while (created.includes(id)) id = methods['board.newCardId']({}) as string;
+      created.push(id);
+      return { op: 'createCard', id, parent, index: at >= 0 ? at + n : null, content: compose(i) };
+    });
+    methods['board.apply']({ board: p.board, op: { op: 'batch', ops }, label: `Add ${created.length} Jira issues` });
+    const next = { ...map };
+    created.forEach((id, n) => (next[id] = info(found[n])));
+    links.set(p.board, next);
+    emitLinks(p.board);
+    return { created, skipped, missing };
   };
   methods['remote.copyFromMirror'] = (p) =>
     (p.ids as string[]).flatMap((id) => {
