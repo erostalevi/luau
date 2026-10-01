@@ -8,6 +8,7 @@ import { ui, openEditor } from '$lib/state/ui.svelte';
 import { activeTab, openDocTab, openBoardTab } from '$lib/state/workspace.svelte';
 import { registry } from '$lib/state/registry.svelte';
 import { quickPick, pickOne, inputBox, steps, BACK, type QuickItem } from '$lib/quickinput/qi.svelte';
+import { settings } from '$lib/settings/store.svelte';
 import { tabBoard, activeCard, copyText } from '$lib/app/helpers';
 import { openCard } from '$lib/app/open';
 import { toast } from '$lib/state/toasts.svelte';
@@ -298,6 +299,18 @@ async function forEachTarget(fn: (b: BoardModel, id: string) => Promise<unknown>
 
 const ON_BOARD = "tabKind == 'board'";
 
+
+/** The user's own @name (setting `general.yourName`); asks once when unset. */
+export async function myName(): Promise<string | null> {
+  const cur = (settings.get<string>('general.yourName') ?? '').trim().replace(/^@/, '');
+  if (cur) return cur;
+  const v = await inputBox({ title: t('cards.askName'), placeholder: '@name', validate: (x) => (/^@?[\p{L}\p{N}._-]{1,40}$/u.test(x.trim()) ? null : t('validation.required')) });
+  if (typeof v !== 'string' || !v.trim()) return null;
+  const name = v.trim().replace(/^@/, '');
+  settings.set('general.yourName', name);
+  return name;
+}
+
 export const boardCardCommands: Command[] = [
   { id: 'card.new', title: 'commands.card.new', category: 'card', icon: Plus, run: newCard },
   {
@@ -534,6 +547,21 @@ export const boardCardCommands: Command[] = [
       await forEachTarget(async (b, id) => {
         const n = b.node(id);
         const list = [...new Set([...(n?.footer.assignees ?? []), who])];
+        await setFooterField(b.id, id, 'assignees', list.map((x) => `@${x}`).join(', '));
+      });
+    },
+  },
+  {
+    id: 'card.assignSelf',
+    title: 'commands.card.assignSelf',
+    category: 'card',
+    icon: UserPlus,
+    run: async () => {
+      const me = await myName();
+      if (!me) return;
+      await forEachTarget(async (b, id) => {
+        const n = b.node(id);
+        const list = [...new Set([...(n?.footer.assignees ?? []), me])];
         await setFooterField(b.id, id, 'assignees', list.map((x) => `@${x}`).join(', '));
       });
     },

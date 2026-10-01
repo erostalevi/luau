@@ -87,6 +87,7 @@ export default {
       'general.restoreTabs': { label: 'Restore tabs', desc: 'Reopen the tabs you had open last time.' },
       'general.startPage': { label: 'On start', desc: 'What to show when there are no tabs.', options: { start: 'Start page', last: 'Last board', none: 'Nothing' } },
       'general.confirmDelete': { label: 'Confirm before deleting', desc: 'Deleted items go to the trash either way and can be restored.' },
+      'general.yourName': { label: 'Your @name', desc: 'How you appear in @mentions and assignees. Used by “Assign to me” and “Show my cards”.' },
       'app.runInBackground': { label: 'Keep running in the background', desc: 'Stay available when all windows are closed, so scheduled summaries can run.' },
       'app.launchAtLogin': { label: 'Launch at login', desc: 'Start Luau quietly when you log in.' },
       'updates.checkOnStart': { label: 'Check for updates on start', desc: 'Look for a new version shortly after launch.' },

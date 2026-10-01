@@ -68,6 +68,7 @@ export const CORE_SETTINGS: SettingDef[] = [
   s('general.restoreTabs', 'boolean', true, 'general'),
   s('general.startPage', 'enum', 'start', 'general', { options: ['start', 'last', 'none'] }),
   s('general.confirmDelete', 'boolean', false, 'general'),
+  s('general.yourName', 'string', '', 'general'),
   s('app.runInBackground', 'boolean', false, 'general', { restart: false }),
   s('app.launchAtLogin', 'boolean', false, 'general'),
   s('updates.checkOnStart', 'boolean', false, 'general'),

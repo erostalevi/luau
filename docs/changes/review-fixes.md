@@ -196,3 +196,14 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   (dropping "before" a moving card failed and forced a reload).
 - Tests: web build — drag a card across lanes, then click another card: the editor opens (was swallowed);
   `pnpm check`, vitest.
+
+## C8 — Default bindings pointing at missing commands (high)
+
+- Files: `src/lib/board/commands.ts` (`myName`, `card.assignSelf`), `src/lib/commands/builtin/boards.ts`
+  (`board.filterMine`), `src/lib/settings/schema.ts` (`general.yourName`), i18n `en/es/pt` + `parts/prefs.*`,
+  `src/lib/keybindings/defaults.test.ts` (new).
+- The `remote.*` chords now resolve (commands added by the integrations merge). The Trello preset's
+  `board.filterMine` (q) and `card.assignSelf` (space) were added: they use a new setting **Your @name**
+  (asked once if empty, validated) — "Show my cards" opens the board filter with `@name`, "Assign to me" adds you
+  to the card's `assignees` footer field (selection-aware, like "Assign…").
+- Test: `defaults.test.ts` fails if any default or preset binding names a command that is not declared.

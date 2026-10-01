@@ -203,6 +203,21 @@ export const boardCommands: Command[] = [
     },
   },
   {
+    id: 'board.filterMine',
+    title: 'commands.board.filterMine',
+    category: 'board',
+    icon: FolderSearch,
+    when: "tabKind == 'board'",
+    run: async () => {
+      const b = tabBoard();
+      if (!b) return;
+      const { myName } = await import('$lib/board/commands');
+      const me = await myName();
+      if (!me) return;
+      ui.filter[b.id] = { ...(ui.filter[b.id] ?? { open: false, text: '' }), open: true, text: `@${me}` };
+    },
+  },
+  {
     id: 'board.filter',
     title: 'commands.board.filter',
     category: 'board',

@@ -90,6 +90,7 @@ export default {
       'general.restoreTabs': { label: 'Restaurar pestañas', desc: 'Vuelve a abrir las pestañas que tenías abiertas la última vez.' },
       'general.startPage': { label: 'Al iniciar', desc: 'Qué mostrar cuando no hay pestañas.', options: { start: 'Página de inicio', last: 'Último tablero', none: 'Nada' } },
       'general.confirmDelete': { label: 'Confirmar antes de eliminar', desc: 'Lo eliminado va a la papelera de todas formas y se puede restaurar.' },
+      'general.yourName': { label: 'Tu @nombre', desc: 'Cómo apareces en @menciones y responsables. Lo usan “Asignarme” y “Mostrar mis tarjetas”.' },
       'app.runInBackground': { label: 'Seguir en segundo plano', desc: 'Sigue disponible con todas las ventanas cerradas, para que los resúmenes programados puedan ejecutarse.' },
       'app.launchAtLogin': { label: 'Abrir al iniciar sesión', desc: 'Inicia Luau discretamente al iniciar sesión.' },
       'updates.checkOnStart': { label: 'Buscar actualizaciones al iniciar', desc: 'Busca una versión nueva poco después de abrir la app.' },

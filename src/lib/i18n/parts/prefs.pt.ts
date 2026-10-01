@@ -90,6 +90,7 @@ export default {
       'general.restoreTabs': { label: 'Restaurar abas', desc: 'Reabre as abas que estavam abertas da última vez.' },
       'general.startPage': { label: 'Ao iniciar', desc: 'O que mostrar quando não há abas.', options: { start: 'Página inicial', last: 'Último quadro', none: 'Nada' } },
       'general.confirmDelete': { label: 'Confirmar antes de excluir', desc: 'Itens excluídos vão para a lixeira de qualquer forma e podem ser restaurados.' },
+      'general.yourName': { label: 'Seu @nome', desc: 'Como você aparece em @menções e responsáveis. Usado por “Atribuir a mim” e “Mostrar meus cartões”.' },
       'app.runInBackground': { label: 'Continuar em segundo plano', desc: 'Fica disponível com todas as janelas fechadas, para que os resumos agendados possam ser executados.' },
       'app.launchAtLogin': { label: 'Abrir ao iniciar a sessão', desc: 'Inicia o Luau discretamente quando você entra na sessão.' },
       'updates.checkOnStart': { label: 'Verificar atualizações ao iniciar', desc: 'Procura uma nova versão logo após abrir o app.' },
