@@ -3,6 +3,7 @@
 
 pub mod files;
 pub mod registry;
+mod trash_ops;
 pub mod watch;
 
 use std::collections::{HashMap, HashSet};

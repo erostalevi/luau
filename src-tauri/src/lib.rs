@@ -4,6 +4,7 @@
 mod ai_rpc;
 mod exports;
 mod fonts;
+mod history_rpc;
 mod integrations_rpc;
 mod menu;
 mod protocol;

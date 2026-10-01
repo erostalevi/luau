@@ -236,6 +236,8 @@ export interface TrashEntry {
   count: number;
   deletedAt: string;
   boardId: string;
+  archived?: boolean;
+  cover?: Cover | null;
 }
 
 export interface SearchHit {
