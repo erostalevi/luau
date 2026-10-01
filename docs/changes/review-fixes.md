@@ -273,3 +273,12 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   refused with `changed_on_disk`; the editor then shows the existing conflict banner (keep mine / take theirs).
   "Keep mine" writes without `base`. When the app itself rewrites the card to the same text the base is updated.
 - Test: `external_edits_are_not_overwritten_or_undone_away`; suite 5× green.
+
+## D6 — Basic card summaries were always empty (medium)
+
+- File: `crates/luau-core/src/ai/service.rs` (`card_summarize` + test).
+- Cause: the extractive summarizer used `node.meta.plain`, which the indexer drops from memory once a card is
+  indexed; the empty result was then cached by content hash.
+- Fix: plain text is derived from the card content (`markdown::parse`) on demand; the cache key is versioned
+  (`v2|…`) so previously cached empty summaries are ignored.
+- Test: `basic_card_summary_is_not_empty_after_indexing`.

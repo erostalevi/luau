@@ -502,24 +502,22 @@ impl Core {
 
     pub async fn card_summarize(&self, req: CardSummaryRequest) -> Result<CardSummary> {
         let b = self.board(&req.board)?;
-        let (content, plain) = {
+        let content = {
             let s = b.lock();
-            let n = s
-                .state
-                .nodes
-                .get(&req.id)
-                .ok_or_else(|| Error::not_found(format!("card {}", req.id)))?;
-            (
-                s.read_content(&req.id).unwrap_or_default(),
-                n.meta.plain.clone(),
-            )
+            if !s.state.nodes.contains_key(&req.id) {
+                return Err(Error::not_found(format!("card {}", req.id)));
+            }
+            s.read_content(&req.id).unwrap_or_default()
         };
+        // `meta.plain` is dropped from memory once indexed: derive it here.
+        let plain = crate::markdown::parse(&content).plain;
         let settings = self.settings();
         let locale = app_locale(&settings, &req.locale);
         let detail = req.detail.unwrap_or(2).clamp(1, 5);
         let sentences = [1usize, 2, 3, 4, 6][usize::from(detail - 1)];
         let key = crate::fsutil::sha256_hex(
-            format!("{:?}|{detail}|{}|{content}", req.engine, locale.code()).as_bytes(),
+            // v2: earlier builds cached empty basic summaries.
+            format!("v2|{:?}|{detail}|{}|{content}", req.engine, locale.code()).as_bytes(),
         );
         let cache = self.ai_store().cache_path("cardsum", &key);
         if let Some(mut c) = store::read_json::<CardSummary>(&cache) {
@@ -928,6 +926,49 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let c = Core::new(AppPaths::under(&d.path().join("app")), Arc::new(NullSink)).unwrap();
         (d, c)
+    }
+
+    #[test]
+    fn basic_card_summary_is_not_empty_after_indexing() {
+        let (d, c) = core();
+        let snap = c
+            .create_board(
+                &d.path().join("S"),
+                "S",
+                crate::model::BoardKind::Kanban,
+                &["A".into()],
+                false,
+            )
+            .unwrap();
+        let b = snap.header.id.clone();
+        let id = c.new_card_id();
+        c.apply(
+            &b,
+            Op::CreateCard {
+                id: id.clone(),
+                parent: crate::model::Parent::Lane(snap.lanes[0].id.clone()),
+                index: None,
+                content: "# Release plan\n\nWe ship the beta on Friday. QA signs off on Thursday. Docs follow next week.\n".into(),
+            },
+            "n",
+            None,
+        )
+        .unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let r = rt
+            .block_on(c.card_summarize(CardSummaryRequest {
+                board: b,
+                id,
+                engine: Engine::Basic,
+                detail: Some(2),
+                locale: "en".into(),
+                request_id: None,
+            }))
+            .unwrap();
+        assert!(!r.text.trim().is_empty(), "basic summary has text");
     }
 
     #[test]
