@@ -162,3 +162,6 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Risk: plain fsync on macOS does not force the drive cache on power loss; atomic rename still guarantees no
   partial files, at worst the last save is lost.
 - Tests: `only_lane_metadata_changes_request_a_full_reindex`; full suite.
+- Follow-up (found while verifying C5): search hits right after opening a board could show the board id instead
+  of its name, because the board row in the search DB was only written by the background re-index.
+  `open_board` now records the board name synchronously. Full suite run 10× without failures.

@@ -361,6 +361,17 @@ impl Core {
         self.save_registry();
         let id = store.id().to_string();
         let _ = &mut store;
+        // Board name for search results right away; the full re-index below
+        // runs in the background.
+        {
+            let m = &store.state.manifest;
+            let kind = if m.kind == BoardKind::Files {
+                "doc"
+            } else {
+                "card"
+            };
+            let _ = self.search.set_board(&m.id, &m.name, kind);
+        }
         self.boards
             .write()
             .insert(id.clone(), Arc::new(Mutex::new(store)));
