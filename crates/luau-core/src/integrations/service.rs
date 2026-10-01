@@ -15,6 +15,7 @@ use super::gate::{self, Action, ChangeRow, Direction, Draft, Prepared};
 use super::links::{self, Link, LinkInfo, MirrorSource, MirrorState, RemoteInfoDto};
 use super::mirror;
 use super::provider::{self, Provider};
+use super::query::{self, SearchMode};
 use super::secrets::{self, Secret};
 use super::types::*;
 use crate::app::{Core, CoreEvent, files};
@@ -251,6 +252,21 @@ pub fn open(core: &Core, account: &str) -> Result<(Account, Provider)> {
     Provider::open(&core.paths.config, account)
 }
 
+/// Panel search. Plain-text mode builds a safe JQL (see [`query::resolve`]);
+/// an empty query runs the account's default.
+pub async fn search(
+    core: &Core,
+    account: &str,
+    mode: SearchMode,
+    q: &str,
+    project: Option<&str>,
+    next: Option<&str>,
+) -> Result<SearchPage> {
+    let (a, p) = open(core, account)?;
+    let jql = query::resolve(a.provider, mode, q, project, a.query())?;
+    p.search(&jql, next).await
+}
+
 // --- links -----------------------------------------------------------------------
 
 fn root_of(core: &Core, board: &str) -> Result<PathBuf> {
@@ -454,6 +470,272 @@ pub async fn link_issue(core: &Arc<Core>, req: LinkReq) -> Result<String> {
         core, &account, &p, &req.board, req.parent, req.before, &issue,
     )
     .await
+}
+
+/// Most issues accepted by one [`link_many`] (one drop / "Add selected to…").
+pub const MAX_LINK_MANY: usize = 100;
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkManyReq {
+    pub board: String,
+    pub parent: Parent,
+    pub before: Option<String>,
+    pub account: String,
+    pub keys: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AlreadyLinked {
+    pub key: String,
+    pub card: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkManyResult {
+    /// New card ids, in the order of the requested keys.
+    pub created: Vec<String>,
+    /// Keys already linked on the target board (not duplicated).
+    pub skipped: Vec<AlreadyLinked>,
+    /// Keys the service did not return (deleted, no access).
+    pub missing: Vec<String>,
+}
+
+/// Normalize the requested keys: trimmed, non-empty, de-duplicated (first
+/// occurrence wins, order kept), shape-checked and capped at [`MAX_LINK_MANY`].
+pub fn plan_link_keys(keys: &[String]) -> Result<Vec<String>> {
+    let mut out: Vec<String> = Vec::new();
+    for k in keys.iter().map(|k| k.trim()).filter(|k| !k.is_empty()) {
+        let ok = k.len() <= 64
+            && k.chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+        if !ok {
+            return Err(Error::invalid("invalid_issue_key"));
+        }
+        if !out.iter().any(|x| x == k) {
+            out.push(k.to_string());
+        }
+    }
+    if out.is_empty() {
+        return Err(Error::invalid("no_issues"));
+    }
+    if out.len() > MAX_LINK_MANY {
+        return Err(Error::invalid(format!("too_many_issues:{MAX_LINK_MANY}")));
+    }
+    Ok(out)
+}
+
+fn is_bad_request(e: &Error) -> bool {
+    match e {
+        Error::Invalid(_) => true,
+        Error::Other(m) => m == "remote_http:400",
+        _ => false,
+    }
+}
+
+/// Fetch `keys` in one go (Jira: `key in (…)`), falling back to one request
+/// per key when the bulk query is rejected (Jira refuses `key in` with an
+/// unknown key). Returns the issues in the requested order plus the missing keys.
+async fn fetch_ordered(p: &Provider, keys: &[String]) -> Result<(Vec<RemoteIssue>, Vec<String>)> {
+    let list = match p.issues(keys).await {
+        Ok(l) => l,
+        // A 400 arrives as `Invalid` (with the server message) or, when the
+        // body has no readable message, as `remote_http:400`.
+        Err(e) if is_bad_request(&e) => {
+            let mut l = Vec::new();
+            for k in keys {
+                match p.issue(k).await {
+                    Ok(i) => l.push(i),
+                    Err(Error::NotFound(_)) | Err(Error::Invalid(_)) => {}
+                    Err(e) => return Err(e),
+                }
+            }
+            l
+        }
+        Err(e) => return Err(e),
+    };
+    let mut by_key: BTreeMap<String, RemoteIssue> = list
+        .into_iter()
+        .map(|i| (i.key.to_ascii_uppercase(), i))
+        .collect();
+    let mut found = Vec::new();
+    let mut missing = Vec::new();
+    for k in keys {
+        match by_key.remove(&k.to_ascii_uppercase()) {
+            Some(i) => found.push(i),
+            None => missing.push(k.clone()),
+        }
+    }
+    Ok((found, missing))
+}
+
+struct LinkedBatch {
+    ids: Vec<String>,
+    contents: Vec<String>,
+    label: String,
+    /// Coalesce key of the undo step (follow-up writes join it).
+    step: Option<String>,
+}
+
+/// One `Op::Batch` of `CreateCard`s at consecutive indexes before `before`
+/// (appended when `None`), so the cards keep the order of `issues` and the
+/// whole drop is a single undo step.
+fn create_linked_batch(
+    core: &Core,
+    provider: ProviderKind,
+    board: &str,
+    parent: &Parent,
+    before: Option<&str>,
+    issues: &[RemoteIssue],
+) -> Result<LinkedBatch> {
+    let start = before.and_then(|b| {
+        let bs = core.board(board).ok()?;
+        let s = bs.lock();
+        s.state
+            .children_of(parent)
+            .and_then(|c| c.iter().position(|x| x == b))
+    });
+    let mut ids: Vec<String> = Vec::with_capacity(issues.len());
+    let mut contents = Vec::with_capacity(issues.len());
+    let mut ops = Vec::with_capacity(issues.len());
+    for (n, issue) in issues.iter().enumerate() {
+        let id = loop {
+            let id = core.new_card_id();
+            if !ids.contains(&id) {
+                break id;
+            }
+        };
+        let content = links::compose(
+            provider,
+            &issue.summary,
+            &issue.description_md,
+            &issue.key,
+            &issue.url,
+        );
+        ops.push(Op::CreateCard {
+            id: id.clone(),
+            parent: parent.clone(),
+            index: start.map(|s| s + n),
+            content: content.clone(),
+        });
+        ids.push(id);
+        contents.push(content);
+    }
+    let label = format!("Add {} {} issues", ids.len(), provider.label());
+    let step = ids.first().map(|id| format!("remote-link-many:{id}"));
+    if !ops.is_empty() {
+        core.apply(board, Op::Batch { ops }, &label, step.clone())?;
+    }
+    Ok(LinkedBatch {
+        ids,
+        contents,
+        label,
+        step,
+    })
+}
+
+/// Create linked copies of many remote issues at one position, in order, as
+/// **one** undo step (a single `Op::Batch`; image localization afterwards is
+/// coalesced into the same step). Already-linked keys are skipped.
+pub async fn link_many(core: &Arc<Core>, req: LinkManyReq) -> Result<LinkManyResult> {
+    if is_mirror(core, &req.board) {
+        return Err(Error::ReadOnly("mirror".into()));
+    }
+    let keys = plan_link_keys(&req.keys)?;
+    let root = root_of(core, &req.board)?;
+    // Only links whose card is still on the board count: after undoing a
+    // drop the link entries stay (so redo keeps them) but re-adding must work.
+    let live: std::collections::HashSet<String> = {
+        let bs = core.board(&req.board)?;
+        let s = bs.lock();
+        s.state.nodes.keys().cloned().collect()
+    };
+    let existing: BTreeMap<String, String> = links::load(&root)
+        .links
+        .iter()
+        .filter(|(card, _)| live.contains(*card))
+        .map(|(card, l)| (l.key.clone(), card.clone()))
+        .collect();
+    let mut out = LinkManyResult::default();
+    let mut todo = Vec::new();
+    for k in keys {
+        match existing.get(&k) {
+            Some(card) => out.skipped.push(AlreadyLinked {
+                key: k,
+                card: card.clone(),
+            }),
+            None => todo.push(k),
+        }
+    }
+    if todo.is_empty() {
+        return Ok(out);
+    }
+    let (account, p) = open(core, &req.account)?;
+    let (issues, missing) = fetch_ordered(&p, &todo).await?;
+    out.missing = missing;
+    if issues.is_empty() {
+        return Ok(out);
+    }
+
+    let batch = create_linked_batch(
+        core,
+        account.provider,
+        &req.board,
+        &req.parent,
+        req.before.as_deref(),
+        &issues,
+    )?;
+    let LinkedBatch {
+        ids,
+        contents,
+        label,
+        step,
+    } = batch;
+
+    let mut images_of = Vec::with_capacity(ids.len());
+    for ((id, content), issue) in ids.iter().zip(&contents).zip(&issues) {
+        let (local, images) = localize_images(core, &p, &req.board, id, content, issue).await;
+        if local != *content {
+            // Same coalesce key: stays part of the batch's undo step.
+            core.apply(
+                &req.board,
+                Op::WriteCard {
+                    id: id.clone(),
+                    content: local,
+                },
+                &label,
+                step.clone(),
+            )?;
+        }
+        images_of.push(images);
+    }
+
+    let mut f = links::load(&root);
+    for ((id, (content, issue)), images) in
+        ids.iter().zip(contents.iter().zip(&issues)).zip(images_of)
+    {
+        f.links.insert(
+            id.clone(),
+            Link {
+                account: account.id.clone(),
+                provider: account.provider,
+                key: issue.key.clone(),
+                id: issue.id.clone(),
+                url: issue.url.clone(),
+                info: LinkInfo::from_issue(issue),
+                unavailable: false,
+                synced: Some(hash(content)),
+                images,
+            },
+        );
+    }
+    links::save(&root, &f)?;
+    emit_links(core, &req.board);
+    tracing::info!("linked {} issues into board {}", ids.len(), req.board);
+    out.created = ids;
+    Ok(out)
 }
 
 async fn create_linked(
@@ -1594,6 +1876,124 @@ mod tests {
     }
 
     #[test]
+    fn link_keys_are_deduped_validated_and_capped() {
+        let k = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            plan_link_keys(&k(&["B-2", " A-1 ", "B-2", "", "C-3"])).unwrap(),
+            k(&["B-2", "A-1", "C-3"])
+        );
+        assert!(matches!(plan_link_keys(&k(&[" "])), Err(Error::Invalid(m)) if m == "no_issues"));
+        assert!(
+            matches!(plan_link_keys(&k(&["A-1", "x) OR (1=1"])), Err(Error::Invalid(m)) if m == "invalid_issue_key")
+        );
+        let many: Vec<String> = (0..=MAX_LINK_MANY).map(|i| format!("K-{i}")).collect();
+        assert!(
+            matches!(plan_link_keys(&many), Err(Error::Invalid(m)) if m == format!("too_many_issues:{MAX_LINK_MANY}"))
+        );
+        assert_eq!(
+            plan_link_keys(&many[..MAX_LINK_MANY]).unwrap().len(),
+            MAX_LINK_MANY
+        );
+    }
+
+    #[test]
+    fn linked_batch_keeps_order_and_is_one_undo_step() {
+        let d = tempfile::tempdir().unwrap();
+        let core = Core::new(AppPaths::under(&d.path().join("app")), Arc::new(NullSink)).unwrap();
+        let snap = core
+            .create_board(
+                &d.path().join("Work"),
+                "Work",
+                BoardKind::Kanban,
+                &["To do".into()],
+                false,
+            )
+            .unwrap();
+        let b = snap.header.id.clone();
+        let lane = Parent::Lane(snap.lanes[0].id.clone());
+        let first = core.new_card_id();
+        core.apply(
+            &b,
+            Op::CreateCard {
+                id: first.clone(),
+                parent: lane.clone(),
+                index: None,
+                content: "# Existing\n".into(),
+            },
+            "New card",
+            None,
+        )
+        .unwrap();
+        let issues: Vec<RemoteIssue> = ["K-3", "K-1", "K-2"]
+            .iter()
+            .map(|k| RemoteIssue {
+                key: k.to_string(),
+                summary: format!("Sum {k}"),
+                url: format!("https://a/browse/{k}"),
+                ..Default::default()
+            })
+            .collect();
+        let order = |core: &Core| core.snapshot(&b).unwrap().lanes[0].order.clone();
+
+        let out = create_linked_batch(
+            &core,
+            ProviderKind::JiraCloud,
+            &b,
+            &lane,
+            Some(&first),
+            &issues,
+        )
+        .unwrap();
+        assert_eq!(out.ids.len(), 3);
+        let mut want = out.ids.clone();
+        want.push(first.clone());
+        assert_eq!(
+            order(&core),
+            want,
+            "inserted before `first`, in issue order"
+        );
+        assert!(
+            core.read_card(&b, &out.ids[0])
+                .unwrap()
+                .starts_with("# Sum K-3")
+        );
+        assert_eq!(out.label, "Add 3 Jira issues");
+
+        // A follow-up write with the same coalesce key joins the step.
+        core.apply(
+            &b,
+            Op::WriteCard {
+                id: out.ids[1].clone(),
+                content: "# Sum K-1\n\n![x](local.png)\n".into(),
+            },
+            &out.label,
+            out.step.clone(),
+        )
+        .unwrap();
+        let u = core.undo(&b).unwrap();
+        assert!(u.done);
+        assert_eq!(
+            order(&core),
+            vec![first.clone()],
+            "one undo removes the whole drop"
+        );
+        // …and the cards are gone from the board state, so `link_many` no
+        // longer counts their (kept) link entries as "already linked".
+        {
+            let bs = core.board(&b).unwrap();
+            let s = bs.lock();
+            assert!(out.ids.iter().all(|id| !s.state.nodes.contains_key(id)));
+        }
+
+        // Appending (no `before`) keeps the order too.
+        let out =
+            create_linked_batch(&core, ProviderKind::JiraCloud, &b, &lane, None, &issues).unwrap();
+        let mut want = vec![first];
+        want.extend(out.ids);
+        assert_eq!(order(&core), want);
+    }
+
+    #[test]
     fn accounts_update_keeps_own_host() {
         let d = tempfile::tempdir().unwrap();
         let core = Core::new(AppPaths::under(d.path()), Arc::new(NullSink)).unwrap();
@@ -1624,6 +2024,7 @@ mod tests {
                     SavedQuery {
                         name: "Mine".into(),
                         query: "assignee = currentUser()".into(),
+                        ..Default::default()
                     },
                     SavedQuery::default(),
                 ]),

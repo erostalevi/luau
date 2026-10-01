@@ -7,7 +7,9 @@ import { boards } from '$lib/state/boards.svelte';
 import { activeCard } from '$lib/app/helpers';
 import { ctx } from '$lib/commands/context.svelte';
 import { integrationStatus } from './status.svelte';
-import type { Account, Mirror, RemoteIssue } from './types';
+import { uiGet, uiSet } from '$lib/state/persist.svelte';
+import { emptySelection, type ListSelection } from './resultSelection';
+import type { Account, Mirror, RemoteIssue, SearchMode } from './types';
 
 export const integ = $state({
   accounts: [] as Account[],
@@ -21,6 +23,8 @@ export const integ = $state({
   searching: false,
   error: '' as string,
   lastSync: '' as string,
+  /** Panel: selected result keys (list order) + range anchor. */
+  selection: emptySelection() as ListSelection,
 });
 
 export function accountById(id: string | undefined | null): Account | undefined {
@@ -28,6 +32,19 @@ export function accountById(id: string | undefined | null): Account | undefined 
 }
 
 export const isIssueAccount = (a: Account) => a.provider !== 'slack';
+export const isJiraAccount = (a: Account | undefined) => a?.provider === 'jiraCloud' || a?.provider === 'jiraServer';
+
+const MODE_KEY = 'integrations.searchMode';
+
+/** Search mode of an account (remembered per account in ui-state; Trello is always text). */
+export function searchModeOf(a: Account | undefined): SearchMode {
+  if (!a || !isJiraAccount(a)) return 'text';
+  return uiGet<Record<string, SearchMode>>(MODE_KEY, {})[a.id] === 'text' ? 'text' : 'jql';
+}
+
+export function setSearchMode(accountId: string, mode: SearchMode) {
+  uiSet(MODE_KEY, { ...uiGet<Record<string, SearchMode>>(MODE_KEY, {}), [accountId]: mode });
+}
 
 export async function loadAccounts() {
   try {

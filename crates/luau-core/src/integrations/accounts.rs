@@ -20,6 +20,8 @@ pub const SLACK_API: &str = "https://slack.com";
 pub struct SavedQuery {
     pub name: String,
     pub query: String,
+    /// How `query` is interpreted (JQL when absent, for older configs).
+    pub mode: super::query::SearchMode,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

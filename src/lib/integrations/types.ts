@@ -5,9 +5,14 @@ import type { RemoteUser } from '$lib/backend/types';
 export type ProviderKind = 'jiraCloud' | 'jiraServer' | 'trello' | 'slack';
 export type StatusCategory = 'todo' | 'inProgress' | 'done';
 
+/** Panel search mode: JQL as typed, or plain text (core builds `text ~ "…"`). */
+export type SearchMode = 'jql' | 'text';
+
 export interface SavedQuery {
   name: string;
   query: string;
+  /** Absent in older configs: JQL. */
+  mode?: SearchMode;
 }
 
 export interface Account {
@@ -141,4 +146,18 @@ export interface IssueDragPayload {
   type: 'remoteIssue';
   account: string;
   key: string;
+}
+
+/** Several selected result rows dragged at once (list order). */
+export interface IssuesDragPayload {
+  type: 'remoteIssues';
+  account: string;
+  keys: string[];
+}
+
+/** `remote.linkMany` result. */
+export interface LinkManyResult {
+  created: string[];
+  skipped: { key: string; card: string }[];
+  missing: string[];
 }

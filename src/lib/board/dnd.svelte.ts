@@ -27,6 +27,8 @@ export interface DragSource {
   /** Read-only source: only copying out is allowed (mirror boards). */
   copyOnly?: boolean;
   label?: string;
+  /** Items carried by an external payload (ghost badge); defaults to `ids.length` or 1. */
+  count?: number;
 }
 
 export type Zone = 'before' | 'after' | 'into';
@@ -454,7 +456,7 @@ export function startDrag(e: PointerEvent, source: DragSource, sourceEl: HTMLEle
       dnd.active = true;
       cmdCtx.dragging = true;
       dnd.source = source;
-      dnd.count = source.ids?.length ?? 1;
+      dnd.count = source.count ?? source.ids?.length ?? 1;
       scrollers = [...scrollEls, ...document.querySelectorAll<HTMLElement>('[data-autoscroll]')];
       makeGhost(sourceEl, dnd.count, source.label);
       for (const id of source.ids ?? []) document.querySelectorAll(`[data-card="${id}"]`).forEach((el) => el.classList.add('dragging-source'));

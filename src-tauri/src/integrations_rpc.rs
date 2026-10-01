@@ -4,6 +4,7 @@
 use std::sync::Arc;
 
 use luau_core::app::Core;
+use luau_core::integrations::query::SearchMode;
 use luau_core::integrations::{accounts, gate, provider, service as svc};
 use luau_core::model::Parent;
 use serde::Serialize;
@@ -72,19 +73,19 @@ async fn run(core: &Arc<Core>, method: &str, p: &Value) -> R {
 
         // --- remote reads -------------------------------------------------------
         "remote.search" => {
-            let (a, pr) = svc::open(core, &account()?)?;
             let q: Option<String> = opt(p, "query")?;
-            let q = q
-                .filter(|q| !q.trim().is_empty())
-                .unwrap_or_else(|| a.query());
-            if q.len() > 4000 {
-                return Err(RpcError {
-                    code: "invalid".into(),
-                    message: "query too long".into(),
-                });
-            }
+            let mode: Option<SearchMode> = opt(p, "mode")?;
+            let project: Option<String> = opt(p, "project")?;
             let next: Option<String> = opt(p, "next")?;
-            ok(pr.search(&q, next.as_deref()).await?)
+            ok(svc::search(
+                core,
+                &account()?,
+                mode.unwrap_or_default(),
+                q.as_deref().unwrap_or_default(),
+                project.as_deref(),
+                next.as_deref(),
+            )
+            .await?)
         }
         "remote.issue" => ok(svc::open(core, &account()?)?
             .1
@@ -117,6 +118,13 @@ async fn run(core: &Arc<Core>, method: &str, p: &Value) -> R {
                 message: e.to_string(),
             })?;
             ok(svc::link_issue(core, req).await?)
+        }
+        "remote.linkMany" => {
+            let req: svc::LinkManyReq = serde_json::from_value(obj(p)).map_err(|e| RpcError {
+                code: "invalid".into(),
+                message: e.to_string(),
+            })?;
+            ok(svc::link_many(core, req).await?)
         }
         "remote.copyFromMirror" => {
             let from: String = arg(p, "from")?;

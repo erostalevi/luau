@@ -2,7 +2,8 @@
 //! linked cards, Slack and the WriteGate (SPEC §9).
 //!
 //! Layout (hexagonal):
-//! - pure domain: [`types`], [`adf`], [`wiki`], [`md_util`], [`links`] (format), [`mirror`] (planning), [`gate`]
+//! - pure domain: [`types`], [`adf`], [`wiki`], [`md_util`], [`links`] (format), [`mirror`] (planning), [`gate`],
+//!   [`query`] (JQL / plain-text search building)
 //! - adapters: [`http`] (allow-list, backoff), [`jira`], [`trello`], [`slack`], [`secrets`] (keychain)
 //! - port: [`provider::Provider`]; application layer: [`service`]
 
@@ -15,6 +16,7 @@ pub mod links;
 pub mod md_util;
 pub mod mirror;
 pub mod provider;
+pub mod query;
 pub mod secrets;
 pub mod service;
 pub mod slack;
