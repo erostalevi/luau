@@ -438,3 +438,77 @@ fn failed_undo_keeps_its_step_when_transient() {
     assert!(c.undo(&b).unwrap().done, "step was kept");
     assert!(c.snapshot(&b).unwrap().nodes.is_empty());
 }
+
+#[test]
+fn sweep_keeps_attachments_referenced_by_html_luau_urls_or_other_cards() {
+    let (d, c, _) = core();
+    let snap = c
+        .create_board(
+            &d.path().join("S"),
+            "S",
+            BoardKind::Kanban,
+            &["A".into()],
+            false,
+        )
+        .unwrap();
+    let b = snap.header.id.clone();
+    let lane = lanes(&snap)[0].clone();
+    let mk = |content: &str| {
+        let id = c.new_card_id();
+        c.apply(
+            &b,
+            Op::CreateCard {
+                id: id.clone(),
+                parent: Parent::Lane(lane.clone()),
+                index: None,
+                content: content.into(),
+            },
+            "n",
+            None,
+        )
+        .unwrap();
+        id
+    };
+    let a = mk("# A\n");
+    let other = mk("# Other\n");
+    let html = c
+        .add_attachment(&b, &a, files::Source::Bytes(b"1"), "html.png")
+        .unwrap();
+    let url = c
+        .add_attachment(&b, &a, files::Source::Bytes(b"2"), "url pic.png")
+        .unwrap();
+    let cross = c
+        .add_attachment(&b, &a, files::Source::Bytes(b"3"), "cross.pdf")
+        .unwrap();
+    c.add_attachment(&b, &a, files::Source::Bytes(b"4"), "unused.png")
+        .unwrap();
+    c.write_card(
+        &b,
+        &a,
+        &format!("# A\n\n<img src=\"{}\" width=200>\n", html.file),
+        None,
+    )
+    .unwrap();
+    let enc = url.file.replace(' ', "%20");
+    c.write_card(
+        &b,
+        &other,
+        &format!(
+            "# Other\n\nluau://localhost/{b}/{enc}\n[see]({})\n",
+            cross.file
+        ),
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        c.cleanup_unlinked(&b, true).unwrap(),
+        1,
+        "only the unused file moves"
+    );
+    let s = c.snapshot(&b).unwrap();
+    let n = s.nodes.iter().find(|n| n.id == a).unwrap();
+    let files: Vec<&str> = n.attachments.iter().map(|x| x.file.as_str()).collect();
+    for f in [&html.file, &url.file, &cross.file] {
+        assert!(files.contains(&f.as_str()), "{f} kept");
+    }
+}

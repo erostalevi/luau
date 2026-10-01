@@ -134,3 +134,14 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   transient (I/O, read-only, other); permanent errors (not found, conflict, invalid — e.g. the trash entry was
   purged) drop the step so undo is never stuck on it.
 - Tests: `concurrent_undo_redo_never_panics` (6 threads × 30 undo/redo), `failed_undo_keeps_its_step_when_transient`.
+
+## C4 — Unlinked-attachment sweep moved attachments still in use (high)
+
+- File: `crates/luau-core/src/app/files.rs` (`sweep_unlinked`), test in `app/tests.rs`.
+- Cause: "referenced" only meant Markdown link/image targets in the owning card, missing raw HTML (`<img src>`,
+  `<video>`), `luau://` URLs and references from other cards; unreadable (cloud-evicted) cards looked empty.
+- Fix: when at least one attachment looks unlinked, every card is read once and an attachment is kept if its file
+  name appears anywhere (plain, percent-encoded or with `%20`). If any card cannot be read, nothing is swept that
+  run. Boards without candidates skip the extra reads.
+- Tests: `sweep_keeps_attachments_referenced_by_html_luau_urls_or_other_cards` (HTML, encoded luau URL and
+  cross-card link kept; truly unused file moved); the existing TTL test still passes.

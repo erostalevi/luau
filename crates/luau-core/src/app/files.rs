@@ -322,6 +322,40 @@ pub fn sweep_unlinked(
     let mut moved = 0;
     let mut ch = Changes::default();
     let ids: Vec<String> = store.state.nodes.keys().cloned().collect();
+    // Markdown link targets miss raw HTML (`<img src>`, `<video>`), `luau://`
+    // URLs and references from other cards. Before treating anything as
+    // unlinked, read every card once and keep any attachment whose file name
+    // appears anywhere. If a card cannot be read (e.g. a cloud-evicted file),
+    // sweep nothing: a false "unlinked" would move a file that is in use.
+    let mut corpus = String::new();
+    let has_candidates = ids.iter().any(|id| {
+        let n = &store.state.nodes[id];
+        n.attachments.iter().any(|a| {
+            !n.meta.file_refs.iter().any(|r| r.ends_with(&a.file))
+                && n.cover.as_ref().map(|c| c.file.as_str()) != Some(a.file.as_str())
+        })
+    });
+    if !has_candidates {
+        tracker.clear();
+    } else {
+        for id in &ids {
+            match store.read_content(id) {
+                Ok(t) => {
+                    corpus.push_str(&t);
+                    corpus.push('\n');
+                }
+                Err(_) => return Ok((0, Changes::default())),
+            }
+        }
+    }
+    let referenced_anywhere = |file: &str| {
+        corpus.contains(file)
+            || corpus.contains(
+                &percent_encoding::utf8_percent_encode(file, percent_encoding::NON_ALPHANUMERIC)
+                    .to_string(),
+            )
+            || corpus.contains(&file.replace(' ', "%20"))
+    };
     for id in ids {
         let (atts, refs, cover) = {
             let n = &store.state.nodes[&id];
@@ -341,7 +375,10 @@ pub fn sweep_unlinked(
             continue;
         };
         for a in atts {
-            if refs.contains(&a.file) || cover.as_deref() == Some(a.file.as_str()) {
+            if refs.contains(&a.file)
+                || cover.as_deref() == Some(a.file.as_str())
+                || referenced_anywhere(&a.file)
+            {
                 continue;
             }
             let rel = store.state.rel(&dir.join(&a.file));
