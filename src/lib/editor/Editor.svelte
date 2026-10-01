@@ -20,6 +20,7 @@
   import { refreshPreview } from './cm/livePreview';
   import { fileMarkdown } from './cm/paste';
   import { renderMarkdown, enhanceRendered } from '$lib/markdown/render';
+  import { runCodeCell } from '$lib/summaries/code';
 
   let {
     boardId,
@@ -180,7 +181,7 @@
       },
       runCode: async (lang, code) => {
         try {
-          const r = await rpc<CodeResult>('code.run', { lang, code, board: boardId, card: cardId });
+          const r = await runCodeCell(lang, code, boardId, cardId);
           outputs.set(`${lang}\u0000${code}`, r);
           return r;
         } catch (e) {

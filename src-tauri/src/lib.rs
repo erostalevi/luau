@@ -108,6 +108,7 @@ pub fn run() {
                 Box::new(std::io::Error::other(e.to_string())) as Box<dyn std::error::Error>
             })?;
             app.manage(AppState { core: core.clone() });
+            ai_rpc::start_scheduler(&handle, core.clone());
 
             let menu = menu::build(&handle)?;
             app.set_menu(menu)?;
