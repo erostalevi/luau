@@ -19,6 +19,7 @@
   import { copyText, pickSavePath, reveal } from '$lib/app/helpers';
   import { rpc } from '$lib/backend/rpc';
   import { t, i18n } from '$lib/i18n/index.svelte';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -219,7 +220,7 @@
   }
 </script>
 
-<div class="summary-view">
+<div class="summary-view" use:keepScroll={'summary'}>
   <header class="head">
     <div class="titles">
       <h1><Sparkles size={18} strokeWidth={1.8} /> {view === 'summary' ? t('summaries.title') : t('schedules.title')}</h1>

@@ -11,6 +11,7 @@
   import { collectDocs, visibleDocs, type DocSort } from './filesHome';
   import { newDocument, docMenu } from './filesActions';
   import { files } from './filesState.svelte';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let { board }: { board: BoardModel } = $props();
 
@@ -98,7 +99,7 @@
   }
 </script>
 
-<div class="home">
+<div class="home" use:keepScroll={'files'}>
   <div class="inner">
     <header>
       <div class="title">

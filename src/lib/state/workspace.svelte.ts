@@ -7,6 +7,7 @@ import { uiGet, uiSet, uiPushRecent } from './persist.svelte';
 import { openBoard, boards } from './boards.svelte';
 import { toast } from './toasts.svelte';
 import { t } from '$lib/i18n/index.svelte';
+import { forgetScroll } from '$lib/components/keepScroll';
 
 export type TabKind = 'board' | 'doc' | 'start' | 'settings' | 'keybindings' | 'savedSearch' | 'summary';
 
@@ -162,6 +163,7 @@ export function closeTab(tabId: string, force = false) {
     p.tabs.splice(i, 1);
     p.mru = p.mru.filter((x) => x !== tabId);
     ws.closed.push({ ...tab });
+    forgetScroll(tab.id);
     if (ws.closed.length > 30) ws.closed.shift();
     if (tab.kind === 'board' && tab.boardId && !findTab((x) => x.kind === 'board' && x.boardId === tab.boardId)) {
       void rpc('board.release', { id: tab.boardId });

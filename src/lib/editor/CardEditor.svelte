@@ -37,6 +37,7 @@
   import { trashCards, setArchived, createCard } from '$lib/board/cardActions';
   import { t, relTime } from '$lib/i18n/index.svelte';
   import Editor from './Editor.svelte';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let { boardId, cardId, variant }: { boardId: string; cardId: string; variant: 'modal' | 'sidebar' | 'page' } = $props();
 
@@ -184,7 +185,7 @@
       </div>
     {/if}
 
-    <div class="body">
+    <div class="body" use:keepScroll={variant === 'page' ? `doc:${cardId}` : null}>
       <Editor
         bind:this={editor}
         {boardId}

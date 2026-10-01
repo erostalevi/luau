@@ -27,6 +27,7 @@
   import CardList from './CardList.svelte';
   import { boardUi, listKey } from './boardUi.svelte';
   import { startDrag } from './dnd.svelte';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let {
     boardId,
@@ -201,7 +202,7 @@
     <button class="icon-btn sm act" onclick={menu} use:tip={t('common.more')}><MoreHorizontal size={15} /></button>
   </header>
   {#if !lane.collapsed}
-    <div class="lbody" data-autoscroll>
+    <div class="lbody" data-autoscroll use:keepScroll={`lane:${lane.id}`}>
       <CardList {boardId} parent={{ kind: 'lane', id: lane.id }} ids={lane.order} {flow} {wrap}>
         {#snippet empty()}
           {#if !readOnly}

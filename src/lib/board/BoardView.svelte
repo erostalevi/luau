@@ -32,6 +32,7 @@
   import { compileFilter } from './filter';
   import { boardUi } from './boardUi.svelte';
   import { dnd } from './dnd.svelte';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let { board }: { board: BoardModel } = $props();
 
@@ -230,7 +231,17 @@
   {#if filterState.open}
     <FilterBar boardId={board.id} count={matchCount} />
   {/if}
-  <div class="scroll" bind:this={scroller} data-board-scroll data-autoscroll tabindex="-1" role="region" onpointerdown={onBackgroundPointerDown} use:pinch>
+  <div
+    class="scroll"
+    bind:this={scroller}
+    data-board-scroll
+    data-autoscroll
+    tabindex="-1"
+    role="region"
+    onpointerdown={onBackgroundPointerDown}
+    use:pinch
+    use:keepScroll={'board'}
+  >
     <div class="lanes {orientation} {view.spacing}" style:zoom={zoom === 1 ? undefined : zoom}>
       {#each lanes as lane, i (lane.id)}
         <Lane boardId={board.id} {lane} index={i} {orientation} spacing={view.spacing} />

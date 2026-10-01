@@ -12,6 +12,7 @@
   import Kbd from '$lib/components/Kbd.svelte';
   import { t, relTime } from '$lib/i18n/index.svelte';
   import { dayPart } from './start/greeting';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   const part = dayPart(new Date().getHours());
   const actions = [
@@ -63,7 +64,7 @@
   }
 </script>
 
-<div class="start">
+<div class="start" use:keepScroll={'start'}>
   <div class="inner">
     <header>
       <h1>{t(`start.greeting.${part}`)}</h1>
