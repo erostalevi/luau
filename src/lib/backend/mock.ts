@@ -298,13 +298,13 @@ function seed(): MockBoard[] {
     ],
     ['cjiraxx', 2, '# Jira mirror boards\n\nMirror a Jira board locally; copy issues into your own boards with live status. #integrations\n', null],
     ['cshippd', 3, '# Markdown cards on disk\n\nCards are `c123abc.md` files; groups are folders with an `index.md`. See [[cwelcom]].\n\n#core\n', null],
-    ['cthemes', 3, '# Pastel themes\n\nIndigo + pale green, with Liquid Glass translucency on macOS. #design\n', null],
+    ['cthemes', 3, '# Pastel themes\n\nHawaii sunset pastels — coral, mango and dusk lavender — with Liquid Glass on macOS. #design\n', null],
   ];
   const lanes: LaneDto[] = [
     { id: k[0], name: 'Backlog', order: [], color: null, width: null, wip: null, collapsed: false, archived: false },
-    { id: k[1], name: 'In progress', order: [], color: '#c7c8fa', width: null, wip: 3, collapsed: false, archived: false },
+    { id: k[1], name: 'In progress', order: [], color: '#f6c9b8', width: null, wip: 3, collapsed: false, archived: false },
     { id: k[2], name: 'Review', order: [], color: null, width: null, wip: null, collapsed: false, archived: false },
-    { id: k[3], name: '✅ Done', order: [], color: '#cfe8d3', width: null, wip: null, collapsed: false, archived: false },
+    { id: k[3], name: '✅ Done', order: [], color: '#e3d6f5', width: null, wip: null, collapsed: false, archived: false },
   ];
   const nodes = new Map<string, MockNode>();
   for (const [id, lane, content, parent] of cards) {
