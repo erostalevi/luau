@@ -171,10 +171,14 @@
         if (/^https?:/i.test(ref)) return void openExternal(ref);
         if (!model || !isTauri) return;
         const dir = attachmentDirRel(model, cardId);
-        const rel = (dir ? `${dir}/` : '') + decodeURIComponent(ref.replace(/^\.\//, ''));
-        const abs = `${model.header.root}/${rel}`;
-        const { openPath } = await import('@tauri-apps/plugin-opener');
-        await openPath(abs).catch(() => reveal(abs));
+        let name: string;
+        try {
+          name = decodeURIComponent(ref.replace(/^\.\//, ''));
+        } catch {
+          return; // malformed %-escape
+        }
+        // The backend resolves the path inside the board (no `..`, no links out).
+        await rpc('file.open', { board: model.id, rel: (dir ? `${dir}/` : '') + name }).catch((e) => toast.error(String((e as Error).message ?? e)));
       },
       renderEmbed: (id, _heading, el) => {
         let alive = true;

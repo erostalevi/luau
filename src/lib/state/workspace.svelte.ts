@@ -203,6 +203,9 @@ export function moveTab(tabId: string, toPane: string, index: number) {
   for (const p of ws.panes) {
     const i = p.tabs.findIndex((x) => x.id === tabId);
     if (i >= 0) {
+      // `index` was computed with the tab still in place: removing it first
+      // shifts later slots left by one.
+      if (p.id === toPane && i < index) index--;
       [tab] = p.tabs.splice(i, 1);
       p.mru = p.mru.filter((x) => x !== tabId);
       if (p.active === tabId) p.active = p.mru[0] ?? p.tabs[0]?.id ?? null;

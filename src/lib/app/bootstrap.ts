@@ -11,12 +11,42 @@ import { ctx, trackFocus } from '$lib/commands/context.svelte';
 import { runCommand } from '$lib/commands/registry.svelte';
 import { loadUiState } from '$lib/state/persist.svelte';
 import { loadUi, ui } from '$lib/state/ui.svelte';
-import { loadWorkspace, ws, openBoardTab, openSingleton, allTabs } from '$lib/state/workspace.svelte';
+import { loadWorkspace, ws, openBoardTab, openDocTab, openSingleton, openTabOfKind, allTabs } from '$lib/state/workspace.svelte';
 import { loadRegistry } from '$lib/state/registry.svelte';
 import { initBoardEvents, openBoard } from '$lib/state/boards.svelte';
 import { registerBuiltinCommands } from '$lib/commands/builtin';
+import { openExternal } from '$lib/app/helpers';
 
 export const app = { info: null as AppInfo | null };
+
+/** Restore a tab moved here from another window (`?tab=<json>`). */
+async function openCarriedTab(raw: string) {
+  let t: { kind?: string; boardId?: string; cardId?: string; payload?: Record<string, unknown> };
+  try {
+    t = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  const id = (v: unknown) => (typeof v === 'string' && /^[a-z][a-z0-9]{6}$/.test(v) ? v : undefined);
+  const payload = t.payload && typeof t.payload === 'object' ? t.payload : undefined;
+  switch (t.kind) {
+    case 'board':
+      if (id(t.boardId)) await openBoardTab(id(t.boardId)!);
+      break;
+    case 'doc':
+      if (id(t.boardId) && id(t.cardId)) await openDocTab(id(t.boardId)!, id(t.cardId)!);
+      break;
+    case 'savedSearch':
+    case 'summary':
+      openTabOfKind(t.kind, payload);
+      break;
+    case 'start':
+    case 'settings':
+    case 'keybindings':
+      openSingleton(t.kind, payload);
+      break;
+  }
+}
 
 export async function bootstrap() {
   await initTransport();
@@ -41,6 +71,19 @@ export async function bootstrap() {
   installKeybindings();
   trackFocus();
   onMenu((id) => void runCommand(id));
+  // Links in rendered Markdown (summaries, embeds, previews) open in the
+  // system browser; the webview itself never navigates away.
+  document.addEventListener(
+    'click',
+    (e) => {
+      const a = (e.target as Element | null)?.closest?.('a[href]');
+      const href = a?.getAttribute('href') ?? '';
+      if (!a || a.closest('[data-card]') || !/^(https?:|mailto:)/i.test(href)) return;
+      e.preventDefault();
+      void openExternal(href);
+    },
+    true,
+  );
 
   loadWorkspace(info.window || 'main');
   const params = new URLSearchParams(location.search);
@@ -62,6 +105,8 @@ export async function bootstrap() {
     }
   }
   if (boardParam) await openBoardTab(boardParam);
+  const tabParam = params.get('tab');
+  if (tabParam) await openCarriedTab(tabParam);
   if (!allTabs().length && settings.get('general.startPage') !== 'none') openSingleton('start');
   ui.firstRun = !settings.get<boolean>('general.firstRunDone');
   if (import.meta.env.DEV) {

@@ -32,8 +32,7 @@ export const appCommands: Command[] = [
     category: 'preferences',
     run: async () => {
       if (!app.info) return;
-      const { openPath } = await import('@tauri-apps/plugin-opener');
-      await openPath(`${app.info.configDir}/settings.json`).catch(() => reveal(`${app.info!.configDir}/settings.json`));
+      await rpc('config.open', { file: 'settings' }).catch(() => reveal(`${app.info!.configDir}/settings.json`));
     },
   },
   { id: 'app.cheatsheet', title: 'commands.app.cheatsheet', category: 'help', icon: Keyboard, run: () => (ui.cheatsheet = !ui.cheatsheet) },

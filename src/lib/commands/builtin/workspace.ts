@@ -76,9 +76,10 @@ export const workspaceCommands: Command[] = [
     run: async (tabId?: string) => {
       const tab = tabId ? allTabs().find((x) => x.id === tabId) : activeTab();
       if (!tab) return;
-      const query = tab.kind === 'board' && tab.boardId ? `?board=${encodeURIComponent(tab.boardId)}` : '';
-      closeTab(tab.id, true);
-      if (tab.kind === 'board' && tab.boardId) await rpc('board.release', { id: tab.boardId });
+      // Carry the whole tab (boards, docs, settings, saved searches…).
+      const carried = { kind: tab.kind, boardId: tab.boardId, cardId: tab.cardId, payload: tab.payload };
+      const query = `?tab=${encodeURIComponent(JSON.stringify(carried))}`;
+      closeTab(tab.id, true); // also releases the board claim
       await rpc('window.new', { query });
       void ws;
     },

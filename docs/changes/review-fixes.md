@@ -313,3 +313,18 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Properties widget lowercases priority values (`priority: High` → "High" label, `p-high` style) and falls back to
   the raw value for unknown priorities instead of showing `priority.High`.
 - Tests (web build): `[tomorrow]␠` → date chip; `[today](x)` stays a link; `` `arr[now]` `` unchanged.
+
+## D9 — Shell: tab reorder, move to new window, dead links, opening attachments (medium)
+
+- Files: `src/lib/state/workspace.svelte.ts` (+ `workspace.test.ts`), `src/lib/commands/builtin/workspace.ts`,
+  `src/lib/app/bootstrap.ts`, `src/lib/editor/Editor.svelte`, `src/lib/commands/builtin/app.ts`, `src-tauri/src/rpc.rs`.
+- Tab drag inside one pane landed one slot too far right (index computed before removing the tab) — fixed.
+- "Move tab to new window" carries the whole tab (`?tab=<json>`: board, doc, settings, keybindings, saved search,
+  summary); the new window validates ids/kinds and reopens it. The double `board.release` is gone. The backend
+  only accepts URL-safe window queries (≤ 4 KiB).
+- Links in rendered Markdown (AI summaries, embeds, previews) open in the system browser through one delegated
+  click handler (http/https/mailto); the webview never navigates away.
+- Opening attachments / "Open settings.json": new backend RPCs `file.open {board, rel}` (path resolved by the core
+  inside the board — no `..`, no links out — then opened with the default app) and `config.open {settings|keybindings}`.
+  No webview `opener:open-path` permission was added. A malformed `%` escape in a link is ignored instead of throwing.
+- Tests: `workspace.test.ts`; manual check of opening files pending in F1.

@@ -110,6 +110,16 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         "window.new" => {
             let label = crate::windows::next_label();
             let query: String = opt(p, "query")?.unwrap_or_default();
+            // Only `?key=value&…` with URL-safe characters (percent-encoded JSON).
+            if !(query.is_empty()
+                || (query.starts_with('?')
+                    && query.len() <= 4096
+                    && query[1..]
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || "=&%_.-~".contains(c))))
+            {
+                return Err(bad("invalid window query"));
+            }
             crate::windows::create(app, &label, &query).map_err(|e| bad(e.to_string()))?;
             ok(label)
         }
@@ -123,6 +133,37 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         }
         "window.release" => {
             core.release_window(window);
+            ok(true)
+        }
+        "file.open" => {
+            // Open a board file with the default app; the path is resolved
+            // inside the board by the core (no traversal, no links out).
+            let board: String = arg(p, "board")?;
+            let rel: String = arg(p, "rel")?;
+            let path = core.board_file(&board, &rel)?;
+            if !path.is_file() {
+                return Err(bad("not found"));
+            }
+            use tauri_plugin_opener::OpenerExt;
+            app.opener()
+                .open_path(path.to_string_lossy(), None::<&str>)
+                .map_err(|e| bad(e.to_string()))?;
+            ok(true)
+        }
+        "config.open" => {
+            let file: String = arg(p, "file")?;
+            let path = match file.as_str() {
+                "settings" => core.paths.settings(),
+                "keybindings" => core.paths.keybindings(),
+                _ => return Err(bad("unknown config file")),
+            };
+            if !path.exists() {
+                luau_core::fsutil::atomic_write(&path, b"{}\n")?;
+            }
+            use tauri_plugin_opener::OpenerExt;
+            app.opener()
+                .open_path(path.to_string_lossy(), None::<&str>)
+                .map_err(|e| bad(e.to_string()))?;
             ok(true)
         }
         "path.exists" => {
