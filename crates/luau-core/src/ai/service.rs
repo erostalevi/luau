@@ -773,6 +773,10 @@ impl Core {
 
     pub fn code_set_trust(&self, board: Option<&str>, trusted: bool) -> Result<()> {
         let key = Self::trust_key(board);
+        // Blanket trust ("*") is never granted from the UI.
+        if key == "*" && trusted {
+            return Err(Error::invalid("trust is per board"));
+        }
         if key != "*" && self.board_root(&key).is_err() {
             return Err(Error::not_found(format!("board {key}")));
         }
@@ -927,6 +931,30 @@ mod tests {
     }
 
     #[test]
+    fn trust_is_per_board_only() {
+        let (d, c) = core();
+        assert!(c.code_set_trust(None, true).is_err(), "no blanket trust");
+        assert!(
+            c.code_set_trust(Some("bzzzzzz"), true).is_err(),
+            "unknown board"
+        );
+        let snap = c
+            .create_board(
+                &d.path().join("B"),
+                "B",
+                crate::model::BoardKind::Kanban,
+                &[],
+                false,
+            )
+            .unwrap();
+        let b = snap.header.id;
+        assert!(!c.code_is_trusted(Some(&b)));
+        c.code_set_trust(Some(&b), true).unwrap();
+        assert!(c.code_is_trusted(Some(&b)));
+        assert!(!c.code_is_trusted(None));
+    }
+
+    #[test]
     fn facts_from_real_journal_and_basic_summary() {
         let (d, c) = core();
         let root = d.path().join("board");
@@ -1045,8 +1073,9 @@ mod tests {
             .unwrap_err();
         assert!(matches!(e, Error::Conflict(ref m) if m == NEEDS_TRUST));
         assert!(rt.block_on(c.code_run("bash", "ls", None)).is_err());
-        c.code_set_trust(None, true).unwrap();
-        assert!(c.code_is_trusted(None));
+        // Blanket trust is never granted (see `trust_is_per_board_only`).
+        assert!(c.code_set_trust(None, true).is_err());
+        assert!(!c.code_is_trusted(None));
         assert!(c.code_set_trust(Some("bnotaboard"), true).is_err());
     }
 }

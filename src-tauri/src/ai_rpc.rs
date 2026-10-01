@@ -91,7 +91,31 @@ pub async fn dispatch_async(
                 (Ok(l), Ok(c)) => (l, c),
                 (Err(e), _) | (_, Err(e)) => return Some(Err(e)),
             };
-            let board: Option<String> = opt(p, "board").ok().flatten();
+            // Strict params: a malformed board must not fall back to "any board".
+            let (board, card) = match (opt::<String>(p, "board"), opt::<String>(p, "card")) {
+                (Ok(b), Ok(c)) => (b, c),
+                (Err(e), _) | (_, Err(e)) => return Some(Err(e)),
+            };
+            // Trust is per board, so the code must really come from that
+            // board: it has to appear in the named card.
+            if let Some(b) = board.as_deref() {
+                let Some(card) = card.as_deref() else {
+                    return Some(Err(crate::rpc::RpcError {
+                        code: "invalid".into(),
+                        message: "card required".into(),
+                    }));
+                };
+                match core.read_card(b, card) {
+                    Ok(text) if text.replace("\r\n", "\n").contains(code.trim_end()) => {}
+                    Ok(_) => {
+                        return Some(Err(crate::rpc::RpcError {
+                            code: "invalid".into(),
+                            message: "code_not_in_card".into(),
+                        }));
+                    }
+                    Err(e) => return Some(Err(e.into())),
+                }
+            }
             core.code_run(&lang, &code, board.as_deref())
                 .await
                 .map_err(Into::into)
@@ -111,9 +135,9 @@ pub async fn dispatch_async(
 }
 
 pub fn dispatch_sync(
-    _app: &AppHandle,
+    app: &AppHandle,
     core: &Arc<Core>,
-    _window: &str,
+    window: &str,
     method: &str,
     p: &Value,
 ) -> Option<R> {
@@ -134,9 +158,41 @@ pub fn dispatch_sync(
                 ok(json!({ "trusted": core.code_is_trusted(board.as_deref()) }))
             }
             "code.trust" => {
-                let board: Option<String> = opt(p, "board")?;
+                let board: String = arg(p, "board")?;
                 let trusted: bool = opt(p, "trusted")?.unwrap_or(true);
-                ok(core.code_set_trust(board.as_deref(), trusted)?)
+                if trusted {
+                    // Granting trust needs a native confirmation the page cannot
+                    // fake or click for the user; it names the board.
+                    let name = core
+                        .snapshot(&board)
+                        .map(|s| s.header.name)
+                        .map_err(crate::rpc::RpcError::from)?;
+                    let title: String =
+                        opt(p, "title")?.unwrap_or_else(|| "Run code from this board?".into());
+                    let message: String = opt(p, "message")?.unwrap_or_default();
+                    let confirm: String =
+                        opt(p, "confirm")?.unwrap_or_else(|| "Trust and run".into());
+                    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+                    let mut d = app
+                        .dialog()
+                        .message(format!("“{name}”\n\n{message}"))
+                        .title(title)
+                        .kind(MessageDialogKind::Warning)
+                        .buttons(MessageDialogButtons::OkCancelCustom(
+                            confirm,
+                            "Cancel".into(),
+                        ));
+                    if let Some(w) = tauri::Manager::get_webview_window(app, window) {
+                        d = d.parent(&w);
+                    }
+                    if !d.blocking_show() {
+                        return Err(crate::rpc::RpcError {
+                            code: "cancelled".into(),
+                            message: String::new(),
+                        });
+                    }
+                }
+                ok(core.code_set_trust(Some(&board), trusted)?)
             }
             "summaries.export" => {
                 let path = std::path::PathBuf::from(arg::<String>(p, "path")?);

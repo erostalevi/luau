@@ -1,6 +1,6 @@
 // Code cells: run through the backend, asking once per board for trust.
 
-import { rpc, RpcError } from '$lib/backend/rpc';
+import { rpc, RpcError, isTauri } from '$lib/backend/rpc';
 import { confirm } from '$lib/state/dialogs.svelte';
 import { t } from '$lib/i18n/index.svelte';
 import type { CodeResult } from '$lib/editor/cm/context';
@@ -14,9 +14,15 @@ export async function runCodeCell(lang: string, code: string, board: string | un
     return await run();
   } catch (e) {
     if (!isNeedsTrust(e)) throw e;
-    const ok = await confirm({ title: t('code.trustTitle'), message: t('code.trustMessage'), confirmLabel: t('code.trustConfirm'), cancelFocused: true });
-    if (!ok) throw new Error(t('code.trustMessage'));
-    await rpc('code.trust', { board, trusted: true });
+    if (!board) throw e;
+    // The desktop app asks with a native dialog (backend); the web build mocks it.
+    const args = { board, trusted: true, title: t('code.trustTitle'), message: t('code.trustMessage'), confirm: t('code.trustConfirm') };
+    if (isTauri) await rpc('code.trust', args).catch(() => Promise.reject(new Error(t('code.trustMessage'))));
+    else {
+      const ok = await confirm({ title: t('code.trustTitle'), message: t('code.trustMessage'), confirmLabel: t('code.trustConfirm'), cancelFocused: true });
+      if (!ok) throw new Error(t('code.trustMessage'));
+      await rpc('code.trust', args);
+    }
     return run();
   }
 }

@@ -189,7 +189,10 @@
       },
       runCode: async (lang, code) => {
         try {
-          const r = await runCodeCell(lang, code, boardId, cardId);
+          // The backend checks the code is in the saved card: save first.
+          await save(true);
+          const tg = targetOf(view);
+          const r = await runCodeCell(lang, code, tg?.boardId ?? boardId, tg?.cardId ?? cardId);
           outputs.set(`${lang}\u0000${code}`, r);
           return r;
         } catch (e) {

@@ -207,3 +207,16 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   (asked once if empty, validated) — "Show my cards" opens the board filter with `@name`, "Assign to me" adds you
   to the card's `assignees` footer field (selection-aware, like "Assign…").
 - Test: `defaults.test.ts` fails if any default or preset binding names a command that is not declared.
+
+## D1 — Code-run trust was decided by the webview (medium, security)
+
+- Files: `src-tauri/src/ai_rpc.rs` (`code.run`, `code.trust`), `crates/luau-core/src/ai/service.rs`
+  (`code_set_trust` + tests), `src/lib/summaries/code.ts`, `src/lib/editor/Editor.svelte`.
+- `code.trust` now requires a board id and, when granting, shows a **native** warning dialog (parented to the
+  window, naming the board) that the page cannot fake or click; cancelling returns `cancelled`. Blanket `"*"`
+  trust can no longer be granted (core rejects it).
+- `code.run` parses `board`/`card` strictly (a malformed value is an error, never "no board"), requires `card`
+  when a board is given, and checks that the code is actually present in that saved card — trusting board A
+  no longer lets arbitrary code run by naming A. The editor saves before running a cell so the check sees it.
+- Web build: the in-app confirm stays (mock backend).
+- Tests: `trust_is_per_board_only`, updated `schedules_crud_and_trust`.
