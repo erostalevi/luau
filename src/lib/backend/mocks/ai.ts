@@ -94,7 +94,38 @@ export function register(methods: Methods, api: MockApi) {
     models: [],
     remote: false,
     error: 'mock: no local AI in the browser',
+    apple: { status: 'missing', contextSize: 0 },
   });
+  // Clipboard → cards: a deterministic stand-in for the local AI (one card per
+  // list item, else one card), so the flow can be exercised in `pnpm dev:web`.
+  methods['ai.cardsFromText'] = (p) => {
+    const text = String(p.text ?? '').replace(/\r\n?/g, '\n');
+    if (!text.trim()) throw new RpcError('invalid', 'the clipboard has no text');
+    const items = text
+      .split('\n')
+      .map((l) => /^\s{0,3}(?:[-*+•]|\d{1,3}[.)])\s+(?:\[[ xX]\]\s+)?(.+)$/.exec(l)?.[1]?.trim())
+      .filter((x): x is string => !!x);
+    const first = text
+      .trim()
+      .split('\n')[0]
+      .replace(/^#+\s*/, '')
+      .trim();
+    const titles = (items.length >= 2 ? items : [first]).slice(0, 12);
+    const tag = (s: string) => /#([\p{L}\p{N}_-]+)/u.exec(s)?.[1];
+    const cards = titles.map((raw) => {
+      const title =
+        raw
+          .replace(/#[\p{L}\p{N}_-]+/gu, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 120) || 'Card';
+      const tg = tag(raw);
+      const body = items.length >= 2 ? '' : text.trim().split('\n').slice(1).join('\n').trim();
+      const parts = (h: string) => [`${h} ${title}`, body, tg ? `#${tg}` : ''].filter(Boolean).join('\n\n') + '\n';
+      return { title, markdown: parts('#'), section: parts('##') };
+    });
+    return { cards, truncated: false, provider: 'mock', model: 'mock' };
+  };
   methods['ai.models'] = () => [];
   methods['ai.pullModel'] = () => {
     throw new Error('mock: downloading models needs Ollama');

@@ -150,7 +150,7 @@ export const CORE_SETTINGS: SettingDef[] = [
   s('history.maxMb', 'number', 50, 'history', { min: 5, max: 2000, step: 5 }),
 
   // ai
-  s('ai.provider', 'enum', 'auto', 'ai', { options: ['auto', 'ollama', 'openai', 'off'] }),
+  s('ai.provider', 'enum', 'auto', 'ai', { options: ['auto', 'apple', 'ollama', 'openai', 'off'] }),
   s('ai.endpoint', 'string', 'http://localhost:11434', 'ai'),
   s('ai.model', 'string', '', 'ai'),
   s('ai.temperature', 'number', 0.3, 'ai', { min: 0, max: 1.5, step: 0.05 }),

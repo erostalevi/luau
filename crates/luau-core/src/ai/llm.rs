@@ -1,6 +1,7 @@
-//! Local LLM client: Ollama (`/api/chat`, `/api/tags`, `/api/pull`) and any
-//! OpenAI-compatible server (`/v1/chat/completions`, `/v1/models`: LM Studio,
-//! llama.cpp, vLLM, LocalAI…). Localhost by default; plain HTTP is accepted
+//! Local LLM client: Apple's on-device model (through [`super::apple`]),
+//! Ollama (`/api/chat`, `/api/tags`, `/api/pull`) and any OpenAI-compatible
+//! server (`/v1/chat/completions`, `/v1/models`: LM Studio, llama.cpp, vLLM,
+//! LocalAI…). Localhost by default; plain HTTP is accepted
 //! only for loopback hosts, anything else must be HTTPS (card data would leave
 //! the machine, so the UI also flags `remote`).
 //!
@@ -12,6 +13,7 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use super::apple::{self, AppleAvailability};
 use super::prompt::Message;
 use crate::error::{Error, Result};
 
@@ -20,12 +22,17 @@ pub const DEFAULT_ENDPOINT: &str = "http://localhost:11434";
 const AUTO_CANDIDATES: &[&str] = &["http://localhost:1234", "http://localhost:8080"];
 /// Hard cap on generated text (characters) to bound memory.
 pub const MAX_OUTPUT_CHARS: usize = 64 * 1024;
+/// Endpoint / model names shown for the Apple on-device provider.
+pub const APPLE_ENDPOINT: &str = "apple:on-device";
+pub const APPLE_MODEL: &str = "Apple on-device";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum Provider {
     #[default]
     Auto,
+    /// Apple's on-device model (FoundationModels, macOS 26+).
+    Apple,
     Ollama,
     #[serde(rename = "openai")]
     OpenAi,
@@ -35,6 +42,7 @@ pub enum Provider {
 impl Provider {
     pub fn parse(s: &str) -> Provider {
         match s.trim().to_ascii_lowercase().as_str() {
+            "apple" | "apple-on-device" | "foundationmodels" => Provider::Apple,
             "ollama" => Provider::Ollama,
             "openai" | "openai-compatible" | "lmstudio" => Provider::OpenAi,
             "off" | "none" | "disabled" => Provider::Off,
@@ -44,6 +52,7 @@ impl Provider {
     pub fn as_str(self) -> &'static str {
         match self {
             Provider::Auto => "auto",
+            Provider::Apple => "apple",
             Provider::Ollama => "ollama",
             Provider::OpenAi => "openai",
             Provider::Off => "off",
@@ -179,7 +188,7 @@ pub struct ModelInfo {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AiStatus {
-    /// `ollama` | `openai` | `off` | `none` (nothing reachable).
+    /// `apple` | `ollama` | `openai` | `off` | `none` (nothing reachable).
     pub provider: String,
     pub available: bool,
     pub endpoint: String,
@@ -189,6 +198,12 @@ pub struct AiStatus {
     pub remote: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    /// Apple on-device model availability (macOS; `missing` elsewhere).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub apple: Option<AppleAvailability>,
+    /// Context window of the chosen model in tokens, when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_size: Option<u32>,
 }
 
 /// A reachable provider with the model to use.
@@ -197,6 +212,35 @@ pub struct Resolved {
     pub provider: Provider,
     pub endpoint: Endpoint,
     pub model: String,
+    /// Context window in tokens when it is small and known (Apple on-device);
+    /// prompts are trimmed to fit it. `None` = no trimming.
+    pub context: Option<u32>,
+}
+
+impl Resolved {
+    /// Tokens reserved for the answer.
+    pub fn response_tokens(&self) -> Option<u32> {
+        self.context.map(response_tokens)
+    }
+}
+
+/// Answer budget for a context window: a quarter, within 256…2048 tokens.
+pub fn response_tokens(context: u32) -> u32 {
+    (context / 4).clamp(256, 2048)
+}
+
+fn apple_status(a: AppleAvailability) -> AiStatus {
+    AiStatus {
+        provider: Provider::Apple.as_str().into(),
+        available: a.available(),
+        endpoint: APPLE_ENDPOINT.into(),
+        model: a.available().then(|| APPLE_MODEL.to_string()),
+        models: vec![APPLE_MODEL.to_string()],
+        remote: false,
+        error: (!a.available()).then(|| a.reason().to_string()),
+        apple: Some(a),
+        context_size: Some(a.context()),
+    }
 }
 
 fn client(read_timeout: Duration) -> Result<reqwest::Client> {
@@ -325,17 +369,51 @@ async fn probe(provider: Provider, ep: &Endpoint) -> Option<(Provider, Vec<Model
     None
 }
 
-/// Find a reachable provider according to the config.
+/// In `auto` mode the Apple model goes first unless the user picked a model
+/// name (which only an Ollama / OpenAI-compatible server can serve).
+pub fn apple_first(cfg: &AiConfig) -> bool {
+    match cfg.provider {
+        Provider::Apple => true,
+        Provider::Auto => cfg.model.is_none(),
+        _ => false,
+    }
+}
+
+/// Find a reachable provider according to the config. `auto` prefers the
+/// Apple on-device model, then a running Ollama / LM Studio / llama.cpp.
 pub async fn status(cfg: &AiConfig) -> AiStatus {
+    if cfg.provider == Provider::Off {
+        return AiStatus {
+            endpoint: cfg.endpoint.clone(),
+            provider: "off".into(),
+            ..Default::default()
+        };
+    }
+    let apple = match cfg.provider {
+        Provider::Apple | Provider::Auto => Some(apple::availability().await),
+        _ => None,
+    };
+    if let Some(a) = apple
+        && (cfg.provider == Provider::Apple || (a.available() && apple_first(cfg)))
+    {
+        return apple_status(a);
+    }
+    let mut st = http_status(cfg).await;
+    if let Some(a) = apple {
+        if !st.available && a.available() {
+            return apple_status(a);
+        }
+        st.apple = Some(a);
+    }
+    st
+}
+
+async fn http_status(cfg: &AiConfig) -> AiStatus {
     let mut st = AiStatus {
         endpoint: cfg.endpoint.clone(),
         provider: "none".into(),
         ..Default::default()
     };
-    if cfg.provider == Provider::Off {
-        st.provider = "off".into();
-        return st;
-    }
     let ep = match parse_endpoint(&cfg.endpoint) {
         Ok(e) => e,
         Err(e) => {
@@ -377,11 +455,120 @@ pub async fn resolve(cfg: &AiConfig) -> Result<Resolved> {
             st.error.unwrap_or_else(|| "local AI unavailable".into()),
         ));
     }
+    let provider = Provider::parse(&st.provider);
+    if provider == Provider::Apple {
+        return Ok(Resolved {
+            provider,
+            endpoint: Endpoint {
+                base: APPLE_ENDPOINT.into(),
+                remote: false,
+            },
+            model: APPLE_MODEL.into(),
+            context: st.context_size,
+        });
+    }
     Ok(Resolved {
-        provider: Provider::parse(&st.provider),
+        provider,
         endpoint: parse_endpoint(&st.endpoint)?,
         model: st.model.unwrap_or_default(),
+        context: None,
     })
+}
+
+/// Split chat messages into (instructions, prompt) for single-turn models.
+pub fn split_messages(messages: &[Message]) -> (String, String) {
+    let join = |sys: bool| {
+        messages
+            .iter()
+            .filter(|m| (m.role == "system") == sys)
+            .map(|m| m.content.as_str())
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    };
+    (join(true), join(false))
+}
+
+async fn apple_chat(
+    r: &Resolved,
+    messages: &[Message],
+    temperature: f32,
+    timeout: Duration,
+    schema: Option<&Value>,
+    max_tokens: Option<u32>,
+    on_chunk: &mut (dyn FnMut(&str) + Send),
+) -> Result<String> {
+    let (instructions, prompt) = split_messages(messages);
+    let cap = r
+        .response_tokens()
+        .unwrap_or(response_tokens(apple::DEFAULT_CONTEXT));
+    let req = apple::AppleRequest {
+        instructions: &instructions,
+        prompt: &prompt,
+        max_tokens: max_tokens.map_or(cap, |m| m.min(cap)),
+        temperature,
+        schema,
+        stream: schema.is_none(),
+    };
+    apple::generate(&req, timeout, MAX_OUTPUT_CHARS, on_chunk).await
+}
+
+/// Run a chat completion constrained to a JSON Schema and return the raw JSON
+/// text (still untrusted: callers must validate it). Apple uses guided
+/// generation; Ollama `format`; OpenAI-compatible `response_format`.
+pub async fn chat_json(
+    r: &Resolved,
+    messages: &[Message],
+    schema: &Value,
+    temperature: f32,
+    timeout: Duration,
+) -> Result<String> {
+    if r.provider == Provider::Apple {
+        return apple_chat(
+            r,
+            messages,
+            temperature,
+            timeout,
+            Some(schema),
+            None,
+            &mut |_| {},
+        )
+        .await;
+    }
+    let c = client(Duration::from_secs(90))?;
+    let (url, body) = match r.provider {
+        Provider::Ollama => (
+            format!("{}/api/chat", r.endpoint.base),
+            json!({ "model": r.model, "messages": messages, "stream": false, "format": schema, "options": { "temperature": temperature } }),
+        ),
+        _ => (
+            format!("{}/v1/chat/completions", r.endpoint.base),
+            json!({ "model": r.model, "messages": messages, "stream": false, "temperature": temperature,
+                    "response_format": { "type": "json_schema", "json_schema": { "name": "cards", "strict": true, "schema": schema } } }),
+        ),
+    };
+    let fut = async {
+        let resp = c.post(&url).json(&body).send().await.map_err(http_err)?;
+        if !resp.status().is_success() {
+            return Err(Error::Other(format!(
+                "local AI answered HTTP {}",
+                resp.status().as_u16()
+            )));
+        }
+        let v: Value = resp.json().await.map_err(http_err)?;
+        let text = match r.provider {
+            Provider::Ollama => v.pointer("/message/content"),
+            _ => v.pointer("/choices/0/message/content"),
+        }
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .chars()
+        .take(MAX_OUTPUT_CHARS)
+        .collect::<String>();
+        Ok(text)
+    };
+    tokio::time::timeout(timeout, fut)
+        .await
+        .map_err(|_| Error::Other("the local AI did not answer in time".into()))?
 }
 
 /// Extract the streamed text delta from one line of a streaming response.
@@ -426,13 +613,27 @@ pub fn parse_stream_line(provider: Provider, line: &str) -> Option<(String, bool
 }
 
 /// Run a chat completion, streaming text deltas to `on_chunk`. Returns the full text.
+/// `max_tokens` caps the answer where the provider supports it (Apple).
 pub async fn chat(
     r: &Resolved,
     messages: &[Message],
     temperature: f32,
     timeout: Duration,
+    max_tokens: Option<u32>,
     on_chunk: &mut (dyn FnMut(&str) + Send),
 ) -> Result<String> {
+    if r.provider == Provider::Apple {
+        return apple_chat(
+            r,
+            messages,
+            temperature,
+            timeout,
+            None,
+            max_tokens,
+            on_chunk,
+        )
+        .await;
+    }
     let c = client(Duration::from_secs(90))?;
     let (url, body) = match r.provider {
         Provider::Ollama => (
@@ -648,6 +849,38 @@ mod tests {
             Some(("".into(), true))
         );
         assert_eq!(parse_stream_line(Provider::OpenAi, ": keep-alive"), None);
+    }
+
+    #[test]
+    fn apple_provider_and_order() {
+        assert_eq!(Provider::parse("apple"), Provider::Apple);
+        assert_eq!(Provider::Apple.as_str(), "apple");
+        let mut c = AiConfig::default();
+        assert!(apple_first(&c), "auto prefers Apple");
+        c.model = Some("llama3".into());
+        assert!(!apple_first(&c), "a picked model means an HTTP server");
+        c.provider = Provider::Apple;
+        assert!(apple_first(&c));
+        c.provider = Provider::Ollama;
+        assert!(!apple_first(&c));
+        assert_eq!(response_tokens(4096), 1024);
+        assert_eq!(response_tokens(8192), 2048);
+        assert_eq!(response_tokens(512), 256);
+        let (i, p) = split_messages(&[
+            Message {
+                role: "system",
+                content: "S".into(),
+            },
+            Message {
+                role: "user",
+                content: "U1".into(),
+            },
+            Message {
+                role: "user",
+                content: "U2".into(),
+            },
+        ]);
+        assert_eq!((i.as_str(), p.as_str()), ("S", "U1\n\nU2"));
     }
 
     #[test]

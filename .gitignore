@@ -21,3 +21,6 @@ Thumbs.db
 
 # local tooling (Claude Code worktrees, launch configs)
 .claude/
+
+# Apple on-device helper (built by src-tauri/build.rs)
+/src-tauri/binaries/

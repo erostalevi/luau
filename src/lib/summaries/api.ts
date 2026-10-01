@@ -10,8 +10,11 @@ export interface ModelInfo {
   size?: number;
 }
 
+/** Apple on-device model state reported by the bundled helper (macOS). */
+export type AppleState = 'available' | 'appleIntelligenceNotEnabled' | 'deviceNotEligible' | 'modelNotReady' | 'unsupportedOs' | 'missing' | 'unknown';
+
 export interface AiStatus {
-  /** `ollama` | `openai` | `off` | `none` (nothing found). */
+  /** `apple` | `ollama` | `openai` | `off` | `none` (nothing found). */
   provider: string;
   endpoint: string;
   available: boolean;
@@ -19,6 +22,26 @@ export interface AiStatus {
   models: string[];
   error?: string;
   remote: boolean;
+  /** Apple on-device model availability (only probed for `auto` / `apple`). */
+  apple?: { status: AppleState; contextSize: number };
+  /** Context window in tokens, when known (Apple). */
+  contextSize?: number;
+}
+
+/** One card proposed by "Create card from clipboard → Let AI review it" (validated by the core). */
+export interface ClipboardCard {
+  title: string;
+  /** Whole card file (`# Title` … optional property footer). */
+  markdown: string;
+  /** `## Title` section for inserting into an open document. */
+  section: string;
+}
+
+export interface CardsFromText {
+  cards: ClipboardCard[];
+  truncated: boolean;
+  provider: string;
+  model: string;
 }
 
 export interface FactItem {
@@ -168,6 +191,7 @@ export const ai = {
   pullModel: (name: string) => rpc<void>('ai.pullModel', { name }),
   facts: (p: { from: string; to: string; boards: string[]; includeRemote?: boolean }) => rpc<ActivityFacts>('activity.facts', p),
   summarize: (p: SummarizeParams) => rpc<SummaryResult>('activity.summarize', p as unknown as Record<string, unknown>),
+  cardsFromText: (text: string) => rpc<CardsFromText>('ai.cardsFromText', { text }),
   cardSummarize: (p: { board: string; id: string; engine?: Engine; detail?: number; requestId?: string }) =>
     rpc<{ text: string; engine: string; model: string | null; cached: boolean }>('card.summarize', p),
   schedules: () => rpc<Schedule[]>('schedules.list'),
