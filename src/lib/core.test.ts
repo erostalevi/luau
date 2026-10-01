@@ -138,6 +138,18 @@ describe('board filter', () => {
     expect(compileFilter('priority:high -#backend').test(n)).toBe(false);
     expect(compileFilter('').empty).toBe(true);
   });
+  it('dates, has: and tag: (the keys the search autocomplete offers)', () => {
+    const n = node({ footer: { startLine: null, fields: [], priority: null, due: '2026-10-08', start: '2026-09-20', assignees: [], labels: ['ui'] } });
+    expect(compileFilter('due:<=2026-10-08').test(n)).toBe(true);
+    expect(compileFilter('due:<2026-10-08').test(n)).toBe(false);
+    expect(compileFilter('due:2026-10').test(n)).toBe(true);
+    expect(compileFilter('started:>=2026-09-01').test(n)).toBe(true);
+    expect(compileFilter('started:>2026-09-20').test(n)).toBe(false);
+    expect(compileFilter('has:start has:tasks').test(n)).toBe(true);
+    expect(compileFilter('has:image').test(n)).toBe(false);
+    expect(compileFilter('tag:ui tag:backend').test(n)).toBe(true);
+    expect(compileFilter('has:start').test(node({}))).toBe(false);
+  });
 });
 
 describe('keys', () => {

@@ -177,7 +177,7 @@ CodeMirror 6 with **live preview** (Obsidian/Notion-like). Markdown stays the so
   and you can drag cards into the tree.
 - **Search:** a query language with a filter UI kept in sync, case sensitivity, snippets, results grouped by board
   or lane, and saved searches (also openable as a virtual board).
-  - Query language: `tag:` `board:` `lane:` `is:open|done|archived` `due:` `priority:` `@person` `has:image` `updated:>=` `in:title` `case:yes` `"phrases"` `-exclude`.
+  - Query language: `tag:` `board:` `lane:` `is:open|done|archived` `due:` `started:` `priority:` `@person` `has:image` `updated:>=` `in:title` `case:yes` `"phrases"` `-exclude`. Search bars autocomplete keys, values, `#tags`, `@people` and dates (presets and natural language like `due:tomorrow`).
 - **History:** a timeline grouped by day and filtered by board, card or origin. It also has a word-level diff with
   restore, **Trash** (days left, restore, delete forever, empty) and **Archive**.
 - **Integrations:** accounts, JQL search with saved queries, issues you can drag onto boards, mirrors and their
