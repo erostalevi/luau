@@ -1,9 +1,12 @@
 // Autocomplete sources: slash menu, #tags, @mentions, [[card links]].
-// Natural dates: typing `]` after `[tomorrow` converts to `[2026-10-01]`.
+// Natural dates: `[tomorrow]` converts to `[2026-10-01]` once the next
+// character is typed (so `[today](url)` stays a link) — never inside code.
 
 import { autocompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 import { EditorView } from '@codemirror/view';
 import { Prec, type Extension } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
+import { syntaxTree } from '@codemirror/language';
 import { parseNaturalDate } from '$lib/util/naturalDate';
 import { tableMarkdown } from './commands';
 
@@ -170,23 +173,58 @@ function cardLinkSource(d: CompletionData) {
   };
 }
 
-/** Convert `[natural date]` to `[YYYY-MM-DD]` when the bracket closes. */
-const naturalDates = Prec.highest(EditorView.inputHandler.of((view, from, to, text) => {
-  if (text !== ']') return false;
-  const line = view.state.doc.lineAt(from);
-  const before = view.state.sliceDoc(line.from, from);
-  const m = /\[([^[\]]{2,32})$/.exec(before);
-  if (!m || /^\[/.test(m[1])) return false;
-  const next = view.state.sliceDoc(to, to + 1);
-  if (next === '(' || before.endsWith('[[')) return false;
-  const iso = parseNaturalDate(m[1]);
-  if (!iso || iso === m[1]) return false;
-  const start = from - m[1].length;
-  // Swallow a bracket auto-inserted by closeBrackets.
-  const end = next === ']' ? to + 1 : to;
-  view.dispatch({ changes: { from: start, to: end, insert: `${iso}]` }, selection: { anchor: start + iso.length + 1 }, userEvent: 'input.date' });
-  return true;
-}));
+const inCode = (view: EditorView, pos: number) => {
+  // An unclosed `inline code span is not code to the parser yet.
+  const line = view.state.doc.lineAt(pos);
+  if ((view.state.sliceDoc(line.from, pos).match(/`/g)?.length ?? 0) % 2 === 1) return true;
+  for (let n: ReturnType<ReturnType<typeof syntaxTree>['resolveInner']> | null = syntaxTree(view.state).resolveInner(pos, -1); n; n = n.parent)
+    if (/Code|CodeText|CodeBlock|FencedCode|InlineCode/.test(n.name)) return true;
+  return false;
+};
+
+/** `[label]` that ends at `pos` → `[YYYY-MM-DD]` when label is a natural date.
+ *  Returns the change, or null. */
+function dateBefore(view: EditorView, pos: number) {
+  const line = view.state.doc.lineAt(pos);
+  const before = view.state.sliceDoc(line.from, pos);
+  const m = /(^|[^[!])\[([^[\]]{2,32})\]$/.exec(before);
+  if (!m) return null;
+  const iso = parseNaturalDate(m[2]);
+  if (!iso || iso === m[2]) return null;
+  if (inCode(view, pos)) return null;
+  const from = pos - m[2].length - 1;
+  return { from, to: pos - 1, insert: iso };
+}
+
+/** Convert a just-closed `[natural date]` when the next character is typed
+ *  (anything but `(` / `[`, which make it a link) or on Enter. */
+const naturalDates = [
+  Prec.highest(
+    EditorView.inputHandler.of((view, from, to, text) => {
+      if (/^[([\]]/.test(text) || from !== to) return false;
+      const ch = dateBefore(view, from);
+      if (!ch) return false;
+      const insert = ch.insert;
+      const shift = insert.length - (ch.to - ch.from);
+      view.dispatch({ changes: [ch, { from, insert: text }], selection: { anchor: from + shift + text.length }, userEvent: 'input.date' });
+      return true;
+    }),
+  ),
+  Prec.highest(
+    keymap.of([
+      {
+        key: 'Enter',
+        run: (view) => {
+          const s = view.state.selection.main;
+          if (!s.empty) return false;
+          const ch = dateBefore(view, s.head);
+          if (ch) view.dispatch({ changes: ch, userEvent: 'input.date' });
+          return false; // let the normal Enter run
+        },
+      },
+    ]),
+  ),
+];
 
 export function luauCompletions(d: CompletionData): Extension {
   return [

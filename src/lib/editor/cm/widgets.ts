@@ -660,8 +660,10 @@ export class PropertiesWidget extends WidgetType {
       const val = el('span', 'val');
       if (k === 'due' || k === 'start') val.textContent = c?.formatDate(v) ?? v;
       else if (k === 'priority') {
-        val.classList.add(`p-${v}`);
-        val.textContent = c?.t(`priority.${v}`) ?? v;
+        const p = v.trim().toLowerCase();
+        val.classList.add(`p-${p}`);
+        const label = c?.t(`priority.${p}`);
+        val.textContent = label && label !== `priority.${p}` ? label : v;
       } else if (k === 'labels' || k === 'assignees') {
         for (const item of v.split(',').map((s) => s.trim()).filter(Boolean)) {
           const chip = el('span', k === 'assignees' ? 'cm-mention' : 'cm-tag', item);

@@ -300,3 +300,16 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   cannot act from a doc tab.
 - ⌘Z/⌘⇧Z with focus on a board tab act on that board even if the sidebar editor shows a card of another board.
 - Tests: `pnpm check`, vitest. Manual check recommended in the desktop app (F1).
+
+## D8 — Editor: dates converted in code/links, rich paste into code, plain paste, priority label (medium)
+
+- Files: `src/lib/editor/cm/autocomplete.ts`, `src/lib/editor/cm/paste.ts`, `src/lib/editor/cm/widgets.ts`.
+- Natural dates: `[label]` is converted when the **next** character is typed (or on Enter) instead of on `]`, so
+  `[today](url)`, `[sat](…)` and reference links `[x][y]` stay links; never inside code (syntax tree, plus an
+  unclosed backtick span on the line), never for images `![…]` or `[[card links]]`.
+- Rich paste falls back to plain text inside code blocks and for HTML that is only `<pre>`/`<code>` or monospace
+  markup (VS Code, terminals), so indentation is kept and `* _ #` are not escaped.
+- "Paste as plain text" uses the native clipboard plugin in the desktop app (no WebKit paste bubble).
+- Properties widget lowercases priority values (`priority: High` → "High" label, `p-high` style) and falls back to
+  the raw value for unknown priorities instead of showing `priority.High`.
+- Tests (web build): `[tomorrow]␠` → date chip; `[today](x)` stays a link; `` `arr[now]` `` unchanged.

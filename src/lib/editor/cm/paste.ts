@@ -3,6 +3,8 @@
 
 import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
+import { syntaxTree } from '@codemirror/language';
+import { isTauri } from '$lib/backend/rpc';
 
 export interface PasteOptions {
   /** Store a file as an attachment; returns the file name to reference. */
@@ -64,7 +66,11 @@ export function pasteAndDrop(opts: PasteOptions): Extension {
         return true;
       }
       const html = dt.getData('text/html');
-      if (html && opts.richPaste() && !html.includes('data-luau-plain')) {
+      // Plain text inside code blocks, and for copies from code editors /
+      // terminals (only <pre>/monospace markup): turndown would escape * _ #
+      // and drop indentation.
+      const codey = isInCode(view) || /^\s*(<meta[^>]*>\s*)?<(pre|code)\b/i.test(html.replace(/<!--[\s\S]*?-->/g, '')) || /font-family:\s*[^;"]*(mono|menlo|consolas|courier)/i.test(html);
+      if (html && opts.richPaste() && !html.includes('data-luau-plain') && !codey) {
         e.preventDefault();
         void htmlToMarkdown().then((conv) => {
           const md = conv(html).trim();
@@ -93,9 +99,18 @@ export function pasteAndDrop(opts: PasteOptions): Extension {
   });
 }
 
-/** Paste clipboard as plain text (⇧⌘V). */
+function isInCode(view: EditorView) {
+  for (let n: ReturnType<ReturnType<typeof syntaxTree>['resolveInner']> | null = syntaxTree(view.state).resolveInner(view.state.selection.main.head, -1); n; n = n.parent)
+    if (/FencedCode|CodeBlock|InlineCode|CodeText/.test(n.name)) return true;
+  return false;
+}
+
+/** Paste clipboard as plain text (⇧⌘V). Uses the native clipboard in the app
+ *  (no WebKit paste bubble), the web API in the browser build. */
 export async function pastePlain(view: EditorView) {
-  const text = await navigator.clipboard.readText().catch(() => '');
+  const text = isTauri
+    ? await import('@tauri-apps/plugin-clipboard-manager').then((m) => m.readText()).catch(() => '')
+    : await navigator.clipboard.readText().catch(() => '');
   if (!text) return;
   const s = view.state.selection.main;
   view.dispatch({ changes: { from: s.from, to: s.to, insert: text }, selection: { anchor: s.from + text.length }, userEvent: 'input.paste' });
