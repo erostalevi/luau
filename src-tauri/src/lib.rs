@@ -117,6 +117,7 @@ pub fn run() {
             if !background_launch {
                 windows::create(&handle, "main", "")?;
             }
+            lull_core::integrations::start_watcher(core.clone());
             // Discover boards shortly after start (never blocks the UI).
             let c = core.clone();
             std::thread::spawn(move || {

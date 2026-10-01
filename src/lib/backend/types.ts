@@ -288,6 +288,8 @@ export interface RemoteInfo {
   sprint?: string | null;
   updated?: string | null;
   unavailable?: boolean;
+  /** Card lives on a read-only mirror board. */
+  mirror?: boolean;
 }
 
 export interface RemoteUser {
