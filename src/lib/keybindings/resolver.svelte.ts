@@ -13,7 +13,7 @@ import { eventToStroke, normalizeKey } from './keys';
 export const kb = $state({
   user: [] as Keybinding[],
   extensions: [] as Keybinding[],
-  /** First stroke of a pending chord (shown in the status bar). */
+  /** First stroke of a pending chord (shown in the top bar). */
   pending: null as string | null,
   /** Recording mode (keybinding editor) suspends dispatch. */
   recording: false,

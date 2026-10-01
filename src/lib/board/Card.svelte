@@ -48,6 +48,9 @@
   const showTags = $derived(settings.get<boolean>('board.face.tags'));
   const showInd = $derived(settings.get<boolean>('board.face.indicators'));
   const faceProviders = $derived(contributions.cardFace.filter((p) => p.when({ boardId, id, remote })));
+  // Providers default to "external" (data from Jira & co.); local ones opt in.
+  const localProviders = $derived(faceProviders.filter((p) => p.placement === 'local'));
+  const externalProviders = $derived(faceProviders.filter((p) => p.placement !== 'local'));
   const childCount = $derived(node?.isGroup && model ? model.descendants(id).length : 0);
   const priorityColor: Record<string, string> = { urgent: 'var(--danger)', high: '#e49a5a', medium: 'var(--warn)', low: 'var(--info)' };
 
@@ -178,11 +181,23 @@
           <CardList {boardId} parent={{ kind: 'card', id }} ids={node.children} depth={depth + 1} flow="y" />
         </div>
       {/if}
-      {#if (showTags && (node.tags.length || node.footer.labels.length)) || faceProviders.length}
-        <footer class="gfoot">
-          {#each node.tags.slice(0, 4) as tag (tag)}<TagChip {tag} />{/each}
-          {#each node.footer.labels.slice(0, 3) as l (l)}<TagChip tag={l} outline prefix="" />{/each}
-          {#each faceProviders as p (p.id)}<p.component {boardId} {id} {remote} compact />{/each}
+      {@const gLocal = showTags && (node.tags.length > 0 || node.footer.labels.length > 0)}
+      {#if gLocal || localProviders.length || externalProviders.length}
+        <footer class="foot gfoot">
+          {#if gLocal || localProviders.length}
+            <div class="meta-local">
+              {#if gLocal}
+                {#each node.tags.slice(0, 4) as tag (tag)}<TagChip {tag} />{/each}
+                {#each node.footer.labels.slice(0, 3) as l (l)}<TagChip tag={l} outline prefix="" />{/each}
+              {/if}
+              {#each localProviders as p (p.id)}<p.component {boardId} {id} {remote} compact />{/each}
+            </div>
+          {/if}
+          {#if externalProviders.length}
+            <div class="meta-external">
+              {#each externalProviders as p (p.id)}<p.component {boardId} {id} {remote} compact />{/each}
+            </div>
+          {/if}
         </footer>
       {/if}
     {:else}
@@ -215,43 +230,55 @@
         {/if}
       </div>
       <CardFace {node} {boardId} />
-      {@const hasFooter =
-        (showTags && (node.tags.length || node.footer.labels.length)) ||
-        (showInd &&
-          (due || node.footer.priority || node.mentions.length || node.attachments.length || node.links.length || node.tasks.total || node.archived)) ||
-        faceProviders.length ||
-        remote}
-      {#if hasFooter}
+      <!-- Footer: local metadata (markdown tags/labels, priority, due, tasks, mentions…)
+           is left-aligned; metadata from external services (Jira status, type,
+           priority, assignee — card-face providers) is right-aligned. -->
+      {@const hasTags = showTags && (node.tags.length > 0 || node.footer.labels.length > 0)}
+      {@const hasInd =
+        showInd && !!(due || node.footer.priority || node.mentions.length || node.attachments.length || node.links.length || node.tasks.total || node.archived)}
+      {@const hasLocal = hasTags || hasInd || localProviders.length > 0}
+      {#if hasLocal || externalProviders.length}
         <footer class="foot">
-          {#if showTags}
-            {#each node.tags.slice(0, 5) as tag (tag)}<TagChip {tag} />{/each}
-            {#if node.tags.length > 5}<span class="chip">+{node.tags.length - 5}</span>{/if}
-            {#each node.footer.labels.slice(0, 3) as l (l)}<TagChip tag={l} outline prefix="" />{/each}
-          {/if}
-          {#if showInd}
-            <span class="ind">
-              {#if node.archived}<span class="i" title={t('cards.archived')}><Archive size={12} /></span>{/if}
-              {#if node.footer.priority && node.footer.priority !== 'none'}
+          {#if hasLocal}
+            <div class="meta-local">
+              {#if showInd && node.archived}<span class="i" title={t('cards.archived')}><Archive size={12} /></span>{/if}
+              {#if showInd && node.footer.priority && node.footer.priority !== 'none'}
                 <span class="i" style:color={priorityColor[node.footer.priority]} title={t(`priority.${node.footer.priority}`)}
                   ><Flag size={12} fill="currentColor" /></span
                 >
               {/if}
-              {#if due}
-                <span class="i due" class:overdue title={t('cards.due')}><CalendarDays size={12} /> {fmtDate(due)}</span>
+              {#if showTags}
+                {#each node.tags.slice(0, 5) as tag (tag)}<TagChip {tag} />{/each}
+                {#if node.tags.length > 5}<span class="chip">+{node.tags.length - 5}</span>{/if}
+                {#each node.footer.labels.slice(0, 3) as l (l)}<TagChip tag={l} outline prefix="" />{/each}
               {/if}
-              {#if node.tasks.total}
-                <span class="i" class:done={node.tasks.done === node.tasks.total} title={t('cards.tasks')}
-                  ><CircleCheck size={12} /> {node.tasks.done}/{node.tasks.total}</span
-                >
+              {#if showInd}
+                {#if due}
+                  <span class="i due" class:overdue title={t('cards.due')}><CalendarDays size={12} /> {fmtDate(due)}</span>
+                {/if}
+                {#if node.tasks.total}
+                  <span class="i" class:done={node.tasks.done === node.tasks.total} title={t('cards.tasks')}
+                    ><CircleCheck size={12} /> {node.tasks.done}/{node.tasks.total}</span
+                  >
+                {/if}
+                {#if node.attachments.length}<span class="i" title={t('cards.attachments')}><Paperclip size={12} /> {node.attachments.length}</span>{/if}
+                {#if node.links.length}<span class="i" title={t('cards.links')}><Link2 size={12} /> {node.links.length}</span>{/if}
+                {#if node.mentions.length}
+                  <span class="avatars">
+                    {#each node.mentions.slice(0, 3) as m (m)}
+                      <span class="avatar" title="@{m}">{initials(m)}</span>
+                    {/each}
+                  </span>
+                {/if}
               {/if}
-              {#if node.attachments.length}<span class="i" title={t('cards.attachments')}><Paperclip size={12} /> {node.attachments.length}</span>{/if}
-              {#if node.links.length}<span class="i" title={t('cards.links')}><Link2 size={12} /> {node.links.length}</span>{/if}
-              {#each node.mentions.slice(0, 3) as m (m)}
-                <span class="avatar" title="@{m}">{initials(m)}</span>
-              {/each}
-            </span>
+              {#each localProviders as p (p.id)}<p.component {boardId} {id} {remote} />{/each}
+            </div>
           {/if}
-          {#each faceProviders as p (p.id)}<p.component {boardId} {id} {remote} />{/each}
+          {#if externalProviders.length}
+            <div class="meta-external">
+              {#each externalProviders as p (p.id)}<p.component {boardId} {id} {remote} />{/each}
+            </div>
+          {/if}
         </footer>
       {/if}
     {/if}
@@ -357,21 +384,32 @@
     font: inherit;
     font-weight: var(--fw-medium);
   }
-  .foot,
-  .gfoot {
+  /* Two explicit groups: local metadata hugs the left padding, external
+     metadata hugs the right edge. When narrow the external group wraps
+     onto its own line and stays right-aligned (margin-left: auto). */
+  .foot {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 5px;
+    gap: 6px 8px;
     margin-top: 10px;
   }
-  .ind {
-    display: inline-flex;
+  .meta-local,
+  .meta-external {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    margin-left: auto;
+    gap: 5px 8px;
+    min-width: 0;
+  }
+  .meta-local {
+    justify-content: flex-start;
     color: var(--ink-3);
     font-size: var(--fs-xs);
+  }
+  .meta-external {
+    justify-content: flex-end;
+    margin-left: auto;
   }
   .i {
     display: inline-flex;
@@ -396,11 +434,14 @@
     color: var(--secondary-ink);
     font-size: 9.5px;
     font-weight: var(--fw-semibold);
-    margin-left: -4px;
     box-shadow: 0 0 0 2px var(--bg-card);
   }
-  .avatar:first-of-type {
-    margin-left: 0;
+  .avatars {
+    display: inline-flex;
+    align-items: center;
+  }
+  .avatar + .avatar {
+    margin-left: -4px;
   }
 
   /* Group card: a quiet container with compact header/footer. */
@@ -462,7 +503,7 @@
   .gbody {
     padding-left: calc(2px + max(0, 4 - var(--depth, 0)) * 0px);
   }
-  .gfoot {
+  .foot.gfoot {
     margin: 6px 4px 0;
   }
   .deep .ghead {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Bottom-left status light: gray idle, green active, yellow warnings, red errors.
+  // Top-bar status light: gray idle, green active, yellow warnings, red errors.
   // All logic lives in `$lib/status/activity` (pure, unit-tested); this only renders it.
   import { CircleAlert, TriangleAlert, RefreshCw } from '@lucide/svelte';
   import { activity } from '$lib/status/activity.svelte';
@@ -9,12 +9,27 @@
   import { runCommand } from '$lib/commands/registry.svelte';
   import { tip } from '$lib/components/tooltip';
   import { t } from '$lib/i18n/index.svelte';
+  import { activeTab } from '$lib/state/workspace.svelte';
+  import { boards } from '$lib/state/boards.svelte';
 
   const extra = $derived<TaskIssue[]>(integrationStatus.offline ? [{ level: 'warn', code: 'integrationOffline', subject: integrationStatus.offline }] : []);
   const sum = $derived(summarize(activity.value, extra));
   const bar = $derived(barMessage(sum));
   const tr = (m: Msg) => t(m.key, m.params);
   const label = $derived(`${t(`status.light.${sum.light}`)}${bar ? ` · ${tr(bar)}` : ''}`);
+
+  // Active board size (formerly shown in the bottom status bar).
+  const board = $derived.by(() => {
+    const tab = activeTab();
+    return tab?.boardId ? boards.get(tab.boardId) : undefined;
+  });
+  const counts = $derived.by(() => {
+    if (!board) return null;
+    let cards = 0;
+    let groups = 0;
+    for (const n of board.nodes.values()) n.isGroup ? groups++ : cards++;
+    return { cards, groups };
+  });
 
   let open = $state(false);
   let root = $state<HTMLElement | null>(null);
@@ -40,7 +55,7 @@
     aria-expanded={open}
     onclick={() => (open = !open)}
     onkeydown={onKey}
-    use:tip={open ? null : { text: label, placement: 'top' }}
+    use:tip={open ? null : { text: label, placement: 'bottom' }}
   >
     <span class="dot {sum.light}" class:busy={sum.busy}></span>
   </button>
@@ -53,6 +68,11 @@
         <strong>{t(`status.light.${sum.light}`)}</strong>
       </header>
       <p class="desc">{t(`status.explain.${sum.light}`)}</p>
+      {#if board && counts}
+        <p class="desc counts">
+          {board.header.name} · {t('status.cards', { count: counts.cards })}{counts.groups ? ` · ${t('status.groups', { count: counts.groups })}` : ''}
+        </p>
+      {/if}
 
       {#if sum.running.length}
         <div class="section-title">{t('status.running')}</div>
@@ -162,14 +182,15 @@
     animation: none;
   }
   .bar-text {
+    max-width: 220px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .pop {
     position: absolute;
-    left: -4px;
-    bottom: calc(100% + 8px);
+    right: -4px;
+    top: calc(100% + 8px);
     z-index: 50;
     width: 300px;
     max-width: calc(100vw - 24px);

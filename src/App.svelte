@@ -3,7 +3,7 @@
   import LeftPanel from '$lib/shell/LeftPanel.svelte';
   import TabStrip from '$lib/shell/TabStrip.svelte';
   import PaneView from '$lib/shell/PaneView.svelte';
-  import StatusBar from '$lib/shell/StatusBar.svelte';
+  import TopBarActions from '$lib/shell/TopBarActions.svelte';
   import WindowControls from '$lib/shell/WindowControls.svelte';
   import QuickInput from '$lib/quickinput/QuickInput.svelte';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
@@ -46,7 +46,10 @@
             {/if}
             <TabStrip {pane}>
               {#snippet end()}
-                {#if winChrome && i === ws.panes.length - 1}<WindowControls />{/if}
+                {#if i === ws.panes.length - 1}
+                  <TopBarActions />
+                  {#if winChrome}<WindowControls />{/if}
+                {/if}
               {/snippet}
             </TabStrip>
           </div>
@@ -56,7 +59,6 @@
     </main>
     <CardEditorHost mode="sidebar" />
   </div>
-  <StatusBar />
 </div>
 
 <CardEditorHost mode="modal" />
