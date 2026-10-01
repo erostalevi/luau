@@ -400,3 +400,20 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Logging (no secrets, no bodies): RPC failures as `method + code`, slow RPCs (> 1.5 s), "board opened"
   (id, card count, read-only reason, warnings) and "discovery finished" (boards, roots, ms).
 - Tests: clippy, cargo test, svelte-check, vitest, i18n en/es/pt.
+
+## E5 — Tooling: lint, formatting, audit, bundle size
+
+- Files: `eslint.config.js` (new, flat config: @eslint/js + typescript-eslint + eslint-plugin-svelte),
+  `.prettierrc.json` / `.prettierignore` (new, prettier-plugin-svelte), `pnpm-workspace.yaml` (new),
+  `package.json`, `.github/workflows/ci.yml`, `src/lib/editor/editorCommands.ts`, `src/lib/shell/PaneView.svelte`,
+  `src/lib/shell/LeftPanel.svelte`, plus the 30 lint fixes (unused imports/vars, useless escapes/assignments,
+  comma-expression `if`s, `prefer-const`, error `cause`, BOM literal) and Prettier formatting of 111 files
+  (formatting only).
+- `pnpm lint` (ESLint + Prettier check) passes and runs in CI. Two rules are tuned with reasons in the config
+  (`svelte/prefer-svelte-reactivity` off — plain Map/Set are deliberate caches; short-circuit expressions allowed).
+  Two `{@html}` uses are annotated: their HTML comes from markdown-it with `html:false`.
+- pnpm ≥ 11 ignores the `pnpm` field of package.json: settings moved to `pnpm-workspace.yaml` (`allowBuilds`,
+  `overrides`). `lodash-es` is overridden to ≥ 4.18.1 → `pnpm audit --prod`: no known vulnerabilities.
+- Bundle: settings, keybindings, summary and saved-search views and the history/integrations panels load on first
+  use; editor commands load CodeMirror helpers lazily. Main chunk **822 kB → 452 kB** (gzip 269 → 150 kB).
+- Tests: lint, svelte-check, vitest; web build check that the lazily loaded views open.

@@ -4,10 +4,11 @@
   import BoardTab from '$lib/views/BoardTab.svelte';
   import DocumentTab from '$lib/views/DocumentTab.svelte';
   import StartPage from '$lib/views/StartPage.svelte';
-  import SettingsView from '$lib/views/settings/SettingsView.svelte';
-  import KeybindingsView from '$lib/views/settings/KeybindingsView.svelte';
-  import VirtualBoard from '$lib/views/VirtualBoard.svelte';
-  import SummaryView from '$lib/views/SummaryView.svelte';
+  // Views that are not needed at startup load on first use (smaller bundle).
+  const SettingsView = () => import('$lib/views/settings/SettingsView.svelte');
+  const KeybindingsView = () => import('$lib/views/settings/KeybindingsView.svelte');
+  const VirtualBoard = () => import('$lib/views/VirtualBoard.svelte');
+  const SummaryView = () => import('$lib/views/SummaryView.svelte');
 
   let { pane }: { pane: Pane } = $props();
   const tab = $derived(pane.tabs.find((x) => x.id === pane.active) ?? null);
@@ -25,13 +26,13 @@
       {:else if tab.kind === 'start'}
         <StartPage />
       {:else if tab.kind === 'settings'}
-        <SettingsView initial={tab.payload?.query as string | undefined} />
+        {#await SettingsView() then m}<m.default initial={tab.payload?.query as string | undefined} />{/await}
       {:else if tab.kind === 'keybindings'}
-        <KeybindingsView />
+        {#await KeybindingsView() then m}<m.default />{/await}
       {:else if tab.kind === 'savedSearch'}
-        <VirtualBoard {tab} />
+        {#await VirtualBoard() then m}<m.default {tab} />{/await}
       {:else if tab.kind === 'summary'}
-        <SummaryView {tab} />
+        {#await SummaryView() then m}<m.default {tab} />{/await}
       {/if}
     {/key}
   {/if}

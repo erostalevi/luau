@@ -8,8 +8,8 @@
   import { isTauri } from '$lib/backend/rpc';
   import Explorer from '$lib/panels/explorer/Explorer.svelte';
   import SearchPanel from '$lib/panels/search/SearchPanel.svelte';
-  import HistoryPanel from '$lib/panels/history/HistoryPanel.svelte';
-  import IntegrationsPanel from '$lib/panels/integrations/IntegrationsPanel.svelte';
+  const HistoryPanel = () => import('$lib/panels/history/HistoryPanel.svelte');
+  const IntegrationsPanel = () => import('$lib/panels/integrations/IntegrationsPanel.svelte');
   import ExtensionsPanel from '$lib/panels/extensions/ExtensionsPanel.svelte';
 
   const sections = $derived([
@@ -56,9 +56,9 @@
     {:else if ui.left.section === 'search'}
       <SearchPanel />
     {:else if ui.left.section === 'history'}
-      <HistoryPanel />
+      {#await HistoryPanel() then m}<m.default />{/await}
     {:else if ui.left.section === 'integrations'}
-      <IntegrationsPanel />
+      {#await IntegrationsPanel() then m}<m.default />{/await}
     {:else}
       <ExtensionsPanel />
     {/if}

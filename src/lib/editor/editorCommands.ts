@@ -39,8 +39,7 @@ import {
 import type { EditorView } from '@codemirror/view';
 import type { Command } from '$lib/commands/registry.svelte';
 import { activeEditor } from './active';
-import * as md from './cm/commands';
-import { pastePlain } from './cm/paste';
+import type * as Md from './cm/commands';
 import { settings } from '$lib/settings/store.svelte';
 import { inputBox, pickOne, quickPick, steps, BACK } from '$lib/quickinput/qi.svelte';
 import { rpc } from '$lib/backend/rpc';
@@ -49,12 +48,21 @@ import { t } from '$lib/i18n/index.svelte';
 
 const WHEN = 'editorOpen';
 
-function withView(fn: (v: EditorView) => unknown): () => void {
+// CodeMirror helpers load on first use (keeps CodeMirror out of the startup
+// bundle; they are already loaded whenever an editor is open).
+let mdMod: typeof Md | null = null;
+const loadMd = async () => (mdMod ??= await import('./cm/commands'));
+
+function withView(pick: (m: typeof Md) => (v: EditorView) => unknown): () => void {
   return () => {
     const e = activeEditor();
     if (!e) return;
-    fn(e.view);
-    e.view.focus();
+    const run = (m: typeof Md) => {
+      pick(m)(e.view);
+      e.view.focus();
+    };
+    if (mdMod) run(mdMod);
+    else void loadMd().then(run);
   };
 }
 
@@ -100,25 +108,25 @@ const CODE_LANGS = [
 ];
 
 export const editorCommands: Command[] = [
-  { id: 'editor.bold', title: 'commands.editor.bold', category: 'editor', icon: Bold, when: WHEN, run: withView(md.toggleWrap('**')) },
-  { id: 'editor.italic', title: 'commands.editor.italic', category: 'editor', icon: Italic, when: WHEN, run: withView(md.toggleWrap('*')) },
-  { id: 'editor.strike', title: 'commands.editor.strike', category: 'editor', icon: Strikethrough, when: WHEN, run: withView(md.toggleWrap('~~')) },
-  { id: 'editor.inlineCode', title: 'commands.editor.inlineCode', category: 'editor', icon: Code, when: WHEN, run: withView(md.toggleWrap('`')) },
-  { id: 'editor.highlight', title: 'commands.editor.highlight', category: 'editor', icon: Highlighter, when: WHEN, run: withView(md.toggleWrap('==')) },
-  { id: 'editor.heading1', title: 'commands.editor.heading1', category: 'editor', icon: Heading1, when: WHEN, run: withView(md.setHeading(1)) },
-  { id: 'editor.heading2', title: 'commands.editor.heading2', category: 'editor', icon: Heading2, when: WHEN, run: withView(md.setHeading(2)) },
-  { id: 'editor.heading3', title: 'commands.editor.heading3', category: 'editor', icon: Heading3, when: WHEN, run: withView(md.setHeading(3)) },
-  { id: 'editor.heading4', title: 'commands.editor.heading4', category: 'editor', when: WHEN, run: withView(md.setHeading(4)) },
-  { id: 'editor.heading5', title: 'commands.editor.heading5', category: 'editor', when: WHEN, run: withView(md.setHeading(5)) },
-  { id: 'editor.heading6', title: 'commands.editor.heading6', category: 'editor', when: WHEN, run: withView(md.setHeading(6)) },
-  { id: 'editor.paragraph', title: 'commands.editor.paragraph', category: 'editor', when: WHEN, run: withView(md.setHeading(0)) },
+  { id: 'editor.bold', title: 'commands.editor.bold', category: 'editor', icon: Bold, when: WHEN, run: withView((m) => m.toggleWrap('**')) },
+  { id: 'editor.italic', title: 'commands.editor.italic', category: 'editor', icon: Italic, when: WHEN, run: withView((m) => m.toggleWrap('*')) },
+  { id: 'editor.strike', title: 'commands.editor.strike', category: 'editor', icon: Strikethrough, when: WHEN, run: withView((m) => m.toggleWrap('~~')) },
+  { id: 'editor.inlineCode', title: 'commands.editor.inlineCode', category: 'editor', icon: Code, when: WHEN, run: withView((m) => m.toggleWrap('`')) },
+  { id: 'editor.highlight', title: 'commands.editor.highlight', category: 'editor', icon: Highlighter, when: WHEN, run: withView((m) => m.toggleWrap('==')) },
+  { id: 'editor.heading1', title: 'commands.editor.heading1', category: 'editor', icon: Heading1, when: WHEN, run: withView((m) => m.setHeading(1)) },
+  { id: 'editor.heading2', title: 'commands.editor.heading2', category: 'editor', icon: Heading2, when: WHEN, run: withView((m) => m.setHeading(2)) },
+  { id: 'editor.heading3', title: 'commands.editor.heading3', category: 'editor', icon: Heading3, when: WHEN, run: withView((m) => m.setHeading(3)) },
+  { id: 'editor.heading4', title: 'commands.editor.heading4', category: 'editor', when: WHEN, run: withView((m) => m.setHeading(4)) },
+  { id: 'editor.heading5', title: 'commands.editor.heading5', category: 'editor', when: WHEN, run: withView((m) => m.setHeading(5)) },
+  { id: 'editor.heading6', title: 'commands.editor.heading6', category: 'editor', when: WHEN, run: withView((m) => m.setHeading(6)) },
+  { id: 'editor.paragraph', title: 'commands.editor.paragraph', category: 'editor', when: WHEN, run: withView((m) => m.setHeading(0)) },
   {
     id: 'editor.toggleBullet',
     title: 'commands.editor.toggleBullet',
     category: 'editor',
     icon: List,
     when: WHEN,
-    run: withView(md.toggleLinePrefix('bullet')),
+    run: withView((m) => m.toggleLinePrefix('bullet')),
   },
   {
     id: 'editor.toggleNumbered',
@@ -126,7 +134,7 @@ export const editorCommands: Command[] = [
     category: 'editor',
     icon: ListOrdered,
     when: WHEN,
-    run: withView(md.toggleLinePrefix('ordered')),
+    run: withView((m) => m.toggleLinePrefix('ordered')),
   },
   {
     id: 'editor.toggleChecklist',
@@ -134,10 +142,10 @@ export const editorCommands: Command[] = [
     category: 'editor',
     icon: ListChecks,
     when: WHEN,
-    run: withView(md.toggleLinePrefix('task')),
+    run: withView((m) => m.toggleLinePrefix('task')),
   },
-  { id: 'editor.toggleTask', title: 'commands.editor.toggleTask', category: 'editor', icon: ListChecks, when: WHEN, run: withView(md.toggleTaskDone) },
-  { id: 'editor.toggleQuote', title: 'commands.editor.toggleQuote', category: 'editor', icon: Quote, when: WHEN, run: withView(md.toggleLinePrefix('quote')) },
+  { id: 'editor.toggleTask', title: 'commands.editor.toggleTask', category: 'editor', icon: ListChecks, when: WHEN, run: withView((m) => m.toggleTaskDone) },
+  { id: 'editor.toggleQuote', title: 'commands.editor.toggleQuote', category: 'editor', icon: Quote, when: WHEN, run: withView((m) => m.toggleLinePrefix('quote')) },
   {
     id: 'editor.insertCallout',
     title: 'commands.editor.insertCallout',
@@ -149,7 +157,7 @@ export const editorCommands: Command[] = [
         ['note', 'tip', 'info', 'warning', 'danger', 'question'].map((k) => ({ label: t(`callouts.${k}`), value: k })),
         { title: t('commands.editor.insertCallout') },
       );
-      if (typeof kind === 'string') withView(md.insertBlock(`> [!${kind}] `))();
+      if (typeof kind === 'string') withView((m) => m.insertBlock(`> [!${kind}] `))();
     },
   },
   {
@@ -164,7 +172,7 @@ export const editorCommands: Command[] = [
         { title: t('commands.editor.insertCodeBlock'), allowCustom: (s) => ({ label: s, value: s }) },
       );
       if (typeof lang !== 'string') return;
-      withView(md.insertBlock('```' + lang + '\n\n```', 4 + lang.length))();
+      withView((m) => m.insertBlock('```' + lang + '\n\n```', 4 + lang.length))();
     },
   },
   {
@@ -173,7 +181,7 @@ export const editorCommands: Command[] = [
     category: 'code',
     icon: Play,
     when: WHEN,
-    run: withView(md.insertBlock('```python\n\n```', 10)),
+    run: withView((m) => m.insertBlock('```python\n\n```', 10)),
   },
   {
     id: 'editor.insertTable',
@@ -203,12 +211,12 @@ export const editorCommands: Command[] = [
       ]);
       if (!r) return;
       const [cols, rows] = r[0].split(/[x×*]/i).map((n) => Number(n.trim()));
-      withView(md.insertBlock(md.tableMarkdown(cols, rows, r[1]), 2))();
+      withView((m) => m.insertBlock(m.tableMarkdown(cols, rows, r[1]), 2))();
     },
   },
-  { id: 'editor.addTableRow', title: 'commands.editor.addTableRow', category: 'editor', icon: Rows3, when: WHEN, run: withView(md.addTableRow) },
-  { id: 'editor.addTableColumn', title: 'commands.editor.addTableColumn', category: 'editor', icon: Columns3, when: WHEN, run: withView(md.addTableColumn) },
-  { id: 'editor.formatTable', title: 'commands.editor.formatTable', category: 'editor', icon: Table, when: WHEN, run: withView(md.formatTable) },
+  { id: 'editor.addTableRow', title: 'commands.editor.addTableRow', category: 'editor', icon: Rows3, when: WHEN, run: withView((m) => m.addTableRow) },
+  { id: 'editor.addTableColumn', title: 'commands.editor.addTableColumn', category: 'editor', icon: Columns3, when: WHEN, run: withView((m) => m.addTableColumn) },
+  { id: 'editor.formatTable', title: 'commands.editor.formatTable', category: 'editor', icon: Table, when: WHEN, run: withView((m) => m.formatTable) },
   {
     id: 'editor.insertLink',
     title: 'commands.editor.insertLink',
@@ -225,7 +233,7 @@ export const editorCommands: Command[] = [
       );
       if (kind === 'card') {
         const c = await pickCard(t('editor.linkToCard'));
-        if (c) withView(md.insertCardLink(c.id))();
+        if (c) withView((m) => m.insertCardLink(c.id))();
         return;
       }
       if (kind !== 'url') return;
@@ -242,7 +250,7 @@ export const editorCommands: Command[] = [
           }),
         ([url]) => inputBox({ title: t('editor.linkText'), value: sel || url, step: 3, totalSteps: 3 }),
       ]);
-      if (r) withView(md.insertLink(r[0].trim(), r[1]))();
+      if (r) withView((m) => m.insertLink(r[0].trim(), r[1]))();
     },
   },
   {
@@ -253,7 +261,7 @@ export const editorCommands: Command[] = [
     when: WHEN,
     run: async () => {
       const c = await pickCard(t('commands.editor.insertCardLink'));
-      if (c) withView(md.insertCardLink(c.id))();
+      if (c) withView((m) => m.insertCardLink(c.id))();
     },
   },
   {
@@ -264,7 +272,7 @@ export const editorCommands: Command[] = [
     when: WHEN,
     run: async () => {
       const c = await pickCard(t('commands.editor.insertEmbed'));
-      if (c) withView(md.insertBlock(`![[${c.id}]]`))();
+      if (c) withView((m) => m.insertBlock(`![[${c.id}]]`))();
     },
   },
   {
@@ -281,43 +289,43 @@ export const editorCommands: Command[] = [
       void import('@codemirror/autocomplete').then((m) => m.startCompletion(e.view));
     },
   },
-  { id: 'editor.insertDivider', title: 'commands.editor.insertDivider', category: 'editor', icon: Minus, when: WHEN, run: withView(md.insertBlock('---')) },
-  { id: 'editor.insertMath', title: 'commands.editor.insertMath', category: 'editor', icon: Sigma, when: WHEN, run: withView(md.insertBlock('$$\n\n$$', 3)) },
+  { id: 'editor.insertDivider', title: 'commands.editor.insertDivider', category: 'editor', icon: Minus, when: WHEN, run: withView((m) => m.insertBlock('---')) },
+  { id: 'editor.insertMath', title: 'commands.editor.insertMath', category: 'editor', icon: Sigma, when: WHEN, run: withView((m) => m.insertBlock('$$\n\n$$', 3)) },
   {
     id: 'editor.insertMermaid',
     title: 'commands.editor.insertMermaid',
     category: 'editor',
     icon: Workflow,
     when: WHEN,
-    run: withView(md.insertBlock('```mermaid\ngraph LR\n  A --> B\n```', 11)),
+    run: withView((m) => m.insertBlock('```mermaid\ngraph LR\n  A --> B\n```', 11)),
   },
-  { id: 'editor.insertDate', title: 'commands.editor.insertDate', category: 'editor', icon: CalendarDays, when: WHEN, run: withView(md.insertDate) },
+  { id: 'editor.insertDate', title: 'commands.editor.insertDate', category: 'editor', icon: CalendarDays, when: WHEN, run: withView((m) => m.insertDate) },
   {
     id: 'editor.insertDateTime',
     title: 'commands.editor.insertDateTime',
     category: 'editor',
     icon: CalendarDays,
     when: WHEN,
-    run: withView(md.insertDateTime),
+    run: withView((m) => m.insertDateTime),
   },
   { id: 'editor.togglePreview', title: 'commands.editor.togglePreview', category: 'editor', icon: Eye, run: () => settings.toggle('editor.livePreview') },
-  { id: 'editor.toUpper', title: 'commands.editor.toUpper', category: 'editor', icon: CaseUpper, when: WHEN, run: withView(md.toUpper) },
-  { id: 'editor.toLower', title: 'commands.editor.toLower', category: 'editor', icon: CaseLower, when: WHEN, run: withView(md.toLower) },
-  { id: 'editor.toTitle', title: 'commands.editor.toTitle', category: 'editor', icon: CaseSensitive, when: WHEN, run: withView(md.toTitle) },
-  { id: 'editor.toSentence', title: 'commands.editor.toSentence', category: 'editor', icon: CaseSensitive, when: WHEN, run: withView(md.toSentence) },
-  { id: 'editor.toggleCase', title: 'commands.editor.toggleCase', category: 'editor', icon: CaseSensitive, when: WHEN, run: withView(md.toggleCase) },
-  { id: 'editor.sortAsc', title: 'commands.editor.sortAsc', category: 'editor', icon: ArrowDownAZ, when: WHEN, run: withView(md.sortLinesAsc) },
-  { id: 'editor.sortDesc', title: 'commands.editor.sortDesc', category: 'editor', icon: ArrowUpZA, when: WHEN, run: withView(md.sortLinesDesc) },
-  { id: 'editor.dedupe', title: 'commands.editor.dedupe', category: 'editor', when: WHEN, run: withView(md.dedupeLines) },
-  { id: 'editor.joinLines', title: 'commands.editor.joinLines', category: 'editor', icon: WrapText, when: WHEN, run: withView(md.joinLines) },
-  { id: 'editor.trimTrailing', title: 'commands.editor.trimTrailing', category: 'editor', when: WHEN, run: withView(md.trimTrailing) },
+  { id: 'editor.toUpper', title: 'commands.editor.toUpper', category: 'editor', icon: CaseUpper, when: WHEN, run: withView((m) => m.toUpper) },
+  { id: 'editor.toLower', title: 'commands.editor.toLower', category: 'editor', icon: CaseLower, when: WHEN, run: withView((m) => m.toLower) },
+  { id: 'editor.toTitle', title: 'commands.editor.toTitle', category: 'editor', icon: CaseSensitive, when: WHEN, run: withView((m) => m.toTitle) },
+  { id: 'editor.toSentence', title: 'commands.editor.toSentence', category: 'editor', icon: CaseSensitive, when: WHEN, run: withView((m) => m.toSentence) },
+  { id: 'editor.toggleCase', title: 'commands.editor.toggleCase', category: 'editor', icon: CaseSensitive, when: WHEN, run: withView((m) => m.toggleCase) },
+  { id: 'editor.sortAsc', title: 'commands.editor.sortAsc', category: 'editor', icon: ArrowDownAZ, when: WHEN, run: withView((m) => m.sortLinesAsc) },
+  { id: 'editor.sortDesc', title: 'commands.editor.sortDesc', category: 'editor', icon: ArrowUpZA, when: WHEN, run: withView((m) => m.sortLinesDesc) },
+  { id: 'editor.dedupe', title: 'commands.editor.dedupe', category: 'editor', when: WHEN, run: withView((m) => m.dedupeLines) },
+  { id: 'editor.joinLines', title: 'commands.editor.joinLines', category: 'editor', icon: WrapText, when: WHEN, run: withView((m) => m.joinLines) },
+  { id: 'editor.trimTrailing', title: 'commands.editor.trimTrailing', category: 'editor', when: WHEN, run: withView((m) => m.trimTrailing) },
   {
     id: 'editor.duplicateLine',
     title: 'commands.editor.duplicateLine',
     category: 'editor',
     icon: Copy,
     when: WHEN,
-    run: () => void import('@codemirror/commands').then((m) => withView((v) => m.copyLineDown(v))()),
+    run: () => void import('@codemirror/commands').then((m) => withView(() => (v) => m.copyLineDown(v))()),
   },
   {
     id: 'editor.moveLineUp',
@@ -325,7 +333,7 @@ export const editorCommands: Command[] = [
     category: 'editor',
     icon: ArrowUp,
     when: WHEN,
-    run: () => void import('@codemirror/commands').then((m) => withView((v) => m.moveLineUp(v))()),
+    run: () => void import('@codemirror/commands').then((m) => withView(() => (v) => m.moveLineUp(v))()),
   },
   {
     id: 'editor.moveLineDown',
@@ -333,7 +341,7 @@ export const editorCommands: Command[] = [
     category: 'editor',
     icon: ArrowDown,
     when: WHEN,
-    run: () => void import('@codemirror/commands').then((m) => withView((v) => m.moveLineDown(v))()),
+    run: () => void import('@codemirror/commands').then((m) => withView(() => (v) => m.moveLineDown(v))()),
   },
   {
     id: 'editor.find',
@@ -341,7 +349,7 @@ export const editorCommands: Command[] = [
     category: 'editor',
     icon: Search,
     when: WHEN,
-    run: () => void import('@codemirror/search').then((m) => withView((v) => m.openSearchPanel(v))()),
+    run: () => void import('@codemirror/search').then((m) => withView(() => (v) => m.openSearchPanel(v))()),
   },
   {
     id: 'editor.pastePlain',
@@ -351,7 +359,7 @@ export const editorCommands: Command[] = [
     when: WHEN,
     run: () => {
       const e = activeEditor();
-      if (e) void pastePlain(e.view);
+      if (e) void import('./cm/paste').then((m) => m.pastePlain(e.view));
     },
   },
 ];
