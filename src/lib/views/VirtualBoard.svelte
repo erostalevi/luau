@@ -29,6 +29,7 @@
     type GroupBy,
   } from '$lib/panels/search/searchState.svelte';
   import { openHit, hitMenu, focusSearch, setSavedGroupBy, saveCurrent } from '$lib/panels/search/searchActions';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let { tab }: { tab: Tab } = $props();
 
@@ -154,9 +155,12 @@
     next?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
+  // Regrouping starts from the left; mounting keeps the remembered scroll (keepScroll).
+  let shownGroupBy: GroupBy | null = null;
   $effect(() => {
-    void groupBy;
-    void tick().then(() => scroller?.scrollTo({ left: 0 }));
+    const g = groupBy;
+    if (shownGroupBy !== null && shownGroupBy !== g) void tick().then(() => scroller?.scrollTo({ left: 0 }));
+    shownGroupBy = g;
   });
 
   const today = new Date().toISOString().slice(0, 10);
@@ -198,7 +202,7 @@
   </header>
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="scroll" bind:this={scroller} data-autoscroll {onkeydown}>
+  <div class="scroll" bind:this={scroller} data-autoscroll {onkeydown} use:keepScroll={'results'}>
     {#if failed}
       <div class="empty"><strong>{t('searchPanel.failed')}</strong><span>{failed}</span></div>
     {:else if !hits.length && !busy}

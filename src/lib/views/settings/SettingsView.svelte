@@ -17,6 +17,7 @@
   import { setSetting } from './effects';
   import { prefsUi } from './prefsState.svelte';
   import SettingRow from './SettingRow.svelte';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let { initial }: { initial?: string } = $props();
 
@@ -179,7 +180,7 @@
   </header>
 
   <div class="body">
-    <nav class="toc" aria-label={t('prefs.settings.categories')}>
+    <nav class="toc" use:keepScroll={'toc'} aria-label={t('prefs.settings.categories')}>
       {#each order as id (id)}
         {@const n = groups.find((g) => g.id === id)?.items.length ?? 0}
         {@const Icon = categoryIcon(id)}
@@ -198,7 +199,7 @@
       </div>
     </nav>
 
-    <div class="scroller" bind:this={scroller} onscroll={onScroll}>
+    <div class="scroller" bind:this={scroller} onscroll={onScroll} use:keepScroll={'settings'}>
       <div class="content">
         {#each groups as g (g.id)}
           {@const Icon = categoryIcon(g.id)}

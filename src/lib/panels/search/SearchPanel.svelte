@@ -36,6 +36,7 @@
   import { search, loadSaved, runSearch, groupByBoard, groupByLane, navOrder, snippetSegments, highlightSegments, type Segment } from './searchState.svelte';
   import { FILTER_KINDS, filterMenu, activeCount, chipLabel, type FilterKind } from './filterMenus';
   import { saveCurrent, toggleCase, openHit, hitMenu, savedMenu, openSavedBoard } from './searchActions';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let input: HTMLInputElement | undefined = $state();
   let listEl: HTMLDivElement | undefined = $state();
@@ -356,7 +357,16 @@
         onclick={() => void saveCurrent()}><BookmarkPlus size={14} /></button
       >
     </div>
-    <div class="scroll results" id="search-results" role="listbox" aria-label={t('panels.search')} tabindex="0" bind:this={listEl} onkeydown={onKeydown}>
+    <div
+      class="scroll results"
+      use:keepScroll={'search'}
+      id="search-results"
+      role="listbox"
+      aria-label={t('panels.search')}
+      tabindex="0"
+      bind:this={listEl}
+      onkeydown={onKeydown}
+    >
       {#if failed}
         <div class="empty small">{failed}</div>
       {:else if !hits.length && !busy}

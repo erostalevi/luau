@@ -50,7 +50,7 @@
   <div class="selector">
     <Segmented options={sections} bind:value={ui.left.section} onchange={() => persistUi()} full />
   </div>
-  <div class="content">
+  <div class="content" data-scroll-scope="left">
     {#if ui.left.section === 'explorer'}
       <Explorer />
     {:else if ui.left.section === 'search'}

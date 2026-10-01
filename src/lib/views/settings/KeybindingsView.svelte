@@ -27,6 +27,7 @@
   import { tip } from '$lib/components/tooltip';
   import Kbd from '$lib/components/Kbd.svelte';
   import { t } from '$lib/i18n/index.svelte';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   // Leaving the view (tab closed or switched) must never leave every shortcut
   // suspended.
@@ -180,7 +181,7 @@
     {/if}
     <button class="icon-btn sm" class:active={recordSearch} onclick={toggleRecordSearch} use:tip={t('keys.editor.recordSearch')}><Keyboard size={14} /></button>
   </div>
-  <div class="table" role="grid">
+  <div class="table" role="grid" use:keepScroll={'keybindings'}>
     <div class="thead" role="row">
       <span>{t('keys.editor.command')}</span><span>{t('keys.editor.keybinding')}</span><span>{t('keys.editor.when')}</span><span
         >{t('keys.editor.sourceCol')}</span

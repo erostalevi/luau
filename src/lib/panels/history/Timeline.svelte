@@ -12,6 +12,7 @@
   import { boardName, knownBoards } from './actions';
   import { KIND_GROUPS, describeEntry, entryCardId, filterEntries, groupByDay, hasVersions, kindGroup, rangeFrom, sourceOf, type RangePreset } from './model';
   import { entryIcon } from './icons';
+  import { keepScroll } from '$lib/components/keepScroll';
 
   let entries = $state<JournalEntry[]>([]);
   let loading = $state(false);
@@ -210,7 +211,7 @@
   </div>
 {/if}
 
-<div class="list">
+<div class="list" use:keepScroll={'history'}>
   {#if failed}
     <div class="empty">{t('errors.opFailed', { message: '' })}</div>
   {:else if !days.length && !loading}

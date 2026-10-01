@@ -16,24 +16,27 @@
 
 <div class="pane-view" role="presentation" onpointerdown={() => (ws.activePane = pane.id)}>
   {#if !tab}
-    <StartPage />
+    <div class="scroll-scope" data-scroll-scope="pane:{pane.id}"><StartPage /></div>
   {:else}
     {#key tab.id}
-      {#if tab.kind === 'board'}
-        <BoardTab boardId={tab.boardId!} />
-      {:else if tab.kind === 'doc'}
-        <DocumentTab boardId={tab.boardId!} cardId={tab.cardId!} tabId={tab.id} />
-      {:else if tab.kind === 'start'}
-        <StartPage />
-      {:else if tab.kind === 'settings'}
-        {#await SettingsView() then m}<m.default initial={tab.payload?.query as string | undefined} />{/await}
-      {:else if tab.kind === 'keybindings'}
-        {#await KeybindingsView() then m}<m.default />{/await}
-      {:else if tab.kind === 'savedSearch'}
-        {#await VirtualBoard() then m}<m.default {tab} />{/await}
-      {:else if tab.kind === 'summary'}
-        {#await SummaryView() then m}<m.default {tab} />{/await}
-      {/if}
+      <!-- Scope for use:keepScroll: positions are remembered per tab id. -->
+      <div class="scroll-scope" data-scroll-scope={tab.id}>
+        {#if tab.kind === 'board'}
+          <BoardTab boardId={tab.boardId!} />
+        {:else if tab.kind === 'doc'}
+          <DocumentTab boardId={tab.boardId!} cardId={tab.cardId!} tabId={tab.id} />
+        {:else if tab.kind === 'start'}
+          <StartPage />
+        {:else if tab.kind === 'settings'}
+          {#await SettingsView() then m}<m.default initial={tab.payload?.query as string | undefined} />{/await}
+        {:else if tab.kind === 'keybindings'}
+          {#await KeybindingsView() then m}<m.default />{/await}
+        {:else if tab.kind === 'savedSearch'}
+          {#await VirtualBoard() then m}<m.default {tab} />{/await}
+        {:else if tab.kind === 'summary'}
+          {#await SummaryView() then m}<m.default {tab} />{/await}
+        {/if}
+      </div>
     {/key}
   {/if}
 </div>
@@ -45,5 +48,8 @@
     display: flex;
     flex-direction: column;
     position: relative;
+  }
+  .scroll-scope {
+    display: contents;
   }
 </style>
