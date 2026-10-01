@@ -1,209 +1,168 @@
 <p align="center">
-  <img src="assets/icon.png" width="96" height="96" alt="Luau icon">
+  <img src="assets/icon.png" width="104" height="104" alt="Luau icon: a pastel sunset over the sea">
 </p>
 
 <h1 align="center">Luau</h1>
 
 <p align="center">
-  A calm, local-first kanban board and Markdown notes app for macOS, Windows and Linux.<br>
-  Every card is a plain Markdown file. No accounts, no cloud, no lock-in.
+  A calm, local-first <b>kanban board</b> and <b>Markdown notes</b> app for macOS, Windows and Linux.<br>
+  Every card is a plain Markdown file in a folder you own. No accounts, no cloud, no lock-in.
 </p>
 
 <p align="center">
-  <a href="LICENSE">MIT license</a> ·
+  <a href="docs/SPEC.md">Specification</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
-  <a href="SPEC.md">Spec</a>
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="SECURITY.md">Security</a> ·
+  <a href="LICENSE">MIT license</a>
 </p>
 
----
-
-<!-- Screenshots: replace with real captures (light + dark) before the first release. -->
 <p align="center">
-  <em>Screenshot placeholder: board view (light)</em> ·
-  <em>card editor</em> ·
-  <em>command palette</em> ·
-  <em>board view (dark)</em>
+  <img src="docs/screenshots/board-light.jpg" alt="A kanban board in Luau's light theme: lanes Backlog, In progress, Review and Done with cards, a group card, tags, tasks and due dates" width="880">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/board-dark.jpg" alt="The same board in the dark 'Hawaii dusk' theme" width="430">
+  <img src="docs/screenshots/doc-light.jpg" alt="A Markdown document with math, next to the search panel and its query syntax" width="430">
 </p>
 
 ## Why Luau
 
-- **Your files, your folders.** A board is any folder on disk with a hidden `.luau/` directory.
-  Lanes are folders, cards are `.md` files. Open them in any editor, sync them with git,
-  Dropbox or iCloud; they stay readable without the app.
-- **Fast and light.** Tauri 2 + Rust core + Svelte 5: a small native binary that uses the system
-  webview, starts quickly and keeps memory low.
-- **Keyboard first.** Everything is a command: a VS Code–style command palette, fully
-  rebindable shortcuts with chords, and optional single-key board shortcuts.
-- **Calm by design.** Soft pastel palette, light and dark themes, translucent sidebars where the OS
-  supports them, and motion that respects “reduce motion”.
+- **Your files, your folders.** A board is any folder with a hidden `.luau/` directory. Lanes are folders and
+  cards are `.md` files, so they stay readable in any editor and sync with git, Dropbox or iCloud.
+- **Feels great.** Smooth drag and drop, an Obsidian/Notion-style live-preview editor, a VS Code-style command
+  palette, and keyboard shortcuts for everything (with VS Code, Trello, Vim and Emacs presets).
+- **Remembers everything.** Undo for every action, full per-card history with diff and restore, a trash, and
+  local-AI summaries of what you did.
+- **Light and native.** Tauri 2, a Rust core and Svelte 5: a ~15 MB app that opens a board in under half a second.
+- **Calm by design.** Pastel "Hawaii sunset" colors, light and dark themes, Liquid Glass translucency on macOS,
+  and respect for reduced motion.
 
 ## Features
 
 ### Boards
-- **Kanban boards** with lanes shown as columns or rows, drag-and-drop for cards and lanes
-  (pointer-based, smooth on every OS), lane colours, collapse, resizable width and WIP limits.
-- **Group cards**: drop a card onto another to nest it; unlimited depth, collapsible on the board.
-- **Files boards**: a tree of Markdown documents with full-page editor tabs, convertible to and from kanban.
-- Board **templates** (Simple, Product, Personal, Content pipeline, Bug triage…) and per-board card templates.
-- Inline **quick add**, multi-select with bulk move / tag / archive / delete, a board **filter bar**
-  (`#tag`, `@person`, `is:open`, `due:overdue`…), per-board zoom and archive.
-- Cards show tags, due date, priority, assignees, task progress, attachments and an optional cover image.
+- **Kanban boards**, with lanes as columns or rows.
+  - Lanes: colors, WIP limits, collapse, archive.
+  - Cards show: tags, tasks, due dates, priority, assignees, covers.
+- **Group cards:** drop a card onto another to nest it, as deep as you like.
+- **Files boards:** a tree of Markdown documents that open in tabs.
+- **Quick add**, multi-select (⇧-click, ⌘-drag lasso), find-in-board, per-board zoom.
+- **Board templates:** Kanban basic, Sprint, Personal, Notes.
 
 ### Editor
-- Obsidian-style **live preview** built on CodeMirror 6, with a source mode toggle.
-- Slash menu for blocks: headings, lists, checklists, tables, callouts, code blocks,
-  **math (KaTeX)**, **diagrams (Mermaid)**, dividers, images and files.
-- Card-to-card **links** `[[…]]` shown by title, embeds, backlinks and `#tags` with autocomplete.
-- **Python cells** that run locally, rich-text paste converted to Markdown, spell check and optional **Vim mode**.
-- Opens as a centred modal or a pinnable sidebar; autosaves as you type.
+- **Live preview** on CodeMirror 6 that renders:
+  - tables, callouts and code;
+  - **math** (KaTeX) and **diagrams** (Mermaid);
+  - **embeds** and heading links;
+  - **Python cells** with their output.
+- `[[Card links]]` by title, `#tags` and `@mentions` with autocomplete, and a `/` slash menu.
+- **Natural dates:** type `[next friday]` or `[in 3 days]` and it becomes a real date.
+- Images and PDFs with resizable thumbnails, rich paste (HTML → Markdown), and a properties footer for priority,
+  dates and assignees.
+- Optional Vim mode and spellcheck. Autosave never overwrites changes made outside the app.
 
 ### Find and remember
-- **Explorer** of every board discovered on your machine (boards are found automatically, even after you move them).
-- **Full-text search** across all boards (SQLite FTS5) with a query syntax and filters.
-- **Per-board undo/redo** and persistent **history** with diffs, restore, and a **trash** (7 days by default, configurable).
-- **Activity summary**: “what did I do yesterday?” grouped by board, ready to paste into a stand-up.
+- **Search** across all boards with a small query language (`tag:` `board:` `is:open` `due:overdue` `@ana`
+  `"exact phrase"` `-tag:wip`…). The filter UI stays in sync with the query, and searches can be saved and opened
+  as boards.
+- **History** timeline with a word-level diff and *restore this version*, plus **Trash** and **Archive** views.
+- **Activity summaries** ("what did I do yesterday?") written by a **local** model (Ollama, LM Studio…) or a
+  built-in basic writer. They can be scheduled, with delivery by notification or Slack.
 
-### Integrations
-- **Jira** (Cloud and Server/Data Center): browse and search issues, drag them into boards as linked copies,
-  run Jira actions (transition, assign, comment), and keep **mirror boards** synced with a Jira board.
-- **Trello** and **Slack** integrations through the same provider and contribution points.
-- Every write to an external service can require explicit confirmation. Tokens are stored in the OS keychain
-  (macOS Keychain, Windows Credential Manager, Linux Secret Service), never in settings or logs, and all
-  traffic is HTTPS to the hosts you configured.
+<p align="center">
+  <img src="docs/screenshots/summary-light.jpg" alt="Activity summary view with period presets, detail slider and the history timeline" width="430">
+  <img src="docs/screenshots/start-dark.jpg" alt="Start page in dark theme with quick actions, recent boards and recent activity" width="430">
+</p>
 
-### Local AI
-- Optional **card and activity summaries** with a model running on your own computer
-  (Ollama, LM Studio or any local OpenAI-compatible server). Nothing leaves your machine.
+### Work with others' tools (optional)
+- **Jira Cloud and Data Center**, **Trello** and **Slack**:
+  - search issues and drag them onto your boards as linked cards;
+  - mirror whole boards, kept up to date every minute when watched;
+  - transition issues, assign them and comment;
+  - create an issue from a card.
+- **Every write to an external service** shows a confirmation that lists exactly what will change. Tokens are kept
+  in your OS keychain.
 
-### Everywhere
-- VS Code–style **Settings** view with search and a **keyboard shortcuts editor** (record keys, chords,
-  `when` clauses, conflicts), plus presets for **VS Code, Trello, Vim and Emacs**.
-- Tabs (pin, reopen closed, split right), multiple windows, native macOS menus.
-- Import from a Markdown folder, export to Markdown, HTML, PDF or a board `.zip`; export/import settings.
-- UI in **English, Español and Português**.
+### Everything else
+- **Tabs, split view and multiple windows.** An Explorer tree with drag and drop. A start page.
+- **Import and export:**
+  - Import any Markdown folder (e.g. an Obsidian vault).
+  - Export a board, card or document as HTML, PDF, Markdown, ZIP or JSON.
+- **Settings:** about 80 options with search. A full keyboard-shortcut editor (record keys, chords,
+  when-clauses). Import and export of `settings.json`.
+- **Languages:** English, Español, Português.
+
+<p align="center">
+  <img src="docs/screenshots/settings-light.jpg" alt="Settings view with categories and searchable options" width="640">
+</p>
 
 ## Install
 
-Pre-built installers are published on the GitHub Releases page:
+Download the latest release for your platform from the **Releases** page:
 
-| Platform | Package | Requirements |
-|---|---|---|
-| macOS (Apple Silicon, Intel) | `.dmg` / `.app` | macOS 13 Ventura or later |
-| Windows (x64, ARM64) | `.exe` (NSIS) / `.msi` | Windows 10 1809+ with WebView2 |
-| Linux (x64, ARM64) | `.AppImage`, `.deb`, `.rpm` | WebKitGTK 4.1 (Ubuntu 22.04+, Fedora 38+) |
+| Platform | Package |
+|---|---|
+| macOS 13+ (Apple Silicon, Intel) | `.dmg` |
+| Windows 10/11 (x64, ARM64) | `.exe` installer or `.msi` |
+| Linux (x64, ARM64) | `.AppImage`, `.deb`, `.rpm` |
 
-Early builds are unsigned: on macOS, right-click the app and choose **Open** the first time;
-on Windows, choose **More info → Run anyway** in SmartScreen.
+On first launch Luau asks for your language, look, keyboard style and where to look for boards. macOS may ask
+once for access to folders such as Documents or Desktop while it looks for boards.
 
 ## Build from source
 
-Prerequisites: [Node.js 24](https://nodejs.org), [pnpm](https://pnpm.io),
-[Rust (rustup)](https://rustup.rs) and the
-[Tauri 2 system dependencies](https://tauri.app/start/prerequisites/)
-(on Linux: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`).
+Requirements: **Node 24+**, **pnpm 12+**, **Rust stable (1.90+)**, and the
+[Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 
-```sh
-pnpm install          # install JS dependencies
-pnpm dev              # run the desktop app with hot reload (Tauri + Vite)
-pnpm dev:web          # run the UI in a browser with an in-memory mock backend
+```bash
+pnpm install
+pnpm dev                    # desktop app with hot reload
+pnpm dev:web                # UI only, in the browser, with an in-memory mock backend (http://localhost:1420)
+pnpm build --localtarget    # release build for this machine (macOS: .app + .dmg)
+pnpm build --release        # every target this host can build (CI builds all six)
 ```
 
-### Building installers
+**Checks** (all run in CI):
 
-```sh
-pnpm build --localtarget   # build for this machine only (fastest)
-pnpm build --release       # build every target this host can build; the rest are built by CI
-pnpm build --target <id>   # one target (add --debug for a debug build, --dry-run to print commands)
+```bash
+pnpm lint            # ESLint + Prettier
+pnpm check           # svelte-check
+pnpm test            # vitest
+pnpm i18n en         # translation keys (also: es, pt)
+pnpm check:tauri     # npm ↔ Rust Tauri versions in step
+cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 ```
 
-Targets (`scripts/build.mjs`):
+## How your data is stored
 
-| Target | Rust triple | Bundles |
-|---|---|---|
-| `macos-arm64` | `aarch64-apple-darwin` | app, dmg |
-| `macos-x64` | `x86_64-apple-darwin` | app, dmg |
-| `windows-x64` | `x86_64-pc-windows-msvc` | nsis, msi |
-| `windows-arm64` | `aarch64-pc-windows-msvc` | nsis, msi |
-| `linux-x64` | `x86_64-unknown-linux-gnu` | AppImage, deb, rpm |
-| `linux-arm64` | `aarch64-unknown-linux-gnu` | AppImage, deb, rpm |
-
-macOS builds both Apple architectures; Windows and Linux builds of other architectures run on
-GitHub Actions (`gh workflow run release.yml`). Output lands in `target/<triple>/release/bundle/`.
-
-### Checks
-
-```sh
-pnpm check                 # svelte-check (0 errors, 0 warnings)
-pnpm test                  # vitest
-pnpm test:rust             # cargo test --workspace
-pnpm i18n en|es|pt         # missing translations / placeholder mismatches
-cargo clippy --workspace --all-targets -- -D warnings
-cargo fmt --all
+```text
+My board/
+├── .luau/board.json        board id, name, lane order, view settings
+├── .luau/history/          append-only journal + compressed card versions
+├── .luau/trash/            deleted items (kept 7 days by default)
+├── k1a2b3c/                a lane (index.json holds its name, order, color)
+│   ├── c4d5e6f.md          a card — "# Title" on the first line
+│   └── c7g8h9i/index.md    a group card with children inside
 ```
 
-## Data format
+Luau never rewrites a file just because it opened it. It writes atomically and picks up changes from other
+editors live. See the [specification](docs/SPEC.md#3-on-disk-format) for every detail.
 
+## Project layout
+
+```text
+src/                Svelte 5 UI — commands, keybindings, editor, panels, i18n (en/es/pt)
+src-tauri/          Tauri 2 shell — windows, menus, dialogs, luau:// protocol, RPC
+crates/luau-core/   Rust core — store, history, search (SQLite FTS5), import/export, AI, integrations
+docs/               SPEC, ARCHITECTURE, change notes, reviews, screenshots
+scripts/            build, i18n and version checks
 ```
-Project Alpha/                ← any folder, anywhere
-├── .luau/                    ← hidden, app-internal (also the board marker)
-│   ├── board.json            ← manifest: id, name, type, lane order, view
-│   ├── history/              ← operation journal + compressed text versions
-│   ├── trash/                ← deleted items, restorable
-│   └── cache/                ← disposable (search index, summaries, thumbnails)
-├── k4m2p9/                   ← a lane
-│   ├── index.json            ← { id, name, order }
-│   ├── c8x1q0.md             ← a card: plain Markdown, first line "# Title"
-│   ├── c8x1q0.3f9a.png       ← an image owned by that card
-│   └── c2mz7p/               ← a group card
-│       ├── index.md
-│       ├── index.json
-│       └── c77ab1.md
-```
-
-- Cards are pure Markdown with no front-matter; tags (`#tag`), links (`[[c8x1q0]]`), due dates and
-  priorities are inline text, so files stay meaningful in any editor.
-- `index.json` order is the source of truth for ordering; the file system is the source of truth for existence.
-- JSON is pretty-printed with a stable key order for clean git diffs. Writes are atomic; loading never rewrites your files.
-- Boards created by a newer Luau open read-only instead of being silently changed.
-
-## Keyboard shortcuts (highlights)
-
-`⌘` is `Ctrl` on Windows and Linux. Every shortcut can be changed in **Keyboard Shortcuts** (`⌘K ⌘S`).
-
-| Action | Shortcut |
-|---|---|
-| Command palette / quick open | `⇧⌘P` / `⌘P` |
-| New card / lane / board | `⌘N` / `⇧⌘N` / `⌥⌘N` |
-| Open board · close / reopen tab | `⌘T` · `⌘W` / `⇧⌘T` |
-| Toggle sidebar · explorer · search · history | `⌘B` · `⇧⌘E` · `⇧⌘F` · `⇧⌘H` |
-| Undo / redo | `⌘Z` / `⇧⌘Z` |
-| Filter board · rows/columns · show archived | `⌘F` · `⇧⌘L` · `⇧⌘A` |
-| Move card up/down/between lanes · nest / unnest | `⌥↑↓←→` · `Tab` / `⇧Tab` |
-| Source / live preview · card link | `⌘E` · `⇧⌘K` |
-| Back / forward through cards | `⌘[` / `⌘]` |
-| Settings | `⌘,` |
-| Single-key board shortcuts | `n` new · `e` open · `t` tag · `d` due · `p` priority · `a` archive · `m` move · `/` filter · `?` cheat sheet |
-
-## Architecture
-
-A framework-free Rust core (`crates/luau-core`) owns the file system, watcher, discovery, search,
-history and integrations; a thin Tauri adapter (`src-tauri`) exposes it over a single RPC command;
-the Svelte 5 UI (`src/`) is built around a command registry and contribution points.
-See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for layers and conventions, and
-[SPEC.md](SPEC.md) for the product specification. Change notes live in `docs/changes/`.
 
 ## Contributing
 
-1. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and follow its conventions
-   (every action is a command, all strings go through `t()`, board mutations go through `Core::apply`).
-2. Work on a short-lived branch and use [Conventional Commits](https://www.conventionalcommits.org)
-   (`feat(board): …`, `fix(editor): …`, `docs: …`).
-3. Add strings to `src/lib/i18n/parts/<feature>.en.ts` **and** translate them in `.es.ts` / `.pt.ts`
-   (glossary in `docs/changes/i18n.md`).
-4. Add unit tests for business rules and a short note in `docs/changes/<feature>.md`.
-5. Make sure all checks above pass before opening a pull request.
-
-Security issues: please report them privately rather than in a public issue.
+Issues and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md): it covers Conventional
+Commits, the checks above, and a short change note in `docs/changes/` for every change. Report security issues
+privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

@@ -417,3 +417,10 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Bundle: settings, keybindings, summary and saved-search views and the history/integrations panels load on first
   use; editor commands load CodeMirror helpers lazily. Main chunk **822 kB → 452 kB** (gzip 269 → 150 kB).
 - Tests: lint, svelte-check, vitest; web build check that the lazily loaded views open.
+
+## F1 — Rebuild and re-test
+
+See `docs/reviews/2026-10-01-review-2.md`: all checks green (202 Rust + 149 UI tests, lint, i18n parity, audit),
+`pnpm build --localtarget` produces `.app` + `.dmg` without flags, the critical findings re-verified as fixed, card
+creation ~100× faster, native app screenshots with real data. New finding: first home-folder discovery waits on
+macOS privacy prompts while the status shows "Indexing boards 0/…" (proposal in the review).

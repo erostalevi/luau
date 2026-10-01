@@ -1,4 +1,6 @@
-# Luau — Product & Technical Spec
+# Luau — Planning draft (v0.5, historical)
+
+> Superseded by [`docs/SPEC.md`](../SPEC.md). Kept for the design history; `§` numbers in `docs/changes/*` refer to this draft.
 
 > Status: **DRAFT v0.5** — ✅ agreed · 🟡 proposal awaiting confirmation
 > Last updated: 2026-09-30

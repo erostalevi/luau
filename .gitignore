@@ -11,5 +11,13 @@ coverage/
 .env
 .env.*
 
-# local tooling
-.claude/worktrees/
+# editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+Thumbs.db
+*.tsbuildinfo
+
+# local tooling (Claude Code worktrees, launch configs)
+.claude/

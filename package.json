@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "description": "Luau — calm, local-first kanban and notes",
   "license": "MIT",
+  "author": "Eros Talevi",
+  "keywords": ["kanban", "markdown", "notes", "local-first", "tauri", "svelte"],
   "type": "module",
   "scripts": {
     "dev": "tauri dev",

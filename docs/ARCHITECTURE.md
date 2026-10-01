@@ -1,7 +1,7 @@
 # Luau — Architecture & Conventions
 
 Luau is a Tauri 2 app: a framework-free Rust core (`crates/luau-core`), a thin
-Tauri adapter (`src-tauri`), and a Svelte 5 UI (`src/`). See `SPEC.md` for the
+Tauri adapter (`src-tauri`), and a Svelte 5 UI (`src/`). See `docs/SPEC.md` for the
 product spec.
 
 ## Layers

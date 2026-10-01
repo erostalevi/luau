@@ -12,9 +12,9 @@ Questions marked 🔴 have no safe default, so please answer those explicitly.
    a) ⭐ "Luau" (working name)
    b) Other: ___
 
-2. 🔴 **Project ownership.** It decides the repo host, license, and whether the Forpay process applies (Bitbucket, change docs, ISO evidence).
+2. 🔴 **Project ownership.** It decides the repo host, license, and whether a company process applies.
    a) Personal project
-   b) Forpay internal tool
+   b) Internal company tool
    c) Personal, but open source
 
 3. **License** (if open source).
