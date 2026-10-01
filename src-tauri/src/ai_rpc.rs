@@ -140,6 +140,7 @@ pub fn dispatch_sync(
             }
             "summaries.export" => {
                 let path = std::path::PathBuf::from(arg::<String>(p, "path")?);
+                crate::grants::require(core, &path, false)?;
                 let markdown: String = arg(p, "markdown")?;
                 let ext_ok = path.extension().and_then(|e| e.to_str()).is_some_and(|e| {
                     matches!(e.to_ascii_lowercase().as_str(), "md" | "markdown" | "txt")

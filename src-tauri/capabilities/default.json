@@ -33,8 +33,6 @@
     "core:webview:allow-set-webview-zoom",
     "core:webview:allow-print",
     "dialog:default",
-    "dialog:allow-open",
-    "dialog:allow-save",
     "dialog:allow-message",
     "dialog:allow-ask",
     "dialog:allow-confirm",

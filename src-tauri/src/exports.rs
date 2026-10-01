@@ -81,6 +81,7 @@ pub fn dispatch(
                 let card: Option<String> = opt(p, "card")?;
                 let format: ExportFormat = arg(p, "format")?;
                 let dest: PathBuf = arg(p, "dest")?;
+                crate::grants::require(core, &dest, false)?;
                 let history: bool = opt(p, "includeHistory")?.unwrap_or(false);
                 ok(core.io_export(&board, card.as_deref(), format, &dest, history)?)
             }
@@ -92,6 +93,7 @@ pub fn dispatch(
             }
             "io.inspect" => {
                 let path: PathBuf = arg(p, "path")?;
+                crate::grants::require(core, &path, true)?;
                 ok(core.io_inspect(&path)?)
             }
             "io.import" => {
@@ -100,6 +102,10 @@ pub fn dispatch(
                         code: "invalid".into(),
                         message: format!("params: {e}"),
                     })?;
+                crate::grants::require(core, std::path::Path::new(&req.path), true)?;
+                if let Some(dest) = &req.dest {
+                    crate::grants::require(core, std::path::Path::new(dest), false)?;
+                }
                 ok(core.io_import(&req)?)
             }
             "templates.list" => {
@@ -108,6 +114,7 @@ pub fn dispatch(
             }
             "board.createFromTemplate" => {
                 let path: PathBuf = arg(p, "path")?;
+                crate::grants::require(core, &path, false)?;
                 let name: String = opt(p, "name")?.unwrap_or_default();
                 let tpl: BoardTemplate = arg(p, "template")?;
                 let vcs: bool = opt(p, "git")?.unwrap_or(false);
@@ -124,11 +131,13 @@ pub fn dispatch(
             }
             "settings.export" => {
                 let path: PathBuf = arg(p, "path")?;
+                crate::grants::require(core, &path, false)?;
                 let bundle: Value = arg(p, "bundle")?;
                 ok(core.settings_export(&path, bundle)?)
             }
             "settings.import" => {
                 let path: PathBuf = arg(p, "path")?;
+                crate::grants::require(core, &path, false)?;
                 ok(core.settings_import(&path)?)
             }
             _ => unreachable!(),

@@ -8,7 +8,7 @@
   import { ctx as cmdCtx } from '$lib/commands/context.svelte';
   import { resolveTitle, lookupCard } from '$lib/links/titles.svelte';
   import { openCardById } from '$lib/app/open';
-  import { openExternal, reveal } from '$lib/app/helpers';
+  import { openExternal, reveal, pickFile } from '$lib/app/helpers';
   import { cardFileUrl, attachmentDirRel } from '$lib/board/paths';
   import { tagHue } from '$lib/markdown/meta';
   import { pastel } from '$lib/theme/color';
@@ -259,9 +259,7 @@
         insertFile: async (v, from, to) => {
           v.dispatch({ changes: { from, to, insert: '' } });
           if (!isTauri) return;
-          const { open } = await import('@tauri-apps/plugin-dialog');
-          const picked = await open({ multiple: true, title: t('slash.file') });
-          const paths = Array.isArray(picked) ? picked : picked ? [picked] : [];
+          const paths = (await pickFile(t('slash.file'), undefined, true)) ?? [];
           const parts: string[] = [];
           for (const p of paths) {
             const name = p.split(/[\\/]/).pop() ?? 'file';

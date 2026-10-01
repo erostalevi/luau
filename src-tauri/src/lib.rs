@@ -2,8 +2,10 @@
 //! Tauri (windows, menus, protocol, events, plugins).
 
 mod ai_rpc;
+mod dialogs;
 mod exports;
 mod fonts;
+mod grants;
 mod history_rpc;
 mod integrations_rpc;
 mod menu;

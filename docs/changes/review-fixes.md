@@ -103,3 +103,22 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   (local builds no longer need the signing key).
 - Tests: `pnpm tauri build` passes the version check without `--ignore-version-mismatches`; `pnpm check:tauri`
   passes; `node scripts/build.mjs --localtarget --dry-run`.
+
+## C2 — File RPCs accepted any path from the webview (high)
+
+- Files: `src-tauri/src/grants.rs` (new), `src-tauri/src/dialogs.rs` (new), `src-tauri/src/rpc.rs`,
+  `src-tauri/src/exports.rs`, `src-tauri/src/ai_rpc.rs`, `src-tauri/src/lib.rs`, `src-tauri/capabilities/default.json`,
+  `src/lib/app/helpers.ts`, `src/lib/editor/Editor.svelte`.
+- Removed unused, unrestricted RPCs: `json.read`, `json.write`, `text.write`, `bytes.write`.
+- New backend dialogs `dialog.pickFolder`, `dialog.pickFiles`, `dialog.save` (tauri-plugin-dialog, parented to the
+  calling window). Every path the user picks is recorded as a **grant** (folder = subtree, file = exact path).
+  The JS dialog permissions `dialog:allow-open/save` were removed, so the webview cannot open pickers itself.
+- Gated RPCs (`grants::require`): `logs.export`, `board.create`, `board.open {path}`, `attachment.add {path}`,
+  `io.export`, `io.inspect`, `io.import` (source + destination), `board.createFromTemplate`, `settings.export`,
+  `settings.import`, `summaries.export`. Allowed: granted paths, the app's data/config/logs dirs, and (for reads
+  and board operations) folders of registered boards. Paths are normalized lexically; anything that still contains
+  `..` or is relative is rejected. `board.reassignId` accepts an existing board folder (discovered duplicates).
+- Not gated (low risk, documented): `path.exists` (existence only).
+- Tests: `grants::tests::normalization_and_subtrees`; clippy; svelte-check. Manual native-dialog test pending in F1.
+- Risk: a flow that passes a path not obtained from a picker now fails with `forbidden_path` (toast). The web
+  build is unaffected (mock backend).

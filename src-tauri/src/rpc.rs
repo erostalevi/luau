@@ -106,31 +106,6 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             core.write_json_file(&core.paths.ui_state(), &arg::<Value>(p, "value")?)?;
             ok(true)
         }
-        "json.read" => {
-            let path: PathBuf = arg(p, "path")?;
-            ok(core.read_json_file(&path))
-        }
-        "json.write" => {
-            let path: PathBuf = arg(p, "path")?;
-            core.write_json_file(&path, &arg::<Value>(p, "value")?)?;
-            ok(true)
-        }
-        "text.write" => {
-            let path: PathBuf = arg(p, "path")?;
-            let text: String = arg(p, "text")?;
-            luau_core::fsutil::atomic_write(&path, text.as_bytes())?;
-            ok(true)
-        }
-        "bytes.write" => {
-            use base64::Engine;
-            let path: PathBuf = arg(p, "path")?;
-            let b64: String = arg(p, "base64")?;
-            let bytes = base64::engine::general_purpose::STANDARD
-                .decode(b64)
-                .map_err(|e| bad(e.to_string()))?;
-            luau_core::fsutil::atomic_write(&path, &bytes)?;
-            ok(true)
-        }
         "fonts.list" => ok(crate::fonts::list()),
         "window.new" => {
             let label = crate::windows::next_label();
@@ -158,6 +133,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         }
         "logs.export" => {
             let dest: PathBuf = arg(p, "dest")?;
+            crate::grants::require(core, &dest, false)?;
             crate::exports::zip_dir(&core.paths.logs, &dest).map_err(|e| bad(e.to_string()))?;
             ok(true)
         }
@@ -207,12 +183,18 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         })),
         "board.reassignId" => {
             let path: PathBuf = arg(p, "path")?;
+            // Duplicated boards come from discovery (not a dialog): only an
+            // existing board folder is accepted, and only its id changes.
+            if !luau_core::store::is_board(&path) {
+                crate::grants::require(core, &path, true)?;
+            }
             ok(core.reassign_board_id(&path)?)
         }
 
         // --- boards ----------------------------------------------------------------
         "board.create" => {
             let path: PathBuf = arg(p, "path")?;
+            crate::grants::require(core, &path, false)?;
             let name: String = opt(p, "name")?.unwrap_or_default();
             let kind: BoardKind = opt(p, "kind")?.unwrap_or_default();
             let lanes: Vec<String> = opt(p, "lanes")?.unwrap_or_default();
@@ -224,6 +206,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
                 ok(core.open_board_by_id(&id)?)
             } else {
                 let path: PathBuf = arg(p, "path")?;
+                crate::grants::require(core, &path, true)?;
                 ok(core.open_board(&path)?)
             }
         }
@@ -284,6 +267,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             let card: String = arg(p, "card")?;
             let name: String = arg(p, "name")?;
             if let Some(path) = opt::<PathBuf>(p, "path")? {
+                crate::grants::require(core, &path, false)?;
                 ok(core.add_attachment(&board, &card, files::Source::Path(&path), &name)?)
             } else {
                 let b64: String = arg(p, "base64")?;
@@ -344,7 +328,8 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             let boards: Vec<String> = opt(p, "boards")?.unwrap_or_default();
             ok(core.history_all(&boards, &filter))
         }
-        m => crate::exports::dispatch(app, core, window, m, p)
+        m => crate::dialogs::dispatch_sync(app, window, m, p)
+            .or_else(|| crate::exports::dispatch(app, core, window, m, p))
             .or_else(|| crate::integrations_rpc::dispatch_sync(app, core, window, m, p))
             .or_else(|| crate::ai_rpc::dispatch_sync(app, core, window, m, p))
             .or_else(|| crate::history_rpc::dispatch_sync(app, core, window, m, p))

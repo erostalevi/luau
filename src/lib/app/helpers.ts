@@ -46,27 +46,21 @@ export function selectedCards(): { board: BoardModel; ids: string[] } | null {
 }
 
 export async function pickFolder(title: string, defaultPath?: string): Promise<string | null> {
-  if (isTauri) {
-    const { open } = await import('@tauri-apps/plugin-dialog');
-    const r = await open({ directory: true, multiple: false, title, defaultPath });
-    return typeof r === 'string' ? r : null;
-  }
+  // Native dialogs run in the backend so it can remember what the user picked
+  // (file RPCs only accept picked locations).
+  if (isTauri) return rpc<string | null>('dialog.pickFolder', { title, defaultPath });
   const r = await inputBox({ title, placeholder: '~/Documents/My board', value: defaultPath });
   return typeof r === 'string' && r ? r : null;
 }
 
 export async function pickFile(title: string, filters?: { name: string; extensions: string[] }[], multiple = false): Promise<string[] | null> {
   if (!isTauri) return null;
-  const { open } = await import('@tauri-apps/plugin-dialog');
-  const r = await open({ directory: false, multiple, title, filters });
-  if (!r) return null;
-  return Array.isArray(r) ? r : [r];
+  return rpc<string[] | null>('dialog.pickFiles', { title, filters, multiple });
 }
 
 export async function pickSavePath(title: string, defaultPath: string, filters?: { name: string; extensions: string[] }[]): Promise<string | null> {
   if (!isTauri) return null;
-  const { save } = await import('@tauri-apps/plugin-dialog');
-  return (await save({ title, defaultPath, filters })) ?? null;
+  return rpc<string | null>('dialog.save', { title, defaultPath, filters });
 }
 
 export async function reveal(path: string) {
