@@ -134,6 +134,8 @@ pub fn render_body(md: &str, ctx: &HtmlCtx) -> String {
                 events.push(Event::End(e));
             }
             Event::Html(h) | Event::InlineHtml(h) => events.push(Event::Text(h)),
+            // Line breaks are breaks, as in the app's own preview.
+            Event::SoftBreak => events.push(Event::HardBreak),
             Event::Text(t) if !in_code && (t.contains("[[") || t.contains('#')) => {
                 events.push(Event::InlineHtml(CowStr::from(decorate_text(&t, ctx))));
             }

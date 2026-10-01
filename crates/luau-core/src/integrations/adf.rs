@@ -65,7 +65,11 @@ fn block(n: &Value) -> Option<String> {
                 .and_then(Value::as_u64)
                 .unwrap_or(1)
                 .clamp(1, 6) as usize;
-            format!("{} {}", "#".repeat(level), inline(children(n)))
+            format!(
+                "{} {}",
+                "#".repeat(level),
+                inline(children(n)).replace('\n', " ")
+            )
         }
         "bulletList" => list(children(n), None),
         "orderedList" => list(
@@ -339,7 +343,9 @@ fn inline(list: &[Value]) -> String {
             other => {
                 flush(&mut out, &mut pending);
                 match other {
-                    "hardBreak" => out.push_str("\\\n"),
+                    // A plain newline: Luau renders line breaks as breaks, so no
+                    // trailing `\` is needed (and none shows up in the editor).
+                    "hardBreak" => out.push('\n'),
                     "mention" => {
                         let id = attr_str(n, "id").unwrap_or("");
                         let text = attr_str(n, "text").unwrap_or("").trim_start_matches('@');
@@ -872,20 +878,47 @@ fn panel(panel_type: &str, mut blocks: Vec<Value>) -> Value {
     json!({ "type": "panel", "attrs": { "panelType": panel_type }, "content": blocks })
 }
 
-/// Remove internal markers left in the tree; soft breaks become spaces
-/// (outside code blocks).
+/// Remove internal markers left in the tree; soft breaks become ADF hard
+/// breaks (outside code blocks), since Luau shows every line break.
 fn postprocess(v: &mut Value) {
+    fn split_breaks(a: &mut Vec<Value>) {
+        if !a.iter().any(|x| {
+            x.get("type").and_then(Value::as_str) == Some("text")
+                && x.get("text")
+                    .and_then(Value::as_str)
+                    .is_some_and(|t| t.contains('\n'))
+        }) {
+            return;
+        }
+        let mut out = Vec::with_capacity(a.len());
+        for x in a.drain(..) {
+            let text = (x.get("type").and_then(Value::as_str) == Some("text"))
+                .then(|| x.get("text").and_then(Value::as_str).map(str::to_string))
+                .flatten();
+            let Some(t) = text.filter(|t| t.contains('\n')) else {
+                out.push(x);
+                continue;
+            };
+            for (i, part) in t.split('\n').enumerate() {
+                if i > 0 {
+                    out.push(json!({ "type": "hardBreak" }));
+                }
+                if !part.is_empty() {
+                    let mut n = x.clone();
+                    n["text"] = json!(part);
+                    out.push(n);
+                }
+            }
+        }
+        *a = out;
+    }
     fn walk(v: &mut Value, in_code: bool) {
         match v {
             Value::Object(o) => {
                 o.remove("__task");
                 let code = in_code || o.get("type").and_then(Value::as_str) == Some("codeBlock");
-                if !code
-                    && o.get("type").and_then(Value::as_str) == Some("text")
-                    && let Some(Value::String(t)) = o.get_mut("text")
-                    && t.contains('\n')
-                {
-                    *t = t.replace('\n', " ");
+                if !code && let Some(Value::Array(a)) = o.get_mut("content") {
+                    split_breaks(a);
                 }
                 for (_, x) in o.iter_mut() {
                     walk(x, code);
@@ -1025,7 +1058,18 @@ mod tests {
     #[test]
     fn hard_break() {
         let d = doc(json!([p(json!([t("a"), { "type": "hardBreak" }, t("b")]))]));
-        assert_eq!(to_markdown(&d), "a\\\nb");
+        assert_eq!(to_markdown(&d), "a\nb");
+        // And back: a line break in the card is a Jira line break.
+        let v = from_markdown("a\nb");
+        let inl = v["content"][0]["content"].as_array().unwrap();
+        assert_eq!(inl.len(), 3);
+        assert_eq!(inl[1]["type"], "hardBreak");
+        assert_eq!(inl[2]["text"], "b");
+        // Two breaks in a row (an empty line in Jira) make a new paragraph.
+        let d = doc(json!([p(
+            json!([t("a"), { "type": "hardBreak" }, { "type": "hardBreak" }, t("b")])
+        )]));
+        assert_eq!(to_markdown(&d), "a\n\nb");
     }
 
     #[test]

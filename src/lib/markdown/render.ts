@@ -36,7 +36,7 @@ function inlineRule(name: string, re: RegExp, prev: (s: string, pos: number) => 
 const wordBoundary = (s: string, pos: number) => pos === 0 || /[\s([,;]/.test(s[pos - 1]);
 
 export function createRenderer(o: RenderOptions): MarkdownIt {
-  const md = new MarkdownItFactory({ html: false, linkify: true, typographer: false, breaks: false });
+  const md = new MarkdownItFactory({ html: false, linkify: true, typographer: false, breaks: true });
   md.use(footnote);
 
   md.inline.ruler.before(

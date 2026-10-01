@@ -512,7 +512,12 @@ impl BoardStore {
         if !path.exists() {
             return Ok(String::new());
         }
-        read_to_string(&path)
+        // Old files may still hold backslash hard breaks; show them clean (the
+        // next save writes them clean too, via `markdown::normalize`).
+        read_to_string(&path).map(|t| match markdown::clean_hard_breaks(&t) {
+            std::borrow::Cow::Owned(c) => c,
+            std::borrow::Cow::Borrowed(_) => t,
+        })
     }
 
     /// Re-scan the attachments of a node from disk.

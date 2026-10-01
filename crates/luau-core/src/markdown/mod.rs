@@ -126,10 +126,12 @@ pub fn options() -> Options {
         | Options::ENABLE_GFM
 }
 
-/// Normalize content for writing: strip BOM, LF line endings, single trailing newline.
+/// Normalize content for writing: strip BOM, LF line endings, no backslash
+/// hard breaks, single trailing newline.
 pub fn normalize(content: &str) -> String {
     let s = content.strip_prefix('\u{feff}').unwrap_or(content);
-    let mut s = s.replace("\r\n", "\n").replace('\r', "\n");
+    let s = s.replace("\r\n", "\n").replace('\r', "\n");
+    let mut s = clean_hard_breaks(&s).into_owned();
     while s.ends_with("\n\n") {
         s.pop();
     }
@@ -137,6 +139,68 @@ pub fn normalize(content: &str) -> String {
         s.push('\n');
     }
     s
+}
+
+/// Drop backslash hard breaks (`text\` at the end of a line). Luau renders
+/// every line break as a break, so they only clutter the editor; older Jira
+/// imports wrote them for each Shift+Enter. A line holding just `\` becomes
+/// blank (a paragraph break). Fenced/indented code, math blocks and table
+/// rows are left alone, as is a `\` that ends a paragraph (a literal there).
+/// Idempotent; expects LF line endings.
+pub fn clean_hard_breaks(content: &str) -> std::borrow::Cow<'_, str> {
+    if !content.contains("\\\n") {
+        return content.into();
+    }
+    let lines: Vec<&str> = content.split('\n').collect();
+    let mut out: Vec<std::borrow::Cow<str>> = Vec::with_capacity(lines.len());
+    let mut fence: Option<(char, usize)> = None;
+    let mut math = false;
+    let mut indented_code = false;
+    for (i, &line) in lines.iter().enumerate() {
+        let trimmed = line.trim_start();
+        let indent = line.len() - trimmed.len();
+        if let Some((ch, n)) = fence {
+            if indent < 4
+                && trimmed.starts_with(&ch.to_string().repeat(n))
+                && trimmed.trim_start_matches(ch).trim().is_empty()
+            {
+                fence = None;
+            }
+            out.push(line.into());
+            continue;
+        }
+        if indent < 4 && (trimmed.starts_with("```") || trimmed.starts_with("~~~")) {
+            let ch = trimmed.chars().next().unwrap_or('`');
+            fence = Some((ch, trimmed.chars().take_while(|&c| c == ch).count()));
+            out.push(line.into());
+            continue;
+        }
+        if trimmed.trim_end() == "$$" {
+            math = !math;
+            out.push(line.into());
+            continue;
+        }
+        let prev_blank = i == 0 || lines[i - 1].trim().is_empty();
+        let code_indent = line.starts_with('\t') || indent >= 4;
+        indented_code =
+            code_indent && (prev_blank || indented_code) || indented_code && line.trim().is_empty();
+        let next_text = lines.get(i + 1).is_some_and(|n| !n.trim().is_empty());
+        let slashes = line.len() - line.trim_end_matches('\\').len();
+        let keep =
+            math || slashes % 2 == 0 || !next_text || trimmed.starts_with('|') || indented_code;
+        if keep {
+            out.push(line.into());
+            continue;
+        }
+        let cut = &line[..line.len() - 1];
+        // A lone `\` (possibly after `>` quote markers) ends the paragraph.
+        if cut.trim_end().trim_end_matches(['>', ' ']).is_empty() {
+            out.push(cut.trim_end().into());
+        } else {
+            out.push(cut.into());
+        }
+    }
+    out.join("\n").into()
 }
 
 /// Title from line 0 if it is an H1 (`# Title`).
@@ -720,6 +784,33 @@ mod tests {
         );
         assert!(toggle_task(src, 3).is_none());
         assert!(toggle_task(src, 99).is_none());
+    }
+
+    #[test]
+    fn hard_breaks_are_cleaned() {
+        // Old Jira import: Shift+Enter, then an empty line made of a break.
+        assert_eq!(
+            clean_hard_breaks("a long line.\\\n\\\nPropuesta:\n\n1. x\n"),
+            "a long line.\n\nPropuesta:\n\n1. x\n"
+        );
+        assert_eq!(clean_hard_breaks("a\\\nb\n"), "a\nb\n");
+        assert_eq!(clean_hard_breaks("> q\\\n> \\\n> r\n"), "> q\n>\n> r\n");
+        // Escaped backslash, paragraph end, code, math and tables stay.
+        for keep in [
+            "C:\\\\\nnext\n",
+            "ends with \\\n\nnext\n",
+            "```\na\\\nb\n```\n",
+            "~~~~sh\nx \\\n  --y\n~~~~\n",
+            "$$\na \\\\\nb\\\nc\n$$\n",
+            "| a\\\n| b\n",
+            "para\n\n    code\\\n    more\\\n    end\n",
+        ] {
+            assert_eq!(clean_hard_breaks(keep), keep, "{keep:?}");
+        }
+        let once = clean_hard_breaks("x\\\\\\\ny\n").into_owned();
+        assert_eq!(once, "x\\\\\ny\n");
+        assert_eq!(clean_hard_breaks(&once), once);
+        assert_eq!(normalize("a\\\r\nb"), "a\nb\n");
     }
 
     #[test]
