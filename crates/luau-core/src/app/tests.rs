@@ -678,3 +678,216 @@ fn template_links_cards_and_writes_assets() {
             .is_err()
     );
 }
+
+// --- discovery status events ----------------------------------------------------
+
+fn task_events(sink: &Collect) -> Vec<activity::TaskEvent> {
+    sink.0
+        .lock()
+        .iter()
+        .filter_map(|e| match e {
+            CoreEvent::Task(t) => Some(t.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Wait until `n` "index" tasks have closed (each scan pass ends with one).
+fn wait_for_index_closed(sink: &Collect, n: usize) -> Vec<activity::TaskEvent> {
+    let t0 = Instant::now();
+    loop {
+        let ev = task_events(sink);
+        let closed = ev
+            .iter()
+            .filter(|e| e.task == "index" && e.phase.is_closing())
+            .count();
+        if closed >= n {
+            return ev;
+        }
+        assert!(t0.elapsed() < std::time::Duration::from_secs(10), "{ev:?}");
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
+fn settings_for(root: &Path) -> Value {
+    json!({ "discovery.roots": [root], "general.firstRunDone": true })
+}
+
+/// Regression: a scan that finds no board used to leave the status bar on
+/// "Indexing boards 0/…" forever (a start event without a finish).
+#[test]
+fn rescan_with_no_boards_closes_every_task() {
+    let (d, c, sink) = core();
+    let root = d.path().join("empty");
+    std::fs::create_dir_all(&root).unwrap();
+    c.set_settings(settings_for(&root)).unwrap();
+    c.rescan();
+    let ev = wait_for_index_closed(&sink, 1);
+    for task in ["discovery", "index"] {
+        let phases: Vec<_> = ev
+            .iter()
+            .filter(|e| e.task == task)
+            .map(|e| e.phase)
+            .collect();
+        assert_eq!(
+            phases.first(),
+            Some(&activity::TaskPhase::Started),
+            "{task}"
+        );
+        assert_eq!(
+            phases.last(),
+            Some(&activity::TaskPhase::Finished),
+            "{task}"
+        );
+        assert_eq!(
+            phases.iter().filter(|p| p.is_closing()).count(),
+            1,
+            "{task}"
+        );
+    }
+    // The snapshot (for windows opened later) shows both tasks closed.
+    assert!(c.task_status().iter().all(|e| e.phase.is_closing()));
+}
+
+#[test]
+fn rescan_reports_missing_roots_and_damaged_boards() {
+    let (d, c, sink) = core();
+    let root = d.path().join("boards");
+    let broken = root.join("Broken");
+    std::fs::create_dir_all(broken.join(MARKER_DIR)).unwrap();
+    std::fs::write(
+        broken.join(MARKER_DIR).join(crate::brand::BOARD_FILE),
+        "{ nope",
+    )
+    .unwrap();
+    c.set_settings(json!({
+        "discovery.roots": [root, d.path().join("gone")],
+        "general.firstRunDone": true,
+    }))
+    .unwrap();
+    c.rescan();
+    let ev = wait_for_index_closed(&sink, 1);
+    let disc = ev
+        .iter()
+        .rfind(|e| e.task == "discovery" && e.phase.is_closing())
+        .unwrap();
+    let codes: Vec<_> = disc.issues.iter().map(|i| i.code.as_str()).collect();
+    assert!(codes.contains(&"folderMissing"), "{codes:?}");
+    assert!(codes.contains(&"boardDamaged"), "{codes:?}");
+    // Subjects are names, never full paths.
+    assert!(disc.issues.iter().all(|i| {
+        i.subject
+            .as_deref()
+            .is_none_or(|s| !s.contains(std::path::MAIN_SEPARATOR))
+    }));
+}
+
+/// Requests during a scan coalesce into one more pass (settings saved while
+/// scanning are honoured), and nothing rescans by itself afterwards.
+#[test]
+fn rescans_requested_while_scanning_coalesce_into_one_pass() {
+    let (d, c, sink) = core();
+    let root = d.path().join("r");
+    std::fs::create_dir_all(&root).unwrap();
+    c.set_settings(settings_for(&root)).unwrap();
+    c.rescan();
+    c.rescan();
+    c.rescan();
+    wait_for_index_closed(&sink, 1);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let starts = task_events(&sink)
+        .iter()
+        .filter(|e| e.task == "discovery" && e.phase == activity::TaskPhase::Started)
+        .count();
+    assert!((1..=2).contains(&starts), "{starts} discovery passes");
+    // The flag is released: a later request scans again.
+    c.rescan();
+    wait_for_index_closed(&sink, starts + 1);
+}
+
+#[test]
+fn discovery_settings_change_triggers_one_rescan() {
+    let (d, c, sink) = core();
+    let root = d.path().join("r");
+    std::fs::create_dir_all(&root).unwrap();
+    c.set_settings(settings_for(&root)).unwrap();
+    // Unrelated setting: no scan.
+    let mut v = settings_for(&root);
+    v["appearance.theme"] = json!("dark");
+    c.update_settings(v.clone()).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    assert!(task_events(&sink).is_empty());
+    // Discovery setting: one scan.
+    v["discovery.exclude"] = json!(["tmp"]);
+    c.update_settings(v).unwrap();
+    wait_for_index_closed(&sink, 1);
+}
+
+#[test]
+fn protected_folders_wait_for_first_run_and_opt_in() {
+    let (_d, c, _sink) = core();
+    c.set_settings(json!({})).unwrap();
+    assert!(
+        !c.discovery_options().include_protected,
+        "not during first run"
+    );
+    c.set_settings(json!({ "general.firstRunDone": true }))
+        .unwrap();
+    assert!(
+        c.discovery_options().include_protected,
+        "default after first run"
+    );
+    c.set_settings(json!({ "general.firstRunDone": true, "discovery.protectedFolders": false }))
+        .unwrap();
+    assert!(!c.discovery_options().include_protected, "opted out");
+}
+
+#[test]
+fn scheduled_rescan_follows_rescan_minutes() {
+    let (d, c, sink) = core();
+    let root = d.path().join("r");
+    std::fs::create_dir_all(&root).unwrap();
+    let mut v = settings_for(&root);
+    v["discovery.rescanMinutes"] = json!(0);
+    c.set_settings(v.clone()).unwrap();
+    assert!(!c.rescan_due(), "never due before the first pass");
+    c.rescan();
+    wait_for_index_closed(&sink, 1);
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    assert!(!c.rescan_due(), "0 = only at start");
+    v["discovery.rescanMinutes"] = json!(30);
+    c.set_settings(v).unwrap();
+    assert!(!c.rescan_due(), "not before 30 minutes");
+}
+
+/// A folder that answers after it was given up on clears its own warning
+/// from the last discovery result (and only that one).
+#[test]
+fn late_folder_clears_its_pending_issue() {
+    use activity::{TaskEvent, TaskIssue, TaskPhase};
+    let (_d, c, sink) = core();
+    (c.task_emitter())(TaskEvent {
+        task: "discovery".into(),
+        phase: TaskPhase::Finished,
+        done: None,
+        total: None,
+        detail: None,
+        issues: vec![
+            TaskIssue::warn("accessPending", Some("Desktop".into())),
+            TaskIssue::warn("accessPending", Some("Documents".into())),
+            TaskIssue::warn("folderMissing", Some("Old".into())),
+        ],
+    });
+    assert!(c.clear_late_issue("Desktop"), "Documents still pending");
+    let last = c.tasks.last("discovery").unwrap();
+    assert_eq!(last.phase, TaskPhase::Finished);
+    let subjects: Vec<_> = last
+        .issues
+        .iter()
+        .filter_map(|i| i.subject.clone())
+        .collect();
+    assert_eq!(subjects, vec!["Documents", "Old"]);
+    assert!(!c.clear_late_issue("Desktop"), "nothing left to clear");
+    assert!(!c.clear_late_issue("Documents"), "no pending folder left");
+    assert_eq!(task_events(&sink).len(), 3);
+}

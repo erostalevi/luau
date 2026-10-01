@@ -151,6 +151,10 @@ export default {
       'files.remoteImages': { label: 'Load images from the web', desc: 'Show images that live on the internet inside cards.' },
       'discovery.roots': { label: 'Search for boards in', desc: 'Folders Luau scans to find your boards. Empty means your home folder.' },
       'discovery.exclude': { label: 'Skip folders named', desc: 'Folder names never scanned.' },
+      'discovery.protectedFolders': {
+        label: 'Also look in Desktop, Documents and Downloads',
+        desc: 'On macOS these folders ask for permission once. They are scanned last, so other boards appear first.',
+      },
       'discovery.rescanMinutes': { label: 'Rescan every', desc: 'Minutes between background scans (0 = only at start).' },
       'explorer.showHidden': { label: 'Show hidden boards', desc: 'Show boards you hid from the explorer.' },
       'search.caseSensitive': { label: 'Case-sensitive by default', desc: 'Match upper and lower case exactly.' },

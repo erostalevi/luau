@@ -138,7 +138,8 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         }
         "settings.get" => ok(core.settings()),
         "settings.set" => {
-            core.set_settings(arg(p, "value")?)?;
+            // Rescans (once, coalesced) when a discovery setting changed.
+            core.update_settings(arg(p, "value")?)?;
             ok(true)
         }
         "keybindings.get" => ok(core.read_json_file(&core.paths.keybindings())),
@@ -263,6 +264,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             core.rescan();
             ok(true)
         }
+        "status.tasks" => ok(core.task_status()),
         "discovery.defaults" => ok(json!({
             "roots": luau_core::discovery::default_roots(),
             "excludes": luau_core::discovery::DEFAULT_EXCLUDES,

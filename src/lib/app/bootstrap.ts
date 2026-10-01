@@ -13,6 +13,7 @@ import { loadUiState } from '$lib/state/persist.svelte';
 import { loadUi, ui } from '$lib/state/ui.svelte';
 import { loadWorkspace, ws, openBoardTab, openDocTab, openSingleton, openTabOfKind, allTabs } from '$lib/state/workspace.svelte';
 import { loadRegistry } from '$lib/state/registry.svelte';
+import { initActivity } from '$lib/status/activity.svelte';
 import { initBoardEvents, openBoard } from '$lib/state/boards.svelte';
 import { registerBuiltinCommands } from '$lib/commands/builtin';
 import { openExternal } from '$lib/app/helpers';
@@ -67,6 +68,7 @@ export async function bootstrap() {
   loadUi();
   initBoardEvents();
   await loadRegistry();
+  void initActivity();
   registerBuiltinCommands();
   installKeybindings();
   trackFocus();

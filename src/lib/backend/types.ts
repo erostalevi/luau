@@ -311,5 +311,25 @@ export type CoreEvent =
   | { type: 'registryChanged'; registry: Registry }
   | { type: 'externalChange'; boardId: string; ids: string[] }
   | { type: 'toast'; level: string; key: string; params: Record<string, unknown> }
-  | { type: 'progress'; task: string; done: number; total: number; label: string | null }
+  | ({ type: 'task' } & TaskEvent)
   | { type: 'custom'; name: string; payload: unknown };
+
+/** Background task lifecycle (`CoreEvent::Task`). Every `started` is followed by one `finished` or `failed`. */
+export type TaskPhase = 'started' | 'progress' | 'waiting' | 'finished' | 'failed';
+
+export interface TaskIssue {
+  level: 'warn' | 'error';
+  /** i18n suffix: `status.issues.<code>`. */
+  code: string;
+  /** Board name or folder name (never a path). */
+  subject: string | null;
+}
+
+export interface TaskEvent {
+  task: string;
+  phase: TaskPhase;
+  done: number | null;
+  total: number | null;
+  detail: string | null;
+  issues: TaskIssue[];
+}

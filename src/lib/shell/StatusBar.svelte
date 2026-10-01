@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { Keyboard, Loader, Undo2, Redo2, CloudOff } from '@lucide/svelte';
+  import { Keyboard, Undo2, Redo2, CloudOff } from '@lucide/svelte';
   import { kb } from '$lib/keybindings/resolver.svelte';
   import { formatKey } from '$lib/keybindings/keys';
   import { activeTab } from '$lib/state/workspace.svelte';
   import { boards } from '$lib/state/boards.svelte';
-  import { registry } from '$lib/state/registry.svelte';
   import { runCommand } from '$lib/commands/registry.svelte';
   import { integrationStatus } from '$lib/integrations/status.svelte';
   import { tip } from '$lib/components/tooltip';
   import { t } from '$lib/i18n/index.svelte';
+  import StatusLight from './StatusLight.svelte';
 
   const tab = $derived(activeTab());
   const board = $derived(tab?.boardId ? boards.get(tab.boardId) : undefined);
@@ -22,10 +22,9 @@
 </script>
 
 <footer class="status">
+  <StatusLight />
   {#if kb.pending}
     <span class="chord"><Keyboard size={13} /> {t('keys.chordWaiting', { key: formatKey(kb.pending).join('') })}</span>
-  {:else if registry.scanning}
-    <span class="item"><Loader size={12} class="spin" /> {t('status.indexing', { done: registry.indexed.done, total: registry.indexed.total || '…' })}</span>
   {/if}
   <span class="grow"></span>
   {#if integrationStatus.offline}
