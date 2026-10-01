@@ -30,7 +30,7 @@
 <style>
   .toasts {
     position: fixed;
-    bottom: calc(var(--statusbar-h) + 16px);
+    bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 1500;

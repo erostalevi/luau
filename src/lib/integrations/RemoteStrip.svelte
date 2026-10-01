@@ -32,12 +32,14 @@
 {/if}
 
 <style>
+  /* Alignment is owned by the card footer (external group, right-aligned). */
   .strip {
     display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: 6px;
     min-width: 0;
-    margin-left: auto;
   }
   .status.todo {
     background: var(--bg-hover);

@@ -25,6 +25,12 @@ export interface CardFaceProvider {
   /** Rendered in the card footer area. Receives `{ boardId, id, remote }`. */
   component: Component<any>;
   when: (c: CardCtx) => boolean;
+  /**
+   * Footer group. `external` (default): metadata from Jira or another service,
+   * right-aligned. `local`: metadata that lives in the card file, left-aligned
+   * with tags, priority, due date and mentions.
+   */
+  placement?: 'local' | 'external';
   source?: string;
 }
 

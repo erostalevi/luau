@@ -82,7 +82,7 @@ export function init() {
   ]);
   initIntegrationState();
 
-  contribute('cardFace', { id: 'remote.strip', component: RemoteStrip, when: (c) => !!c.remote, source: 'integrations' });
+  contribute('cardFace', { id: 'remote.strip', component: RemoteStrip, when: (c) => !!c.remote, placement: 'external', source: 'integrations' });
   contribute('editorHeader', { id: 'remote.header', component: RemoteHeader, when: (c) => !!c.remote, source: 'integrations' });
   contribute('cardActions', {
     id: 'remote.transition',
