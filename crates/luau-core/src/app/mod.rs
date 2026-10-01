@@ -131,6 +131,9 @@ pub struct Core {
     pub(crate) settings: RwLock<Value>,
     pending: Mutex<HashMap<(String, String), PendingEdit>>,
     cross: Mutex<HashMap<String, CrossMove>>,
+    /// Serializes `open_board` so two windows opening the same folder cannot
+    /// load two stores for one board.
+    open_lock: Mutex<()>,
     owners: Mutex<HashMap<String, String>>,
     pub(crate) watchers: Mutex<HashMap<String, notify::RecommendedWatcher>>,
     pub(crate) watch_tx: Mutex<Option<std::sync::mpsc::Sender<watch::WatchMsg>>>,
@@ -186,6 +189,7 @@ impl Core {
             settings: RwLock::new(settings),
             pending: Mutex::new(HashMap::new()),
             cross: Mutex::new(HashMap::new()),
+            open_lock: Mutex::new(()),
             owners: Mutex::new(HashMap::new()),
             watchers: Mutex::new(HashMap::new()),
             watch_tx: Mutex::new(None),
@@ -342,6 +346,7 @@ impl Core {
 
     /// Open by path (or re-use when already open). Returns a full snapshot.
     pub fn open_board(self: &Arc<Self>, path: &Path) -> Result<BoardSnapshot> {
+        let _opening = self.open_lock.lock();
         let found =
             crate::discovery::read_marker(path).ok_or_else(|| Error::NotABoard(path.into()))?;
         if let Some(b) = self.boards.read().get(&found.id) {
@@ -357,8 +362,19 @@ impl Core {
             )));
         }
         let mut store = BoardStore::open(path)?;
-        let ttl = setting_u64(&self.settings(), "trash.ttlDays", 7).clamp(1, 3650) as u32;
-        let _ = trash::purge(path, ttl.max(1), false);
+        let s = self.settings();
+        // Read-only boards (newer schema, damaged manifest, mirrors) are never
+        // modified on open.
+        if store.state.read_only.is_none() {
+            let ttl = setting_u64(&s, "trash.ttlDays", 7).clamp(1, 3650) as u32;
+            let _ = trash::purge(path, ttl, false);
+            let keep = setting_u64(&s, "history.retentionDays", 180).clamp(7, 3650) as u32;
+            let max_mb = setting_u64(&s, "history.maxMb", 50).clamp(5, 2000);
+            let root = path.to_path_buf();
+            std::thread::spawn(move || {
+                let _ = history::prune(&root, keep, max_mb * 1024 * 1024);
+            });
+        }
         let snap = store.state.snapshot();
         self.register(&store.state);
         if let Some(e) = self.registry.lock().get_mut(&found.id) {
@@ -874,7 +890,11 @@ impl Core {
         self.emit_delta(&src, &src_ch);
         self.emit_delta(&dst, &dst_ch);
         let inv = new_id(IdKind::Trash, |t| self.cross.lock().contains_key(t));
-        self.cross.lock().insert(
+        let mut cross = self.cross.lock();
+        // The used token is no longer referenced (the undo stack keeps the
+        // inverse): drop it so the map does not grow for the whole session.
+        cross.remove(token);
+        cross.insert(
             inv.clone(),
             CrossMove {
                 from_board: cm.to_board.clone(),
@@ -1378,7 +1398,30 @@ impl Core {
 
     pub fn trash_purge(&self, board: &str, all: bool) -> Result<usize> {
         let ttl = setting_u64(&self.settings(), "trash.ttlDays", 7).clamp(1, 3650) as u32;
-        trash::purge(&self.board_root(board)?, ttl, all)
+        let root = self.board_root(board)?;
+        let n = trash::purge(&root, ttl, all)?;
+        if n > 0 {
+            // Permanent deletions are part of the audit trail.
+            let _ = history::append(
+                &root,
+                &JournalEntry {
+                    ts: history::now(),
+                    board: board.to_string(),
+                    kind: "purge".into(),
+                    origin: Origin::You,
+                    label: if all {
+                        "Emptied trash".into()
+                    } else {
+                        "Removed expired trash".into()
+                    },
+                    ids: vec![],
+                    details: json!({ "count": n }),
+                    before: None,
+                    after: None,
+                },
+            );
+        }
+        Ok(n)
     }
 
     /// Resolve a file inside a board for the `luau://` protocol.

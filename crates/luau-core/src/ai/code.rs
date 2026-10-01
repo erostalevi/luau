@@ -179,7 +179,7 @@ pub async fn run_python(code: &str, opts: &RunOptions) -> Result<CodeResult> {
     }
     let dir = scratch_dir()?;
     let res = run_in(&dir, code, opts).await;
-    let _ = std::fs::remove_dir_all(&dir);
+    let _ = tokio::fs::remove_dir_all(&dir).await;
     res
 }
 
@@ -187,9 +187,16 @@ async fn run_in(dir: &Path, code: &str, opts: &RunOptions) -> Result<CodeResult>
     let cell = dir.join("cell.py");
     let runner = dir.join("_luau_runner.py");
     let out_dir = dir.join("out");
-    std::fs::create_dir_all(&out_dir).map_err(|e| Error::io(&out_dir, e))?;
-    std::fs::write(&cell, code).map_err(|e| Error::io(&cell, e))?;
-    std::fs::write(&runner, RUNNER).map_err(|e| Error::io(&runner, e))?;
+    // Async file I/O: this runs on the app's async runtime.
+    tokio::fs::create_dir_all(&out_dir)
+        .await
+        .map_err(|e| Error::io(&out_dir, e))?;
+    tokio::fs::write(&cell, code)
+        .await
+        .map_err(|e| Error::io(&cell, e))?;
+    tokio::fs::write(&runner, RUNNER)
+        .await
+        .map_err(|e| Error::io(&runner, e))?;
 
     let mut cmd = tokio::process::Command::new(&opts.python);
     cmd.arg("-u").arg(&runner).arg(&cell).arg(&out_dir);

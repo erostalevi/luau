@@ -1,7 +1,7 @@
 //! File watching: debounce external changes per board, ignore our own writes,
 //! reload, journal and push deltas.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::sync::{Arc, Weak};
@@ -19,6 +19,7 @@ pub enum WatchMsg {
 }
 
 const QUIET: Duration = Duration::from_millis(220);
+const MAX_WAIT: Duration = Duration::from_secs(3);
 
 fn relevant(root: &Path, p: &Path) -> bool {
     let rel = p.strip_prefix(root).unwrap_or(p);
@@ -48,16 +49,20 @@ pub fn start(core: &Arc<Core>) {
 }
 
 fn run(core: Weak<Core>, rx: Receiver<WatchMsg>) {
-    let mut pending: HashMap<String, (Vec<PathBuf>, Instant)> = HashMap::new();
+    // board → (distinct paths, last event, first event)
+    let mut pending: HashMap<String, (HashSet<PathBuf>, Instant, Instant)> = HashMap::new();
     let mut last_flush = Instant::now();
     loop {
         match rx.recv_timeout(Duration::from_millis(120)) {
             Ok(WatchMsg::Event { board, paths }) => {
+                let now = Instant::now();
                 let e = pending
                     .entry(board)
-                    .or_insert_with(|| (Vec::new(), Instant::now()));
-                e.0.extend(paths);
-                e.1 = Instant::now();
+                    .or_insert_with(|| (HashSet::new(), now, now));
+                if e.0.len() < 10_000 {
+                    e.0.extend(paths);
+                }
+                e.1 = now;
             }
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => return,
@@ -65,11 +70,14 @@ fn run(core: Weak<Core>, rx: Receiver<WatchMsg>) {
         let Some(core) = core.upgrade() else { return };
         let ready: Vec<String> = pending
             .iter()
-            .filter(|(_, (_, t))| t.elapsed() >= QUIET)
+            // Quiet for a moment, or busy for too long (a file written
+            // continuously must not starve the board forever).
+            .filter(|(_, (_, last, first))| last.elapsed() >= QUIET || first.elapsed() >= MAX_WAIT)
             .map(|(b, _)| b.clone())
             .collect();
         for b in ready {
-            if let Some((paths, _)) = pending.remove(&b) {
+            if let Some((paths, _, _)) = pending.remove(&b) {
+                let paths: Vec<PathBuf> = paths.into_iter().collect();
                 process(&core, &b, &paths);
             }
         }

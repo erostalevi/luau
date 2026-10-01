@@ -122,9 +122,8 @@ impl ZipOut {
         let f = zip.finish().map_err(|e| zerr(&self.dest, e))?;
         f.sync_all().map_err(|e| Error::io(&self.tmp, e))?;
         drop(f);
-        if self.dest.exists() {
-            let _ = fs::remove_file(&self.dest);
-        }
+        // `rename` replaces an existing export atomically (also on Windows);
+        // removing it first would lose the old file if the rename failed.
         fs::rename(&self.tmp, &self.dest).map_err(|e| Error::io(&self.dest, e))?;
         Ok(self.dest.clone())
     }

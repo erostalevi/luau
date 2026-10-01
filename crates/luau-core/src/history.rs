@@ -172,7 +172,14 @@ pub fn query(root: &Path, f: &HistoryFilter) -> Vec<JournalEntry> {
             if f.from.as_deref().is_some_and(|from| e.ts.as_str() < from) {
                 continue;
             }
-            if f.to.as_deref().is_some_and(|to| e.ts.as_str() > to) {
+            // A date-only bound (`2026-10-01`) includes that whole day.
+            if f.to.as_deref().is_some_and(|to| {
+                if to.len() == 10 {
+                    &e.ts[..e.ts.len().min(10)] > to
+                } else {
+                    e.ts.as_str() > to
+                }
+            }) {
                 continue;
             }
             if !f.ids.is_empty() && !e.ids.iter().any(|i| f.ids.contains(i)) {

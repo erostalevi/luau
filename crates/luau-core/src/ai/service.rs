@@ -806,15 +806,18 @@ impl Core {
             return Err(Error::Conflict(NEEDS_TRUST.into()));
         }
         let settings = self.settings();
-        let python = code::find_python(
-            settings
-                .get("editor.python")
-                .and_then(Value::as_str)
-                .filter(|s| !s.trim().is_empty()),
-        )
-        .ok_or_else(|| {
-            Error::not_found("python3 was not found; install Python or set editor.python")
-        })?;
+        let configured = settings
+            .get("editor.python")
+            .and_then(Value::as_str)
+            .filter(|s| !s.trim().is_empty())
+            .map(str::to_string);
+        // Probing interpreters spawns processes: keep it off the async workers.
+        let python = tokio::task::spawn_blocking(move || code::find_python(configured.as_deref()))
+            .await
+            .map_err(|e| Error::Other(e.to_string()))?
+            .ok_or_else(|| {
+                Error::not_found("python3 was not found; install Python or set editor.python")
+            })?;
         let timeout = settings
             .get("editor.codeTimeout")
             .and_then(Value::as_f64)

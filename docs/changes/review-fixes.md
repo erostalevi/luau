@@ -328,3 +328,24 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   inside the board — no `..`, no links out — then opened with the default app) and `config.open {settings|keybindings}`.
   No webview `opener:open-path` permission was added. A malformed `%` escape in a link is ignored instead of throwing.
 - Tests: `workspace.test.ts`; manual check of opening files pending in F1.
+
+## E1 — Rust low-priority items
+
+- History: `history::prune` now runs in the background when a writable board opens (settings
+  `history.retentionDays`, clamped 7–3650, and `history.maxMb`, 5–2000). A date-only `to` filter includes that
+  whole day.
+- Trash: emptying/expiring trash is journaled (`purge`, count only). Opening a read-only board (newer schema,
+  damaged manifest, mirror) no longer purges its trash.
+- Watcher: pending paths are de-duplicated and capped (10 000 per board), and a board is processed at the latest
+  3 s after its first event, so a continuously written file can no longer starve it.
+- Cross-board moves: the used token is removed after each move/undo/redo (the map no longer grows all session).
+- Concurrency: `open_board` is serialized, so two windows opening the same folder load one store.
+- Async hygiene: the code runner uses `tokio::fs` and probes interpreters on the blocking pool.
+- Files: `atomic_write` updates symlinked files through the link and keeps the existing permissions; ZIP exports
+  replace the old file with a single `rename` (no delete-then-rename window).
+- Failed ops: when an op fails half-way, the store resyncs from disk (memory never diverges from the files).
+- Files: `history.rs`, `app/mod.rs`, `app/watch.rs`, `io/archive.rs`, `store/ops.rs`, `fsutil.rs` (+ test),
+  `ai/code.rs`, `ai/service.rs`.
+- Not changed (documented): `card_summarize` still reads one card under the board lock inside an async fn — a
+  bounded, sub-millisecond read.
+- Tests: `atomic_write_keeps_links_and_permissions`; full suite 3× green.

@@ -150,7 +150,15 @@ impl BoardStore {
             return Err(Error::ReadOnly(r.clone()));
         }
         let mut acc = Acc::default();
-        let inverse = self.apply_inner(op, &mut acc)?;
+        let inverse = match self.apply_inner(op, &mut acc) {
+            Ok(i) => i,
+            Err(e) => {
+                // An op that failed half-way may have changed memory but not
+                // disk: resync from disk (the source of truth).
+                let _ = self.reload();
+                return Err(e);
+            }
+        };
         self.state.version += 1;
         Ok(Applied {
             inverse,

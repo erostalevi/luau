@@ -22,6 +22,17 @@ pub fn short_hash(bytes: &[u8]) -> String {
 
 /// Write via temp file + fsync + rename so readers never see partial files.
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
+    // A symlinked file is updated through the link (the link stays a link).
+    let resolved;
+    let path = match fs::symlink_metadata(path) {
+        Ok(m) if m.file_type().is_symlink() => {
+            resolved = fs::canonicalize(path).map_err(|e| Error::io(path, e))?;
+            resolved.as_path()
+        }
+        _ => path,
+    };
+    // Keep the existing file's permissions (rename would reset them).
+    let perms = fs::metadata(path).ok().map(|m| m.permissions());
     let dir = path
         .parent()
         .ok_or_else(|| Error::invalid(format!("no parent: {}", path.display())))?;
@@ -31,6 +42,9 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     {
         let mut f = fs::File::create(&tmp).map_err(|e| Error::io(&tmp, e))?;
         f.write_all(bytes).map_err(|e| Error::io(&tmp, e))?;
+        if let Some(p) = perms {
+            let _ = f.set_permissions(p);
+        }
         flush_to_disk(&f).map_err(|e| Error::io(&tmp, e))?;
     }
     if let Err(e) = fs::rename(&tmp, path) {
@@ -170,6 +184,30 @@ pub fn mtime_ms(meta: &fs::Metadata) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn atomic_write_keeps_links_and_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let d = tempfile::tempdir().unwrap();
+        let real = d.path().join("real.md");
+        fs::write(&real, "a").unwrap();
+        fs::set_permissions(&real, fs::Permissions::from_mode(0o600)).unwrap();
+        let link = d.path().join("link.md");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        atomic_write(&link, b"b").unwrap();
+        assert!(
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(fs::read_to_string(&real).unwrap(), "b");
+        assert_eq!(
+            fs::metadata(&real).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
 
     #[test]
     fn atomic_write_and_read() {
