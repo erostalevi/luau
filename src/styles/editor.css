@@ -642,33 +642,65 @@
   font-size: 0.94em;
 }
 
-/* Properties footer */
+/* Properties footer: data-only chips; click one to change it, the rest edits the text */
 .cm-properties {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 18px 0 6px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--bg-sunken);
-  cursor: pointer;
-  line-height: 1.4;
-}
-.cm-properties .prop {
-  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.86em;
+  margin: 18px 0 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg-sunken);
+  cursor: text;
+  line-height: 1.4;
 }
-.cm-properties .key {
+.cm-properties .prop-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--bg-elev);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--ink-2);
+  font-size: 0.84em;
+  font-weight: 560;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    box-shadow var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out);
+}
+.cm-properties .prop-chip:hover {
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+.cm-properties .prop-chip:active {
+  transform: scale(0.97);
+}
+.cm-properties .prop-chip svg {
+  flex: none;
   color: var(--ink-3);
+}
+.cm-properties .prop-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.cm-properties .prop-chip .key {
+  color: var(--ink-3);
+  font-weight: 450;
   text-transform: capitalize;
 }
-.cm-properties .val {
-  display: inline-flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  font-weight: 560;
+.cm-properties .prop-chip.cm-tag,
+.cm-properties .prop-chip.cm-mention {
+  box-shadow: none;
+}
+.cm-properties .prop-chip.overdue,
+.cm-properties .prop-chip.overdue svg {
+  color: var(--danger);
 }
 .cm-properties .p-urgent {
   color: var(--danger);

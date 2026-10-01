@@ -31,6 +31,8 @@ export interface LuauEditorContext {
   tagStyle(tag: string): string;
   formatDate(iso: string): string;
   editFooter(): void;
+  /** Quick-change menu for one footer property, anchored to its chip. */
+  editProperty(key: string, anchor: HTMLElement): void;
   t(key: string, params?: Record<string, unknown>): string;
 }
 

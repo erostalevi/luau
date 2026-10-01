@@ -57,6 +57,7 @@ export default {
     properties: 'Properties (priority, due…)',
   },
   callouts: { note: 'Note', tip: 'Tip', info: 'Info', warning: 'Warning', danger: 'Danger', question: 'Question' },
+  propertyMenu: { clear: 'Clear', editText: 'Edit properties as text', overdue: 'Overdue' },
   properties: { priority: 'Priority', due: 'Due', start: 'Start', assignees: 'Assignees', labels: 'Labels', estimate: 'Estimate', status: 'Status' },
   commands: {
     categories: { code: 'Code' },

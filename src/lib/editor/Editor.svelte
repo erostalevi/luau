@@ -166,6 +166,14 @@
     }
   }
 
+  function editFooter() {
+    if (!view) return;
+    const doc = view.state.doc.toString();
+    const i = doc.lastIndexOf('\n---\n');
+    view.dispatch({ selection: { anchor: i >= 0 ? i + 5 : doc.length } });
+    view.focus();
+  }
+
   function makeContext(): LuauEditorContext {
     return {
       boardId,
@@ -241,12 +249,31 @@
             ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
             : { month: 'short', day: 'numeric', year: iso.slice(0, 4) === String(new Date().getFullYear()) ? undefined : 'numeric' },
         ),
-      editFooter: () => {
-        if (!view) return;
-        const doc = view.state.doc.toString();
-        const i = doc.lastIndexOf('\n---\n');
-        view.dispatch({ selection: { anchor: i >= 0 ? i + 5 : doc.length } });
-        view.focus();
+      editFooter,
+      editProperty: (key, anchor) => {
+        if (!view || readOnly) return;
+        void Promise.all([import('./propertyMenu'), import('@codemirror/commands')]).then(([{ openPropertyMenu }, { isolateHistory }]) =>
+          openPropertyMenu(
+            anchor,
+            key,
+            () => view?.state.doc.toString() ?? '',
+            (next) => {
+              if (!view) return;
+              // Replace only what changed (the footer), so undo and the cursor stay sensible.
+              const cur = view.state.doc.toString();
+              let a = 0;
+              while (a < cur.length && a < next.length && cur[a] === next[a]) a++;
+              let b = 0;
+              while (b < cur.length - a && b < next.length - a && cur[cur.length - 1 - b] === next[next.length - 1 - b]) b++;
+              view.dispatch({
+                changes: { from: a, to: cur.length - b, insert: next.slice(a, next.length - b) },
+                annotations: isolateHistory.of('full'),
+                userEvent: 'input.property',
+              });
+            },
+            editFooter,
+          ),
+        );
       },
       t,
     };

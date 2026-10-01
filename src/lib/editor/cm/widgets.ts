@@ -20,6 +20,8 @@ const ICON = {
   link: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
   play: '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>',
   copy: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  start:
+    '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5 15 12l-5 3.5z"/></svg>',
   cal: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
   globe:
     '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>',
@@ -668,33 +670,58 @@ export class PropertiesWidget extends WidgetType {
   toDOM(view: EditorView) {
     const c = ctxOf(view);
     const box = el('div', 'cm-properties');
+    const keyLabel = (k: string) => {
+      const l = c?.t(`properties.${k}`);
+      return l && l !== `properties.${k}` ? l : k;
+    };
+    const today = new Date().toISOString().slice(0, 10);
+    // Chips show only the data; the key lives in the tooltip (and the icon for dates).
+    const chip = (k: string, cls: string, title: string) => {
+      const b = el('span', `prop-chip k-${k} ${cls}`.trim());
+      b.dataset.prop = k;
+      b.setAttribute('role', 'button');
+      b.title = title;
+      box.appendChild(b);
+      return b;
+    };
     for (const [k, v] of this.fields) {
-      const row = el('span', `prop k-${k}`);
-      row.appendChild(el('span', 'key', c?.t(`properties.${k}`) === `properties.${k}` ? k : (c?.t(`properties.${k}`) ?? k)));
-      const val = el('span', 'val');
-      if (k === 'due' || k === 'start') val.textContent = c?.formatDate(v) ?? v;
-      else if (k === 'priority') {
-        const p = v.trim().toLowerCase();
-        val.classList.add(`p-${p}`);
+      const value = v.trim();
+      const title = `${keyLabel(k)}: ${value}`;
+      if (k === 'priority' && value) {
+        const p = value.toLowerCase();
         const label = c?.t(`priority.${p}`);
-        val.textContent = label && label !== `priority.${p}` ? label : v;
-      } else if (k === 'labels' || k === 'assignees') {
-        for (const item of v
+        const b = chip(k, `p-${p}`, title);
+        b.appendChild(el('span', 'dot'));
+        b.appendChild(document.createTextNode(label && label !== `priority.${p}` ? label : value));
+      } else if ((k === 'due' || k === 'start') && value) {
+        const overdue = k === 'due' && value.slice(0, 10) < today;
+        const b = chip(k, overdue ? 'overdue' : '', overdue ? `${title} · ${c?.t('propertyMenu.overdue') ?? ''}` : title);
+        b.insertAdjacentHTML('beforeend', k === 'due' ? ICON.cal : ICON.start);
+        b.appendChild(document.createTextNode(c?.formatDate(value) ?? value));
+      } else if ((k === 'labels' || k === 'assignees') && value) {
+        for (const item of value
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean)) {
-          const chip = el('span', k === 'assignees' ? 'cm-mention' : 'cm-tag', item);
-          if (k === 'labels' && c) chip.setAttribute('style', c.tagStyle(item.replace(/^#/, '')));
-          val.appendChild(chip);
+          const name = item.replace(/^[#@]/, '');
+          const b = chip(k, k === 'assignees' ? 'cm-mention' : 'cm-tag', title);
+          b.textContent = k === 'assignees' ? `@${name}` : `#${name}`;
+          if (k === 'labels' && c) b.setAttribute('style', c.tagStyle(name));
         }
-      } else val.textContent = v;
-      row.appendChild(val);
-      box.appendChild(row);
+      } else {
+        // Custom fields keep a faint key so `estimate: 3` doesn't read as a bare "3".
+        const b = chip(k, 'custom', title);
+        b.appendChild(el('span', 'key', keyLabel(k)));
+        b.appendChild(document.createTextNode(value || '—'));
+      }
     }
     box.onmousedown = (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
-      c?.editFooter();
+      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-prop]');
+      const key = target?.dataset.prop;
+      if (target && key && key !== 'custom' && !target.classList.contains('custom')) c?.editProperty(key, target);
+      else c?.editFooter();
     };
     return box;
   }
