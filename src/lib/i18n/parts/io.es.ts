@@ -52,6 +52,15 @@ export default {
       tip: 'Esta carpeta está abierta tal cual: no se cambia nada en el disco. Importa una copia para editarla.',
       importCopy: 'Importar una copia',
     },
+    repair: {
+      title: 'Reparar este tablero',
+      message: 'Su archivo de ajustes (board.json) está dañado, así que el tablero se abrió en solo lectura. Reparar lo reconstruye a partir de las listas y tarjetas en el disco; una copia del archivo dañado queda en .luau/cache/recovered.',
+      confirm: 'Reparar',
+      done: 'Tablero reparado',
+      failed: 'No se pudo reparar el tablero: {message}',
+      notNeeded: 'Este tablero no necesita reparación',
+      tip: 'El archivo de ajustes del tablero está dañado. No se cambió nada; repáralo para volver a editar.',
+    },
     upgrade: {
       current: 'Este tablero ya usa esta versión',
       backupHint: 'Consejo: exporta primero un archivo del tablero si quieres un respaldo.',
@@ -112,6 +121,7 @@ export default {
       exportFile: 'Exportar documento…',
       import: 'Importar tablero o carpeta…',
       newFromTemplate: 'Nuevo tablero desde plantilla…',
+      repair: 'Reparar tablero…',
       upgradeSchema: 'Convertir tablero a esta versión',
       exportSettings: 'Exportar ajustes…',
       importSettings: 'Importar ajustes…',

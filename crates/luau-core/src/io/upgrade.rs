@@ -135,11 +135,85 @@ impl Core {
         tracing::info!("board {board} schema {} -> {}", report.from, report.to);
         Ok((report, snap))
     }
+
+    /// Rewrite a damaged `board.json` from the salvaged state (lanes, order,
+    /// archive flags as found on disk) and reopen the board. Only allowed for
+    /// boards opened read-only because of a corrupt manifest; the original is
+    /// kept in `.luau/cache/recovered/`.
+    pub fn repair_manifest(self: &Arc<Self>, board: &str) -> Result<BoardSnapshot> {
+        let b = self.board(board)?;
+        let root = {
+            let mut s = b.lock();
+            if s.state.read_only.as_deref() != Some(crate::store::CORRUPT_MANIFEST) {
+                return Err(Error::invalid("board_not_damaged"));
+            }
+            s.save_manifest()?;
+            s.state.root.clone()
+        };
+        self.close_board(board);
+        let snap = self.open_board(&root)?;
+        tracing::info!("board {board} manifest repaired");
+        Ok(snap)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn damaged_manifest_opens_read_only_without_rewrite_and_repairs() {
+        use crate::app::{AppPaths, CoreEvent, EventSink};
+        struct Nop;
+        impl EventSink for Nop {
+            fn emit(&self, _e: CoreEvent) {}
+        }
+        let d = tempfile::tempdir().unwrap();
+        let c = Core::new(AppPaths::under(&d.path().join("app")), Arc::new(Nop)).unwrap();
+        let root = d.path().join("Work");
+        let snap = c
+            .create_board(
+                &root,
+                "Work",
+                BoardKind::Kanban,
+                &["To do".into(), "Done".into()],
+                false,
+            )
+            .unwrap();
+        let id = snap.header.id.clone();
+        c.close_board(&id);
+        let mp = root.join(".luau").join("board.json");
+        let good = std::fs::read_to_string(&mp).unwrap();
+        // Half-written by a sync tool: truncated JSON.
+        let broken = &good[..good.len() / 2];
+        std::fs::write(&mp, broken).unwrap();
+        let s = c.open_board(&root).unwrap();
+        assert_eq!(s.header.id, id, "id salvaged");
+        assert_eq!(s.header.name, "Work", "name salvaged");
+        assert_eq!(s.lanes.len(), 2, "lanes found on disk");
+        assert_eq!(
+            s.header.read_only.as_deref(),
+            Some(crate::store::CORRUPT_MANIFEST)
+        );
+        assert_eq!(
+            std::fs::read_to_string(&mp).unwrap(),
+            broken,
+            "never rewritten on load"
+        );
+        // Reloading does not pile up recovered copies.
+        c.close_board(&id);
+        c.open_board(&root).unwrap();
+        let rec = std::fs::read_dir(root.join(".luau/cache/recovered"))
+            .unwrap()
+            .count();
+        assert_eq!(rec, 1);
+        // Explicit repair writes a valid manifest and reopens writable.
+        let s = c.repair_manifest(&id).unwrap();
+        assert!(s.header.read_only.is_none());
+        let m: crate::model::BoardManifest =
+            serde_json::from_str(&std::fs::read_to_string(&mp).unwrap()).unwrap();
+        assert_eq!(m.lanes.len(), 2);
+    }
     use crate::model::BoardKind;
     use crate::store::BoardStore;
 

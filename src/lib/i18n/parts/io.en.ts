@@ -52,6 +52,15 @@ export default {
       tip: 'This folder is opened as is: nothing is changed on disk. Import a copy to edit it.',
       importCopy: 'Import a copy',
     },
+    repair: {
+      title: 'Repair this board',
+      message: 'Its settings file (board.json) is damaged, so the board is open read-only. Repair rebuilds it from the lanes and cards found on disk; a copy of the damaged file stays in .luau/cache/recovered.',
+      confirm: 'Repair',
+      done: 'Board repaired',
+      failed: 'Could not repair the board: {message}',
+      notNeeded: 'This board does not need repairing',
+      tip: 'The board settings file is damaged. Nothing was changed; repair it to edit again.',
+    },
     upgrade: {
       current: 'This board already uses this version',
       backupHint: 'Tip: export a board archive first if you want a backup.',
@@ -112,6 +121,7 @@ export default {
       exportFile: 'Export document…',
       import: 'Import board or folder…',
       newFromTemplate: 'New board from template…',
+      repair: 'Repair board…',
       upgradeSchema: 'Convert board to this version',
       exportSettings: 'Export settings…',
       importSettings: 'Import settings…',

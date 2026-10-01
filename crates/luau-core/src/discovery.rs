@@ -81,7 +81,9 @@ impl Default for Options {
 pub fn read_marker(root: &Path) -> Option<Found> {
     let p = root.join(MARKER_DIR).join(BOARD_FILE);
     let text = std::fs::read_to_string(p).ok()?;
-    let m: BoardManifest = serde_json::from_str(&text).ok()?;
+    // A damaged manifest still marks a board: salvage it (read-only on open).
+    let m: BoardManifest =
+        serde_json::from_str(&text).unwrap_or_else(|_| crate::store::salvage_manifest(root, &text));
     Some(Found {
         id: m.id,
         name: m.name,

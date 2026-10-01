@@ -160,6 +160,9 @@
       {#if board.header.readOnly === 'loose'}
         <span class="chip warn" use:tip={t('io.loose.tip')}><TriangleAlert size={12} /> {t('board.readOnly')}</span>
         <button class="btn sm soft" onclick={() => runCommand('board.import', { path: board.header.root })}>{t('io.loose.importCopy')}</button>
+      {:else if board.header.readOnly === 'corrupt_manifest'}
+        <span class="chip warn" use:tip={t('io.repair.tip')}><TriangleAlert size={12} /> {t('board.readOnly')}</span>
+        <button class="btn sm soft" onclick={() => runCommand('board.repair')}>{t('io.repair.confirm')}</button>
       {:else if board.header.readOnly && !board.header.readOnly.startsWith('mirror')}
         <span class="chip warn" use:tip={t('board.readOnlyTip')}><TriangleAlert size={12} /> {t('board.readOnly')}</span>
         {#if board.header.readOnly.startsWith('newer_schema')}

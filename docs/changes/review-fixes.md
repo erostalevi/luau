@@ -73,3 +73,19 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Tests (manual, web build): type then Esc immediately → saved (was lost); type in card A then
   `card.openNext` immediately → text only in card A, editor shows card B. `pnpm check` clean.
 - Recommended: a Playwright e2e test for both flows once e2e tooling exists.
+
+## B5 — Loading rewrote a damaged `board.json` (critical)
+
+- Files: `crates/luau-core/src/store/mod.rs` (`salvage_manifest`, `save_recovered_copy`, `CORRUPT_MANIFEST`),
+  `discovery.rs` (`read_marker` salvages), `io/upgrade.rs` (`Core::repair_manifest` + test), `src-tauri/src/exports.rs`
+  (`board.repair`), `src/lib/io/io.commands.ts` (`board.repair` command), `src/lib/board/BoardView.svelte` (banner),
+  `src/lib/i18n/parts/io.{en,es,pt}.ts`.
+- Before: a parse failure wrote a fresh manifest (name, kind, lane order, colors, view lost; random id if the id was
+  unreadable) — even from read-only paths (watcher reload, inspect, rescan). `open_board` failed with "not a board".
+- Now: loading never writes. The board opens **read-only** (`corrupt_manifest`) from a salvage: id/name/type read
+  with regexes when possible (id otherwise derived from the path, stable across reloads), kind inferred from the
+  layout, lanes from the lane folders on disk. One copy of the damaged file per distinct content is kept in
+  `.luau/cache/recovered/` (also fixes the pile-up of recovered copies for any damaged JSON). A banner offers
+  **Repair**, which (after confirmation) rewrites the manifest from the salvaged state and reopens the board.
+- Tests: `damaged_manifest_opens_read_only_without_rewrite_and_repairs` (truncated file stays byte-identical,
+  id/name/lanes salvaged, one recovered copy after two loads, repair makes it writable).

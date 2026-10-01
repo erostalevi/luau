@@ -534,6 +534,68 @@ struct LoadCtx<'a> {
     root: PathBuf,
 }
 
+/// Read-only reason for a board whose `board.json` could not be parsed.
+pub const CORRUPT_MANIFEST: &str = "corrupt_manifest";
+
+/// Keep one copy per distinct damaged content (no pile-up on every reload).
+fn save_recovered_copy(dir: &Path, name: &str, text: &str) {
+    use sha2::{Digest, Sha256};
+    let h = hex::encode(Sha256::digest(text.as_bytes()));
+    let p = dir.join(format!("{}-{name}", &h[..12]));
+    if p.exists() {
+        return;
+    }
+    let _ = fs::create_dir_all(dir);
+    let _ = fs::write(p, text);
+}
+
+/// Best-effort manifest from a damaged `board.json`. Writes nothing.
+/// The id is kept when readable, otherwise derived from the path so it stays
+/// stable across reloads.
+pub fn salvage_manifest(root: &Path, text: &str) -> BoardManifest {
+    let grab = |key: &str, val: &str| -> Option<String> {
+        Regex::new(&format!(r#""{key}"\s*:\s*"({val})""#))
+            .ok()?
+            .captures(text)
+            .map(|c| c[1].to_string())
+    };
+    let id = grab("id", "b[a-z0-9]{6}").unwrap_or_else(|| stable_board_id(root));
+    let name = grab("name", r#"[^"\\]{1,200}"#).unwrap_or_else(|| {
+        root.file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Board".into())
+    });
+    let kind = match grab("type", "kanban|files").as_deref() {
+        Some("files") => BoardKind::Files,
+        Some(_) => BoardKind::Kanban,
+        None => {
+            let has_lanes = fs::read_dir(root)
+                .map(|rd| {
+                    rd.flatten()
+                        .any(|e| is_id(&e.file_name().to_string_lossy(), IdKind::Lane))
+                })
+                .unwrap_or(false);
+            if has_lanes {
+                BoardKind::Kanban
+            } else {
+                BoardKind::Files
+            }
+        }
+    };
+    BoardManifest::new(id, name, kind)
+}
+
+fn stable_board_id(root: &Path) -> String {
+    use sha2::{Digest, Sha256};
+    const ALPHA: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
+    let d = Sha256::digest(root.to_string_lossy().as_bytes());
+    let tail: String = d[..6]
+        .iter()
+        .map(|b| ALPHA[*b as usize % ALPHA.len()] as char)
+        .collect();
+    format!("b{tail}")
+}
+
 fn read_json_or_recover<T: serde::de::DeserializeOwned + Default>(
     path: &Path,
     root: &Path,
@@ -552,14 +614,7 @@ fn read_json_or_recover<T: serde::de::DeserializeOwned + Default>(
                 .unwrap_or(path)
                 .to_string_lossy()
                 .replace(['/', '\\'], "_");
-            let _ = fs::write(
-                rec.join(format!(
-                    "{}-{}",
-                    chrono::Utc::now().format("%Y%m%dT%H%M%S"),
-                    name
-                )),
-                &text,
-            );
+            save_recovered_copy(&rec, &name, &text);
             warnings.push(format!(
                 "recovered:{}:{}",
                 path.strip_prefix(root).unwrap_or(path).display(),
@@ -577,36 +632,23 @@ pub fn load_board(root: &Path, cache: Option<&HashMap<String, Node>>) -> Result<
     }
     let mut warnings = Vec::new();
     let text = read_to_string(&mp)?;
+    let mut corrupt = false;
     let manifest: BoardManifest = match serde_json::from_str(&text) {
         Ok(m) => m,
         Err(e) => {
-            // Salvage the id so links and registry keep working.
-            let id = Regex::new(r#""id"\s*:\s*"(b[a-z0-9]{6})""#)
-                .unwrap()
-                .captures(&text)
-                .map(|c| c[1].to_string())
-                .unwrap_or_else(|| crate::ids::new_id(IdKind::Board, |_| false));
-            let name = root
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default();
+            // Never rewrite a damaged manifest while loading: it may be a sync
+            // tool's half-written file. Open read-only from a best-effort
+            // salvage and keep a copy of the original; the user can repair.
             let rec = marker_dir(root).join("cache").join("recovered");
-            let _ = fs::create_dir_all(&rec);
-            let _ = fs::write(
-                rec.join(format!(
-                    "{}-board.json",
-                    chrono::Utc::now().format("%Y%m%dT%H%M%S")
-                )),
-                &text,
-            );
+            save_recovered_copy(&rec, "board.json", &text);
             warnings.push(format!("recovered:board.json:{e}"));
-            let m = BoardManifest::new(id, name, BoardKind::Kanban);
-            write_json(&mp, &m)?;
-            m
+            corrupt = true;
+            salvage_manifest(root, &text)
         }
     };
-    let read_only = (manifest.schema > SCHEMA)
-        .then(|| format!("newer_schema:{}", manifest.schema))
+    let read_only = corrupt
+        .then(|| CORRUPT_MANIFEST.to_string())
+        .or_else(|| (manifest.schema > SCHEMA).then(|| format!("newer_schema:{}", manifest.schema)))
         // Remote mirrors (integrations) are written only by their sync engine.
         .or_else(|| {
             manifest.extra.get("mirror").map(|m| {

@@ -1,6 +1,6 @@
 // Import / export, board templates, schema upgrade and settings bundles (SPEC §15, §16).
 
-import { Download, Upload, FileDown, FolderInput, LayoutTemplate, ArrowUpCircle, FileCode2, FileText, FileArchive, Printer, Braces, Package, Copy, FolderOpen, Replace } from '@lucide/svelte';
+import { Download, Upload, FileDown, FolderInput, LayoutTemplate, ArrowUpCircle, FileCode2, FileText, FileArchive, Printer, Braces, Package, Copy, FolderOpen, Replace, Wrench } from '@lucide/svelte';
 import type { Component } from 'svelte';
 import type { Command } from '$lib/commands/registry.svelte';
 import { rpc, isTauri } from '$lib/backend/rpc';
@@ -231,6 +231,22 @@ async function upgradeSchema() {
   }
 }
 
+async function repairBoard() {
+  const b = tabBoard();
+  if (!b) return toast.info(t('io.noBoard'));
+  if (b.header.readOnly !== 'corrupt_manifest') return toast.info(t('io.repair.notNeeded'));
+  const ok = await confirm({ title: t('io.repair.title'), message: t('io.repair.message'), confirmLabel: t('io.repair.confirm'), cancelFocused: true });
+  if (!ok) return;
+  try {
+    const snap = await rpc<BoardSnapshot>('board.repair', { board: b.id });
+    boards.get(b.id)?.load(snap);
+    await rpc('board.claim', { board: b.id }).catch(() => null);
+    toast.success(t('io.repair.done'));
+  } catch (e) {
+    toast.error(t('io.repair.failed', { message: errMessage(e) }));
+  }
+}
+
 // ── Settings bundle ─────────────────────────────────────────────────────────
 
 async function exportSettings() {
@@ -268,6 +284,7 @@ export const commands: Command[] = [
   { id: 'board.import', title: 'commands.io.import', category: 'import', icon: FolderInput, run: (args?: { path?: string }) => importFlow(args) },
   { id: 'board.newFromTemplate', title: 'commands.io.newFromTemplate', category: 'board', icon: LayoutTemplate, run: newFromTemplate },
   { id: 'board.upgradeSchema', title: 'commands.io.upgradeSchema', category: 'board', icon: ArrowUpCircle, run: upgradeSchema },
+  { id: 'board.repair', title: 'commands.io.repair', category: 'board', icon: Wrench, run: repairBoard },
   { id: 'settings.export', title: 'commands.io.exportSettings', category: 'preferences', icon: Upload, hidden: true, run: exportSettings },
   { id: 'settings.import', title: 'commands.io.importSettings', category: 'preferences', icon: Download, hidden: true, run: importSettings },
 ];

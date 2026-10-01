@@ -52,6 +52,15 @@ export default {
       tip: 'Esta pasta está aberta como está: nada é alterado no disco. Importe uma cópia para editar.',
       importCopy: 'Importar uma cópia',
     },
+    repair: {
+      title: 'Reparar este quadro',
+      message: 'O arquivo de configurações (board.json) está danificado, então o quadro abriu somente para leitura. Reparar o reconstrói a partir das listas e cartões no disco; uma cópia do arquivo danificado fica em .luau/cache/recovered.',
+      confirm: 'Reparar',
+      done: 'Quadro reparado',
+      failed: 'Não foi possível reparar o quadro: {message}',
+      notNeeded: 'Este quadro não precisa de reparo',
+      tip: 'O arquivo de configurações do quadro está danificado. Nada foi alterado; repare-o para editar de novo.',
+    },
     upgrade: {
       current: 'Este quadro já usa esta versão',
       backupHint: 'Dica: exporte antes um arquivo do quadro se quiser um backup.',
@@ -112,6 +121,7 @@ export default {
       exportFile: 'Exportar documento…',
       import: 'Importar quadro ou pasta…',
       newFromTemplate: 'Novo quadro a partir de modelo…',
+      repair: 'Reparar quadro…',
       upgradeSchema: 'Converter quadro para esta versão',
       exportSettings: 'Exportar configurações…',
       importSettings: 'Importar configurações…',

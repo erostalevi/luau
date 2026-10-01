@@ -118,6 +118,10 @@ pub fn dispatch(
                 let (report, snapshot) = core.upgrade_board_schema(&board)?;
                 ok(serde_json::json!({ "report": report, "snapshot": snapshot }))
             }
+            "board.repair" => {
+                let board: String = arg(p, "board")?;
+                ok(core.repair_manifest(&board)?)
+            }
             "settings.export" => {
                 let path: PathBuf = arg(p, "path")?;
                 let bundle: Value = arg(p, "bundle")?;
@@ -138,6 +142,7 @@ pub fn dispatch(
         | "templates.list"
         | "board.createFromTemplate"
         | "board.upgrade"
+        | "board.repair"
         | "settings.export"
         | "settings.import" => Some(run()),
         _ => None,
