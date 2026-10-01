@@ -40,7 +40,6 @@
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-write-html",
-    "clipboard-manager:allow-read-image",
     {
       "identifier": "opener:allow-open-url",
       "allow": [

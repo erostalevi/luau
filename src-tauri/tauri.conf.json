@@ -14,7 +14,7 @@
     "macOSPrivateApi": true,
     "windows": [],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' luau: http://luau.localhost data: blob: https: http:; media-src 'self' luau: http://luau.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src ipc: http://ipc.localhost luau: http://luau.localhost; frame-src 'self' luau: http://luau.localhost; object-src 'none'; base-uri 'none'; form-action 'none'",
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' luau: http://luau.localhost data: blob: https:; media-src 'self' luau: http://luau.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src ipc: http://ipc.localhost luau: http://luau.localhost; frame-src 'self' luau: http://luau.localhost; object-src 'none'; base-uri 'none'; form-action 'none'",
       "dangerousDisableAssetCspModification": false,
       "freezePrototype": true
     }

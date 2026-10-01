@@ -134,6 +134,9 @@ export function createRenderer(o: RenderOptions): MarkdownIt {
     const [a, w] = alt.split('|');
     if (!/^[a-z]+:/i.test(src)) tk.attrSet('src', o.fileUrl(decodeURIComponent(src)));
     if (w && /^\d+$/.test(w)) tk.attrSet('width', w);
+    // Remote images: no referrer (the site learns nothing about the card).
+    tk.attrSet('referrerpolicy', 'no-referrer');
+    tk.attrSet('loading', 'lazy');
     tk.content = a;
     if (tk.children?.[0]) tk.children[0].content = a;
     return image(tokens, i, opts, env, self);

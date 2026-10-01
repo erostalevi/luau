@@ -65,6 +65,10 @@ export const appCommands: Command[] = [
     icon: Download,
     run: async (args?: { silent?: boolean }) => {
       if (!isTauri) return;
+      if (!app.info?.updatesConfigured) {
+        if (!args?.silent) toast.info(t('updates.notConfigured'));
+        return;
+      }
       try {
         const { check } = await import('@tauri-apps/plugin-updater');
         const update = await check();

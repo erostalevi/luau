@@ -4,6 +4,7 @@
   import { Minus, Square, X, Copy } from '@lucide/svelte';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { onMount } from 'svelte';
+  import { t } from '$lib/i18n/index.svelte';
 
   let maximized = $state(false);
   const win = getCurrentWindow();
@@ -16,11 +17,11 @@
 </script>
 
 <div class="wc no-drag">
-  <button onclick={() => win.minimize()} aria-label="Minimize"><Minus size={15} strokeWidth={1.5} /></button>
-  <button onclick={() => win.toggleMaximize()} aria-label="Maximize">
+  <button onclick={() => win.minimize()} aria-label={t('window.minimize')}><Minus size={15} strokeWidth={1.5} /></button>
+  <button onclick={() => win.toggleMaximize()} aria-label={t('window.maximize')}>
     {#if maximized}<Copy size={13} strokeWidth={1.5} />{:else}<Square size={12} strokeWidth={1.5} />{/if}
   </button>
-  <button class="close" onclick={() => win.close()} aria-label="Close"><X size={16} strokeWidth={1.5} /></button>
+  <button class="close" onclick={() => win.close()} aria-label={t('window.close')}><X size={16} strokeWidth={1.5} /></button>
 </div>
 
 <style>

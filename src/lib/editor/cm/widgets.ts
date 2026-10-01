@@ -199,6 +199,7 @@ export class LinkPreviewWidget extends WidgetType {
       desc.textContent = p.description;
       if (p.image) {
         const img = el('img', 'thumb');
+    img.referrerPolicy = 'no-referrer';
         img.src = p.image;
         img.alt = '';
         img.loading = 'lazy';
@@ -232,6 +233,7 @@ export class ImageWidget extends WidgetType {
     const c = ctxOf(view);
     const wrap = el('span', 'cm-image');
     const img = el('img');
+    img.referrerPolicy = 'no-referrer';
     const w = this.width ?? 420;
     img.src = c?.fileUrl(this.ref, Math.max(w, 160)) ?? this.ref;
     img.alt = this.alt;
@@ -445,6 +447,7 @@ export class CodeOutputWidget extends WidgetType {
     if (r.stderr) box.appendChild(el('pre', 'err', r.stderr));
     for (const img of r.images) {
       const i = el('img');
+    i.referrerPolicy = 'no-referrer';
       i.src = `data:image/png;base64,${img}`;
       i.alt = '';
       box.appendChild(i);

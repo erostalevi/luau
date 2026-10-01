@@ -1,4 +1,5 @@
 export default {
+  window: { minimize: 'Minimizar', maximize: 'Maximizar', close: 'Fechar' },
   start: {
     greeting: { morning: 'Bom dia', afternoon: 'Boa tarde', evening: 'Boa noite', night: 'Trabalhando até tarde' },
     subtitle: 'O que você quer retomar?',

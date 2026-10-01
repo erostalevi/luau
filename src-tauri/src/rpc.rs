@@ -60,6 +60,24 @@ fn ok<T: Serialize>(v: T) -> R {
 
 #[tauri::command]
 pub async fn rpc(app: AppHandle, window: WebviewWindow, method: String, params: Value) -> R {
+    let m = method.clone();
+    let started = std::time::Instant::now();
+    let res = rpc_inner(app, window, method, params).await;
+    // Method names and error codes only: never parameters or messages (they
+    // can contain card text, paths or tokens).
+    match &res {
+        Err(e) if e.code != "cancelled" => {
+            tracing::warn!(method = %m, code = %e.code, "rpc failed")
+        }
+        _ if started.elapsed().as_millis() > 1500 => {
+            tracing::info!(method = %m, ms = started.elapsed().as_millis() as u64, "slow rpc")
+        }
+        _ => {}
+    }
+    res
+}
+
+async fn rpc_inner(app: AppHandle, window: WebviewWindow, method: String, params: Value) -> R {
     let core = app.state::<AppState>().core.clone();
     let label = window.label().to_string();
     // Async-native methods first (network / long-running), per feature module.
@@ -77,6 +95,22 @@ pub async fn rpc(app: AppHandle, window: WebviewWindow, method: String, params: 
         .map_err(|e| bad(format!("task failed: {e}")))?
 }
 
+/// Updater endpoints point at a real release feed (not the template placeholder).
+fn updates_configured(app: &AppHandle) -> bool {
+    app.config()
+        .plugins
+        .0
+        .get("updater")
+        .and_then(|u| u.get("endpoints"))
+        .and_then(|e| e.as_array())
+        .is_some_and(|eps| {
+            !eps.is_empty()
+                && eps
+                    .iter()
+                    .all(|e| e.as_str().is_some_and(|s| !s.contains("/OWNER/")))
+        })
+}
+
 fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &Value) -> R {
     match method {
         // --- app ---------------------------------------------------------------
@@ -90,7 +124,18 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             "logsDir": core.paths.logs,
             "window": window,
             "home": dirs::home_dir(),
+            "updatesConfigured": updates_configured(app),
         })),
+        "menu.setLocale" => {
+            let lang: String = arg(p, "locale")?;
+            let lang = match lang.as_str() {
+                "es" | "pt" => lang,
+                _ => "en".into(),
+            };
+            let m = crate::menu::build(app, &lang).map_err(|e| bad(e.to_string()))?;
+            app.set_menu(m).map_err(|e| bad(e.to_string()))?;
+            ok(true)
+        }
         "settings.get" => ok(core.settings()),
         "settings.set" => {
             core.set_settings(arg(p, "value")?)?;

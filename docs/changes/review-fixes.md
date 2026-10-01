@@ -382,3 +382,21 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - `[[` card-link autocomplete was re-tested key by key and works (the earlier report came from the test tool
   typing whole strings).
 - Tests: visual checks in the web build (light theme).
+
+## E4 — Menus, untranslated strings, permissions, updater placeholder, logging
+
+- Files: `src-tauri/src/menu.rs`, `windows.rs`, `lib.rs`, `rpc.rs`, `tauri.conf.json`, `capabilities/default.json`,
+  `src/lib/i18n/index.svelte.ts`, `src/lib/shell/WindowControls.svelte`, `src/lib/markdown/render.ts`,
+  `src/lib/editor/cm/widgets.ts`, `src/lib/commands/builtin/app.ts`, `src/lib/backend/types.ts`,
+  `crates/luau-core/src/app/mod.rs`, i18n (`window.*`, `updates.notConfigured`).
+- Native menu events with no focused window go to the **last focused** window (tracked on focus) instead of every
+  window (no more duplicate "New card").
+- Native menus are translated (en/es/pt) and rebuilt whenever the app language changes (`menu.setLocale`).
+  Window-control buttons have translated accessible names.
+- Least privilege: removed `clipboard-manager:allow-read-image` (unused). CSP `img-src` no longer allows plain
+  `http:`; rendered and live-preview images use `referrerpolicy=no-referrer` (and `loading=lazy` when rendered).
+- Updater: `app.info.updatesConfigured` is false while the endpoint is the `OWNER` template; "Check for updates"
+  then says so instead of failing, and the startup check stays quiet (set the real repo in G1 / release).
+- Logging (no secrets, no bodies): RPC failures as `method + code`, slow RPCs (> 1.5 s), "board opened"
+  (id, card count, read-only reason, warnings) and "discovery finished" (boards, roots, ms).
+- Tests: clippy, cargo test, svelte-check, vitest, i18n en/es/pt.

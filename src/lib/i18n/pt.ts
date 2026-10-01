@@ -343,6 +343,7 @@ const pt = {
     between: 'Digite um valor entre {min} e {max}',
   },
   updates: {
+    notConfigured: 'As atualizações não estão configuradas nesta versão',
     upToDate: 'O Luau está atualizado',
     available: 'O Luau {version} está disponível',
     install: 'Instalar e reiniciar',

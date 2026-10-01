@@ -58,6 +58,10 @@ export async function setLocale(value: Locale) {
   i18n.locale = locale;
   i18n.ready++;
   document.documentElement.lang = locale;
+  // Native menus follow the app language (desktop only).
+  void import('$lib/backend/rpc')
+    .then((m) => (m.isTauri ? m.rpc('menu.setLocale', { locale }) : null))
+    .catch(() => undefined);
 }
 
 /** First supported language in the OS/browser preference list, else English. */

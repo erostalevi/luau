@@ -274,6 +274,8 @@ export interface AppInfo {
   logsDir: string;
   window: string;
   home: string | null;
+  /** The build has a real update feed (not the template placeholder). */
+  updatesConfigured?: boolean;
 }
 
 // --- integrations (remote issue providers) ---------------------------------

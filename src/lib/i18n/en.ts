@@ -343,6 +343,7 @@ const en = {
     between: 'Enter a value between {min} and {max}',
   },
   updates: {
+    notConfigured: 'Updates are not set up for this build',
     upToDate: 'Luau is up to date',
     available: 'Luau {version} is available',
     install: 'Install and restart',

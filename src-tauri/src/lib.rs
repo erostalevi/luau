@@ -114,7 +114,7 @@ pub fn run() {
             app.manage(AppState { core: core.clone() });
             ai_rpc::start_scheduler(&handle, core.clone());
 
-            let menu = menu::build(&handle)?;
+            let menu = menu::build(&handle, "en")?;
             app.set_menu(menu)?;
             app.on_menu_event(|app, ev| menu::on_event(app, ev.id().as_ref()));
 
@@ -132,6 +132,9 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            if let WindowEvent::Focused(true) = event {
+                windows::note_focused(window.label());
+            }
             if let WindowEvent::Destroyed = event
                 && let Some(state) = window.try_state::<AppState>()
             {

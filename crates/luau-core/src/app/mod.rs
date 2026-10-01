@@ -376,6 +376,13 @@ impl Core {
             });
         }
         let snap = store.state.snapshot();
+        tracing::info!(
+            board = %found.id,
+            cards = store.state.nodes.len(),
+            read_only = store.state.read_only.as_deref().unwrap_or("no"),
+            warnings = store.state.warnings.len(),
+            "board opened"
+        );
         self.register(&store.state);
         if let Some(e) = self.registry.lock().get_mut(&found.id) {
             e.last_opened = Some(chrono::Utc::now().timestamp_millis());
@@ -1310,7 +1317,14 @@ impl Core {
                 total: 0,
                 label: None,
             });
+            let t0 = std::time::Instant::now();
             let found = crate::discovery::scan(&opts, &|| false);
+            tracing::info!(
+                boards = found.len(),
+                roots = opts.roots.len(),
+                ms = t0.elapsed().as_millis() as u64,
+                "discovery finished"
+            );
             let mut seen = HashSet::new();
             {
                 let mut reg = me.registry.lock();

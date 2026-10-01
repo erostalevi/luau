@@ -78,3 +78,16 @@ pub fn focus_any(app: &AppHandle) {
         let _ = create(app, &label, "");
     }
 }
+
+static LAST_FOCUSED: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Remember the most recently focused window (menu events without focus).
+pub fn note_focused(label: &str) {
+    if let Ok(mut g) = LAST_FOCUSED.lock() {
+        *g = Some(label.to_string());
+    }
+}
+
+pub fn last_focused() -> Option<String> {
+    LAST_FOCUSED.lock().ok().and_then(|g| g.clone())
+}

@@ -14,7 +14,94 @@ fn item<R: Runtime>(
     MenuItem::with_id(app, id, label, true, accel)
 }
 
-pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
+/// Menu label in the app language (`en`, `es`, `pt`); English is the key.
+fn tr(lang: &str, en: &'static str) -> &'static str {
+    let i = match lang {
+        "es" => 0,
+        "pt" => 1,
+        _ => return en,
+    };
+    LABELS
+        .iter()
+        .find(|(k, _)| *k == en)
+        .map(|(_, v)| v[i])
+        .unwrap_or(en)
+}
+
+const LABELS: &[(&str, [&str; 2])] = &[
+    ("Settings…", ["Ajustes…", "Configurações…"]),
+    (
+        "Check for Updates…",
+        ["Buscar actualizaciones…", "Procurar atualizações…"],
+    ),
+    ("New Card", ["Nueva tarjeta", "Novo cartão"]),
+    ("New Board…", ["Nuevo tablero…", "Novo quadro…"]),
+    ("New Window", ["Nueva ventana", "Nova janela"]),
+    ("Open Board…", ["Abrir tablero…", "Abrir quadro…"]),
+    ("Import…", ["Importar…", "Importar…"]),
+    ("Export…", ["Exportar…", "Exportar…"]),
+    ("Close Tab", ["Cerrar pestaña", "Fechar aba"]),
+    (
+        "Find in Board",
+        ["Buscar en el tablero", "Buscar no quadro"],
+    ),
+    ("Search Everywhere", ["Buscar en todo", "Pesquisar em tudo"]),
+    (
+        "Command Palette…",
+        ["Paleta de comandos…", "Paleta de comandos…"],
+    ),
+    ("Quick Open…", ["Apertura rápida…", "Abertura rápida…"]),
+    (
+        "Toggle Sidebar",
+        [
+            "Mostrar u ocultar barra lateral",
+            "Mostrar ou ocultar barra lateral",
+        ],
+    ),
+    ("Explorer", ["Explorador", "Explorador"]),
+    ("Search", ["Buscar", "Pesquisar"]),
+    ("History", ["Historial", "Histórico"]),
+    ("Integrations", ["Integraciones", "Integrações"]),
+    ("Extensions", ["Extensiones", "Extensões"]),
+    (
+        "Toggle Rows / Columns",
+        ["Alternar filas / columnas", "Alternar linhas / colunas"],
+    ),
+    (
+        "Toggle Show Archived",
+        [
+            "Mostrar u ocultar archivadas",
+            "Mostrar ou ocultar arquivados",
+        ],
+    ),
+    ("Zoom In", ["Acercar", "Aumentar zoom"]),
+    ("Zoom Out", ["Alejar", "Diminuir zoom"]),
+    ("Actual Size", ["Tamaño real", "Tamanho real"]),
+    ("Split Right", ["Dividir a la derecha", "Dividir à direita"]),
+    ("Next Tab", ["Pestaña siguiente", "Próxima aba"]),
+    ("Previous Tab", ["Pestaña anterior", "Aba anterior"]),
+    (
+        "Keyboard Shortcuts",
+        ["Atajos de teclado", "Atalhos de teclado"],
+    ),
+    ("Welcome", ["Bienvenida", "Boas-vindas"]),
+    (
+        "Open Logs Folder",
+        ["Abrir carpeta de registros", "Abrir pasta de registros"],
+    ),
+    (
+        "Export Diagnostics…",
+        ["Exportar diagnóstico…", "Exportar diagnóstico…"],
+    ),
+    ("File", ["Archivo", "Arquivo"]),
+    ("Edit", ["Edición", "Editar"]),
+    ("View", ["Ver", "Visualizar"]),
+    ("Window", ["Ventana", "Janela"]),
+    ("Help", ["Ayuda", "Ajuda"]),
+    ("About Luau", ["Acerca de Luau", "Sobre o Luau"]),
+];
+
+pub fn build<R: Runtime>(app: &AppHandle<R>, lang: &str) -> tauri::Result<Menu<R>> {
     let about = AboutMetadata {
         name: Some("Luau".into()),
         version: Some(env!("CARGO_PKG_VERSION").into()),
@@ -25,10 +112,20 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         "Luau",
         true,
         &[
-            &PredefinedMenuItem::about(app, Some("About Luau"), Some(about))?,
+            &PredefinedMenuItem::about(app, Some(tr(lang, "About Luau")), Some(about))?,
             &PredefinedMenuItem::separator(app)?,
-            &item(app, "app.openSettings", "Settings…", Some("CmdOrCtrl+,"))?,
-            &item(app, "app.checkForUpdates", "Check for Updates…", None)?,
+            &item(
+                app,
+                "app.openSettings",
+                tr(lang, "Settings…"),
+                Some("CmdOrCtrl+,"),
+            )?,
+            &item(
+                app,
+                "app.checkForUpdates",
+                tr(lang, "Check for Updates…"),
+                None,
+            )?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::services(app, None)?,
             &PredefinedMenuItem::separator(app)?,
@@ -43,23 +140,23 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     // resolver (so users can remap them); menus show them without binding.
     let file = Submenu::with_items(
         app,
-        "File",
+        tr(lang, "File"),
         true,
         &[
-            &item(app, "card.new", "New Card", None)?,
-            &item(app, "board.new", "New Board…", None)?,
-            &item(app, "window.new", "New Window", None)?,
-            &item(app, "board.open", "Open Board…", None)?,
-            &item(app, "board.import", "Import…", None)?,
-            &item(app, "board.export", "Export…", None)?,
+            &item(app, "card.new", tr(lang, "New Card"), None)?,
+            &item(app, "board.new", tr(lang, "New Board…"), None)?,
+            &item(app, "window.new", tr(lang, "New Window"), None)?,
+            &item(app, "board.open", tr(lang, "Open Board…"), None)?,
+            &item(app, "board.import", tr(lang, "Import…"), None)?,
+            &item(app, "board.export", tr(lang, "Export…"), None)?,
             &PredefinedMenuItem::separator(app)?,
-            &item(app, "tab.close", "Close Tab", None)?,
+            &item(app, "tab.close", tr(lang, "Close Tab"), None)?,
             &PredefinedMenuItem::close_window(app, None)?,
         ],
     )?;
     let edit = Submenu::with_items(
         app,
-        "Edit",
+        tr(lang, "Edit"),
         true,
         &[
             &PredefinedMenuItem::undo(app, None)?,
@@ -70,61 +167,76 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &PredefinedMenuItem::paste(app, None)?,
             &PredefinedMenuItem::select_all(app, None)?,
             &PredefinedMenuItem::separator(app)?,
-            &item(app, "board.filter", "Find in Board", None)?,
-            &item(app, "search.focus", "Search Everywhere", None)?,
+            &item(app, "board.filter", tr(lang, "Find in Board"), None)?,
+            &item(app, "search.focus", tr(lang, "Search Everywhere"), None)?,
         ],
     )?;
     let view = Submenu::with_items(
         app,
-        "View",
+        tr(lang, "View"),
         true,
         &[
-            &item(app, "palette.commands", "Command Palette…", None)?,
-            &item(app, "palette.quickOpen", "Quick Open…", None)?,
+            &item(app, "palette.commands", tr(lang, "Command Palette…"), None)?,
+            &item(app, "palette.quickOpen", tr(lang, "Quick Open…"), None)?,
             &PredefinedMenuItem::separator(app)?,
-            &item(app, "panel.toggle", "Toggle Sidebar", None)?,
-            &item(app, "panel.explorer", "Explorer", None)?,
-            &item(app, "panel.search", "Search", None)?,
-            &item(app, "panel.history", "History", None)?,
-            &item(app, "panel.integrations", "Integrations", None)?,
-            &item(app, "panel.extensions", "Extensions", None)?,
+            &item(app, "panel.toggle", tr(lang, "Toggle Sidebar"), None)?,
+            &item(app, "panel.explorer", tr(lang, "Explorer"), None)?,
+            &item(app, "panel.search", tr(lang, "Search"), None)?,
+            &item(app, "panel.history", tr(lang, "History"), None)?,
+            &item(app, "panel.integrations", tr(lang, "Integrations"), None)?,
+            &item(app, "panel.extensions", tr(lang, "Extensions"), None)?,
             &PredefinedMenuItem::separator(app)?,
             &item(
                 app,
                 "board.toggleOrientation",
-                "Toggle Rows / Columns",
+                tr(lang, "Toggle Rows / Columns"),
                 None,
             )?,
-            &item(app, "board.toggleArchived", "Toggle Show Archived", None)?,
-            &item(app, "view.zoomIn", "Zoom In", None)?,
-            &item(app, "view.zoomOut", "Zoom Out", None)?,
-            &item(app, "view.zoomReset", "Actual Size", None)?,
+            &item(
+                app,
+                "board.toggleArchived",
+                tr(lang, "Toggle Show Archived"),
+                None,
+            )?,
+            &item(app, "view.zoomIn", tr(lang, "Zoom In"), None)?,
+            &item(app, "view.zoomOut", tr(lang, "Zoom Out"), None)?,
+            &item(app, "view.zoomReset", tr(lang, "Actual Size"), None)?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::fullscreen(app, None)?,
         ],
     )?;
     let window = Submenu::with_items(
         app,
-        "Window",
+        tr(lang, "Window"),
         true,
         &[
             &PredefinedMenuItem::minimize(app, None)?,
             &PredefinedMenuItem::maximize(app, None)?,
             &PredefinedMenuItem::separator(app)?,
-            &item(app, "view.splitRight", "Split Right", None)?,
-            &item(app, "tab.next", "Next Tab", None)?,
-            &item(app, "tab.previous", "Previous Tab", None)?,
+            &item(app, "view.splitRight", tr(lang, "Split Right"), None)?,
+            &item(app, "tab.next", tr(lang, "Next Tab"), None)?,
+            &item(app, "tab.previous", tr(lang, "Previous Tab"), None)?,
         ],
     )?;
     let help = Submenu::with_items(
         app,
-        "Help",
+        tr(lang, "Help"),
         true,
         &[
-            &item(app, "app.openKeybindings", "Keyboard Shortcuts", None)?,
-            &item(app, "app.showWelcome", "Welcome", None)?,
-            &item(app, "app.openLogs", "Open Logs Folder", None)?,
-            &item(app, "app.exportDiagnostics", "Export Diagnostics…", None)?,
+            &item(
+                app,
+                "app.openKeybindings",
+                tr(lang, "Keyboard Shortcuts"),
+                None,
+            )?,
+            &item(app, "app.showWelcome", tr(lang, "Welcome"), None)?,
+            &item(app, "app.openLogs", tr(lang, "Open Logs Folder"), None)?,
+            &item(
+                app,
+                "app.exportDiagnostics",
+                tr(lang, "Export Diagnostics…"),
+                None,
+            )?,
         ],
     )?;
     Menu::with_items(app, &[&app_menu, &file, &edit, &view, &window, &help])
@@ -141,8 +253,16 @@ pub fn on_event<R: Runtime>(app: &AppHandle<R>, id: &str) {
         Some(label) => {
             let _ = app.emit_to(label.as_str(), "luau://menu", id);
         }
+        // No window is focused (e.g. a menu click right after alt-tab): use
+        // the last focused one instead of running the command in every window.
         None => {
-            let _ = app.emit("luau://menu", id);
+            let last = crate::windows::last_focused();
+            let label = last
+                .filter(|l| app.get_webview_window(l).is_some())
+                .or_else(|| app.webview_windows().into_keys().next());
+            if let Some(l) = label {
+                let _ = app.emit_to(l.as_str(), "luau://menu", id);
+            }
         }
     }
 }
