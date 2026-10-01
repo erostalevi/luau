@@ -181,6 +181,8 @@ const es = {
     atBottom: 'Al final',
   },
   boards: {
+    duplicateTitle: 'Este tablero ya está abierto',
+    duplicateMessage: '“{name}” es una copia de un tablero que ya está abierto (mismo ID). Dale a la copia su propio ID para abrir ambos.',
     new: 'Nuevo tablero…',
     kanban: 'Tablero kanban',
     kanbanDesc: 'Listas y tarjetas que puedes arrastrar',

@@ -247,3 +247,14 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Requests run on Tauri's bounded blocking pool instead of one OS thread each. Thumbnail widths are rounded up to
   nine buckets (64…2048), so the cache cannot grow with every distinct `?w=`.
 - Tests: `internal_folders_and_escaping_links_are_refused`, `protocol::tests::ranges`.
+
+## D4 — Board-type rules only checked at the top level; same-id copies replaced open boards (medium)
+
+- Files: `crates/luau-core/src/app/mod.rs` (`check_kind_rules`, `open_board`), test in `app/tests.rs`,
+  `src/lib/commands/builtin/boards.ts`, i18n `boards.duplicate*` (en/es/pt).
+- `check_kind_rules` now validates `Op::Place` items and recurses into (nested) `Op::Batch`, so cards can no longer
+  land at the root of a kanban board (and vanish on reload) or in lanes of a files board through those ops.
+- `open_board` refuses a folder whose `board.json` has the id of a board that is already open from another folder
+  (`duplicate_board_id`), instead of replacing the original store in memory. "Open folder" catches it and offers
+  "Give this copy its own identity" (`board.reassignId`) and then opens the copy.
+- Test: `kind_rules_cover_place_and_batches_and_copies_need_new_ids`.

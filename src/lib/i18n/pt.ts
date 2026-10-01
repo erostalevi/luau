@@ -181,6 +181,8 @@ const pt = {
     atBottom: 'No final',
   },
   boards: {
+    duplicateTitle: 'Este quadro já está aberto',
+    duplicateMessage: '“{name}” é uma cópia de um quadro que já está aberto (mesmo ID). Dê à cópia um ID próprio para abrir os dois.',
     new: 'Novo quadro…',
     kanban: 'Quadro kanban',
     kanbanDesc: 'Listas e cartões que você pode arrastar',

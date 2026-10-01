@@ -181,6 +181,8 @@ const en = {
     atBottom: 'At the bottom',
   },
   boards: {
+    duplicateTitle: 'This board is already open',
+    duplicateMessage: '“{name}” is a copy of a board that is already open (same board ID). Give the copy its own ID to open both.',
     new: 'New board…',
     kanban: 'Kanban board',
     kanbanDesc: 'Lanes and cards you can drag around',

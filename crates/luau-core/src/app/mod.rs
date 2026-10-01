@@ -349,6 +349,12 @@ impl Core {
             if b.state.root == path {
                 return Ok(b.state.snapshot());
             }
+            // A copy of an open board (same id, other folder) would silently
+            // replace the original in memory. Ask for a new id instead.
+            return Err(Error::Conflict(format!(
+                "duplicate_board_id:{}",
+                b.state.root.display()
+            )));
         }
         let mut store = BoardStore::open(path)?;
         let ttl = setting_u64(&self.settings(), "trash.ttlDays", 7).clamp(1, 3650) as u32;
@@ -480,9 +486,14 @@ impl Core {
             Op::Move { to, .. } if bad(to) => {
                 Err(Error::invalid("target not valid for this board type"))
             }
+            Op::Place { items } if items.iter().any(|i| bad(&i.parent)) => {
+                Err(Error::invalid("target not valid for this board type"))
+            }
             Op::CreateLane { .. } if st.manifest.kind == BoardKind::Files => {
                 Err(Error::invalid("files boards have no lanes"))
             }
+            // Batches are checked op by op (nested batches included).
+            Op::Batch { ops } => ops.iter().try_for_each(|o| Self::check_kind_rules(st, o)),
             _ => Ok(()),
         }
     }

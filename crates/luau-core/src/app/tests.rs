@@ -512,3 +512,52 @@ fn sweep_keeps_attachments_referenced_by_html_luau_urls_or_other_cards() {
         assert!(files.contains(&f.as_str()), "{f} kept");
     }
 }
+
+#[test]
+fn kind_rules_cover_place_and_batches_and_copies_need_new_ids() {
+    let (d, c, _) = core();
+    let root = d.path().join("K");
+    let snap = c
+        .create_board(&root, "K", BoardKind::Kanban, &["A".into()], false)
+        .unwrap();
+    let b = snap.header.id.clone();
+    let id = c.new_card_id();
+    c.apply(
+        &b,
+        Op::CreateCard {
+            id: id.clone(),
+            parent: Parent::Lane(snap.lanes[0].id.clone()),
+            index: None,
+            content: "# x\n".into(),
+        },
+        "n",
+        None,
+    )
+    .unwrap();
+    let to_root = Op::Place {
+        items: vec![store::Placement {
+            id: id.clone(),
+            parent: Parent::Root,
+            index: 0,
+        }],
+    };
+    assert!(c.apply(&b, to_root.clone(), "p", None).is_err());
+    assert!(
+        c.apply(
+            &b,
+            Op::Batch {
+                ops: vec![Op::Batch { ops: vec![to_root] }]
+            },
+            "b",
+            None
+        )
+        .is_err()
+    );
+    // A copied board folder with the same id cannot replace the open one.
+    let copy = d.path().join("K copy");
+    std::fs::create_dir_all(copy.join(".luau")).unwrap();
+    std::fs::copy(root.join(".luau/board.json"), copy.join(".luau/board.json")).unwrap();
+    let e = c.open_board(&copy).unwrap_err();
+    assert!(matches!(e, Error::Conflict(ref m) if m.starts_with("duplicate_board_id")));
+    assert_eq!(c.board_root(&b).unwrap(), root);
+}
