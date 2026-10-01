@@ -65,6 +65,9 @@ pub struct Changes {
     pub lanes: bool,
     pub root: bool,
     pub header: bool,
+    /// Lane names/flags changed: every card's indexed lane data is stale.
+    /// (Plain order changes set `lanes` only; moved cards are in `nodes`.)
+    pub reindex_lanes: bool,
 }
 
 impl Changes {
@@ -83,6 +86,7 @@ impl Changes {
         self.lanes |= o.lanes;
         self.root |= o.root;
         self.header |= o.header;
+        self.reindex_lanes |= o.reindex_lanes;
     }
 }
 
@@ -177,6 +181,7 @@ impl BoardStore {
             }
         }
         ch.lanes = next.lanes.iter().map(LaneDto::from).collect::<Vec<_>>() != prev_lanes;
+        ch.reindex_lanes = ch.lanes;
         ch.root = next.root_order != prev_root;
         ch.header = next.header_dto() != prev_header;
         self.state = next;

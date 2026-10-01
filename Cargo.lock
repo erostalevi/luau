@@ -2745,6 +2745,7 @@ dependencies = [
  "hex",
  "image",
  "keyring",
+ "libc",
  "notify",
  "parking_lot",
  "percent-encoding",

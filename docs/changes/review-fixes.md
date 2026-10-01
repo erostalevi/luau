@@ -145,3 +145,20 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   run. Boards without candidates skip the extra reads.
 - Tests: `sweep_keeps_attachments_referenced_by_html_luau_urls_or_other_cards` (HTML, encoded luau URL and
   cross-card link kept; truly unused file moved); the existing TTL test still passes.
+
+## C5 — Card operations got slower as boards grew (high, performance)
+
+- Files: `crates/luau-core/src/store/mod.rs` (`Changes::reindex_lanes`), `store/ops.rs`, `store/trash.rs`,
+  `app/mod.rs` (`index_changes`), `fsutil.rs` (`flush_to_disk`), `Cargo.toml` (`libc`), test in `store/tests.rs`.
+- Causes: (1) any create/move/trash inside a lane set `Changes.lanes`, which `index_changes` treated as "lane
+  renamed" and re-read + re-indexed **every card** under the board lock (O(n) per op); (2) each `atomic_write`
+  called `File::sync_all`, which on macOS is `F_FULLFSYNC` (full drive-cache flush), twice per write.
+- Fix: new `reindex_lanes` flag set only by lane rename/flag updates, lane archive, lane restore, kind change
+  and external reloads with lane diffs; moved/created cards are already in `Changes.nodes`. On Apple platforms
+  `atomic_write` uses plain `fsync(2)` for the temp file and the directory (ordering before rename — the same
+  trade-off SQLite makes by default); other platforms keep `sync_all`.
+- Measured (release, out-of-repo harness, 2000 cards): create **48 ms → 0.46 ms per card** (97 s → 0.9 s),
+  move 500 cards 209 → 137 ms, undo 264 → 188 ms; reopen 32 ms, search 2–3 ms.
+- Risk: plain fsync on macOS does not force the drive cache on power loss; atomic rename still guarantees no
+  partial files, at worst the last save is lost.
+- Tests: `only_lane_metadata_changes_request_a_full_reindex`; full suite.

@@ -285,6 +285,7 @@ pub(crate) fn restore(store: &mut BoardStore, tid: &str, ch: &mut Changes) -> Re
             store.state.lanes.insert(at, lane);
             store.save_manifest()?;
             ch.lanes = true;
+            ch.reindex_lanes = true;
             remove_path(&entry_dir(&root, tid))?;
             Ok(Restored::Lane(k))
         }

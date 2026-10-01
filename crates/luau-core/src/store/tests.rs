@@ -533,3 +533,52 @@ proptest! {
         assert_disk_matches(&s);
     }
 }
+
+#[test]
+fn only_lane_metadata_changes_request_a_full_reindex() {
+    // Card ops inside a lane must not re-index the whole board (perf), but a
+    // lane rename must (every card's lane name is indexed).
+    let (_d, mut s) = kanban();
+    let a = lane(&mut s, "A");
+    let b = lane(&mut s, "B");
+    let c = cid();
+    let r = s
+        .apply_user(
+            Op::CreateCard {
+                id: c.clone(),
+                parent: Parent::Lane(a.clone()),
+                index: None,
+                content: "# x\n".into(),
+            },
+            "n",
+            None,
+        )
+        .unwrap();
+    assert!(r.changes.lanes && !r.changes.reindex_lanes);
+    let r = s
+        .apply_user(
+            Op::Move {
+                ids: vec![c.clone()],
+                to: Parent::Lane(b.clone()),
+                before: None,
+            },
+            "m",
+            None,
+        )
+        .unwrap();
+    assert!(!r.changes.reindex_lanes && r.changes.nodes.contains(&c));
+    let r = s
+        .apply_user(
+            Op::UpdateLane {
+                id: b,
+                patch: LanePatch {
+                    name: Some("Done".into()),
+                    ..Default::default()
+                },
+            },
+            "r",
+            None,
+        )
+        .unwrap();
+    assert!(r.changes.reindex_lanes);
+}

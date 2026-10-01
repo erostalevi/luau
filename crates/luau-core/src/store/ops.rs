@@ -679,6 +679,7 @@ impl BoardStore {
                 inv_lanes.push((k, l.archived));
                 l.archived = flag;
                 acc.ch.lanes = true;
+                acc.ch.reindex_lanes = true;
             }
         }
         for p in &parents {
@@ -784,6 +785,7 @@ impl BoardStore {
         if inv != LanePatch::default() {
             self.save_container(&Parent::Lane(id.clone()))?;
             acc.ch.lanes = true;
+            acc.ch.reindex_lanes = true;
             acc.touched_anything = true;
         }
         Ok(Op::UpdateLane { id, patch: inv })
@@ -858,6 +860,7 @@ impl BoardStore {
             self.save_manifest()?;
             acc.ch.header = true;
             acc.ch.lanes = true;
+            acc.ch.reindex_lanes = true;
             acc.ch.root = true;
             acc.touched_anything = true;
         }

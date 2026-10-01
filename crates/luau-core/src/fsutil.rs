@@ -31,7 +31,7 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     {
         let mut f = fs::File::create(&tmp).map_err(|e| Error::io(&tmp, e))?;
         f.write_all(bytes).map_err(|e| Error::io(&tmp, e))?;
-        f.sync_all().map_err(|e| Error::io(&tmp, e))?;
+        flush_to_disk(&f).map_err(|e| Error::io(&tmp, e))?;
     }
     if let Err(e) = fs::rename(&tmp, path) {
         let _ = fs::remove_file(&tmp);
@@ -39,9 +39,31 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     }
     #[cfg(unix)]
     if let Ok(d) = fs::File::open(dir) {
-        let _ = d.sync_all();
+        let _ = flush_to_disk(&d);
     }
     Ok(())
+}
+
+/// Durable enough for a notes app without paying for a full drive-cache flush
+/// on every keystroke save. On Apple platforms `File::sync_all` issues
+/// `F_FULLFSYNC` (tens of ms each); plain `fsync(2)` orders the data before the
+/// rename, which is what atomic replacement needs (SQLite makes the same
+/// trade-off by default).
+fn flush_to_disk(f: &fs::File) -> std::io::Result<()> {
+    #[cfg(target_vendor = "apple")]
+    {
+        use std::os::fd::AsRawFd;
+        // SAFETY: `fsync` only reads the descriptor, which `f` keeps open.
+        if unsafe { libc::fsync(f.as_raw_fd()) } == 0 {
+            Ok(())
+        } else {
+            Err(std::io::Error::last_os_error())
+        }
+    }
+    #[cfg(not(target_vendor = "apple"))]
+    {
+        f.sync_all()
+    }
 }
 
 pub fn read_to_string(path: &Path) -> Result<String> {

@@ -1082,7 +1082,7 @@ impl Core {
         };
         let mut docs = Vec::new();
         let mut ids: HashSet<String> = ch.nodes.clone().into_iter().collect();
-        if ch.lanes {
+        if ch.reindex_lanes {
             // Lane renames change lane_name of every card in them.
             ids.extend(st.nodes.keys().cloned());
         }
