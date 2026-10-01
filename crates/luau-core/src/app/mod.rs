@@ -504,7 +504,8 @@ impl Core {
                     .get(&id)
                     .map(|n| n.meta.title.clone())
                     .unwrap_or_default();
-                self.note_edit(board, &id, before, after, title);
+                let root = s.state.root.clone();
+                self.note_edit(&root, board, &id, before, after, title);
             } else {
                 self.journal(&s.state, kind, label, &op_for_journal, &applied, before_ctx);
             }
@@ -881,7 +882,17 @@ impl Core {
         }
     }
 
-    fn note_edit(&self, board: &str, id: &str, before: String, after: String, title: String) {
+    /// Buffer an edit for coalesced journaling. Called while the board lock is
+    /// held, so it must never lock the board again (`root` is passed in).
+    fn note_edit(
+        &self,
+        root: &Path,
+        board: &str,
+        id: &str,
+        before: String,
+        after: String,
+        title: String,
+    ) {
         let now = Instant::now();
         let mut p = self.pending.lock();
         let key = (board.to_string(), id.to_string());
@@ -891,7 +902,7 @@ impl Core {
         if flush_old {
             let old = p.remove(&key).unwrap();
             drop(p);
-            self.write_edit(board, id, old);
+            Self::write_edit_at(root, board, id, old);
             p = self.pending.lock();
         }
         match p.get_mut(&key) {
@@ -921,6 +932,15 @@ impl Core {
         }
         let Ok(b) = self.board(board) else { return };
         let root = b.lock().state.root.clone();
+        Self::write_edit_at(&root, board, id, e);
+    }
+
+    /// Journal one coalesced edit. Takes no locks.
+    fn write_edit_at(root: &Path, board: &str, id: &str, e: PendingEdit) {
+        if e.before == e.after {
+            return;
+        }
+        let root = root.to_path_buf();
         let before = history::put_blob(&root, &e.before).ok();
         let after = history::put_blob(&root, &e.after).ok();
         let lines_before = e.before.lines().count() as i64;

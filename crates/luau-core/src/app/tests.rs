@@ -292,3 +292,69 @@ fn nested_boards_are_rejected_and_unlinked_files_cleaned() {
     assert_eq!(s.nodes[0].attachments.len(), 1);
     assert_eq!(s.nodes[0].attachments[0].file, att.file);
 }
+
+#[test]
+fn long_edit_session_flush_does_not_deadlock() {
+    // Regression: after 60s of continuous typing, `apply` flushed the pending
+    // edit while holding the board lock and then re-locked the same board.
+    let (d, c, _) = core();
+    let snap = c
+        .create_board(
+            &d.path().join("W"),
+            "W",
+            BoardKind::Kanban,
+            &["A".into()],
+            false,
+        )
+        .unwrap();
+    let b = snap.header.id.clone();
+    let id = c.new_card_id();
+    c.apply(
+        &b,
+        Op::CreateCard {
+            id: id.clone(),
+            parent: Parent::Lane(snap.lanes[0].id.clone()),
+            index: None,
+            content: "# a\n".into(),
+        },
+        "x",
+        None,
+    )
+    .unwrap();
+    c.apply(
+        &b,
+        Op::WriteCard {
+            id: id.clone(),
+            content: "# a1\n".into(),
+        },
+        "Edit",
+        Some("s".into()),
+    )
+    .unwrap();
+    {
+        let mut p = c.pending.lock();
+        let e = p.get_mut(&(b.clone(), id.clone())).expect("pending edit");
+        e.started = Instant::now() - std::time::Duration::from_secs(61);
+    }
+    let (tx, rx) = std::sync::mpsc::channel();
+    let (c2, b2, id2) = (c.clone(), b.clone(), id.clone());
+    std::thread::spawn(move || {
+        let r = c2.apply(
+            &b2,
+            Op::WriteCard {
+                id: id2,
+                content: "# a2\n".into(),
+            },
+            "Edit",
+            Some("s".into()),
+        );
+        tx.send(r.is_ok()).ok();
+    });
+    let ok = rx
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .expect("apply deadlocked");
+    assert!(ok);
+    // The old session was journaled as its own version.
+    let h = c.history(&b, &HistoryFilter::default()).unwrap();
+    assert!(h.iter().any(|e| e.kind == "edit"));
+}

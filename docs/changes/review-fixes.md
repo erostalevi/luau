@@ -35,3 +35,14 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Risk: the updater key path in `release.yml` is now `~/.tauri/luau-updater.key`; rename the local key file:
   `mv ~/.tauri/lull-updater.key ~/.tauri/luau-updater.key` (and `.pub`).
 - Tests: cargo test (186), clippy, svelte-check, vitest (142), i18n; visual check light/dark in the web build.
+
+## B1 — Deadlock after ~60 s of continuous typing (critical)
+
+- File: `crates/luau-core/src/app/mod.rs`, test in `app/tests.rs` (`long_edit_session_flush_does_not_deadlock`).
+- Cause: `Core::apply` holds the board mutex and calls `note_edit`; when the pending edit session was older than
+  60 s, `note_edit` → `write_edit` called `self.board(..).lock()` on the same non-reentrant `parking_lot::Mutex`.
+- Fix: `note_edit` now receives the board root from the caller and journals through the new lock-free
+  `write_edit_at(root, …)`. `write_edit` (used by flush paths that do not hold the lock) resolves the root and
+  delegates. Other `journal_entry` callers were checked: they drop the board lock first.
+- Tests: regression test back-dates a pending edit by 61 s and asserts the next `apply` returns within 10 s and
+  journals an `edit` entry. Reproduced before the fix with the out-of-repo harness (edit #60 hung).
