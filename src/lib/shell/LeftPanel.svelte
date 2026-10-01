@@ -11,6 +11,9 @@
   const HistoryPanel = () => import('$lib/panels/history/HistoryPanel.svelte');
   const IntegrationsPanel = () => import('$lib/panels/integrations/IntegrationsPanel.svelte');
   import ExtensionsPanel from '$lib/panels/extensions/ExtensionsPanel.svelte';
+  import { currentMotion } from '$lib/components/menuPlacement';
+  import { cubicOut } from 'svelte/easing';
+  import type { TransitionConfig } from 'svelte/transition';
 
   const sections = $derived([
     { value: 'explorer' as PanelSection, icon: FolderTree, title: t('panels.explorer') },
@@ -21,6 +24,18 @@
   ]);
 
   const macChrome = isTauri && isMac;
+
+  // Show/hide: the slot grows/shrinks (so the panes beside it follow smoothly)
+  // while the panel slides in from / out to the left edge. Only mount/unmount
+  // animate; drag-resizing changes the width directly. No motion when reduced.
+  function slide(node: HTMLElement): TransitionConfig {
+    const w = node.offsetWidth;
+    return {
+      duration: currentMotion() === 'full' ? 200 : 0,
+      easing: cubicOut,
+      css: (t, u) => `width: ${t * w}px; overflow: hidden; --slide: ${u};`,
+    };
+  }
 
   function startResize(e: PointerEvent) {
     const startX = e.clientX;
@@ -40,35 +55,44 @@
   }
 </script>
 
-<aside class="left" style:width="{ui.left.width}px">
-  <div class="top drag-region" data-tauri-drag-region="deep" class:mac={macChrome}>
-    <span class="grow"></span>
-    <button class="icon-btn no-drag" onclick={() => ((ui.left.visible = false), persistUi())} use:tip={{ text: t('panels.hide'), command: 'panel.toggle' }}>
-      <PanelLeftClose size={16} strokeWidth={1.8} />
-    </button>
-  </div>
-  <div class="selector">
-    <Segmented options={sections} bind:value={ui.left.section} onchange={() => persistUi()} full />
-  </div>
-  <div class="content" data-scroll-scope="left">
-    {#if ui.left.section === 'explorer'}
-      <Explorer />
-    {:else if ui.left.section === 'search'}
-      <SearchPanel />
-    {:else if ui.left.section === 'history'}
-      {#await HistoryPanel() then m}<m.default />{/await}
-    {:else if ui.left.section === 'integrations'}
-      {#await IntegrationsPanel() then m}<m.default />{/await}
-    {:else}
-      <ExtensionsPanel />
-    {/if}
-  </div>
-  <div class="resize" role="separator" aria-orientation="vertical" onpointerdown={startResize}></div>
-</aside>
+<div class="slot" transition:slide>
+  <aside class="left" style:width="{ui.left.width}px">
+    <div class="top drag-region" data-tauri-drag-region="deep" class:mac={macChrome}>
+      <span class="grow"></span>
+      <button class="icon-btn no-drag" onclick={() => ((ui.left.visible = false), persistUi())} use:tip={{ text: t('panels.hide'), command: 'panel.toggle' }}>
+        <PanelLeftClose size={16} strokeWidth={1.8} />
+      </button>
+    </div>
+    <div class="selector">
+      <Segmented options={sections} bind:value={ui.left.section} onchange={() => persistUi()} full />
+    </div>
+    <div class="content" data-scroll-scope="left">
+      {#if ui.left.section === 'explorer'}
+        <Explorer />
+      {:else if ui.left.section === 'search'}
+        <SearchPanel />
+      {:else if ui.left.section === 'history'}
+        {#await HistoryPanel() then m}<m.default />{/await}
+      {:else if ui.left.section === 'integrations'}
+        {#await IntegrationsPanel() then m}<m.default />{/await}
+      {:else}
+        <ExtensionsPanel />
+      {/if}
+    </div>
+    <div class="resize" role="separator" aria-orientation="vertical" onpointerdown={startResize}></div>
+  </aside>
+</div>
 
 <style>
+  .slot {
+    display: flex;
+    flex-shrink: 0;
+    height: 100%;
+  }
   .left {
     position: relative;
+    /* --slide is only set while showing/hiding; otherwise this is invalid, so no transform (and no containing block for fixed popups). */
+    transform: translateX(calc(var(--slide) * -100%));
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -95,10 +119,14 @@
   }
   .selector {
     padding: 2px 10px 8px;
+    min-width: 0;
   }
   .content {
     flex: 1;
     min-height: 0;
+    min-width: 0;
+    /* Nothing a panel lays out may paint over the board beside it (clip, unlike hidden, is not a scroller). */
+    overflow-x: clip;
     display: flex;
     flex-direction: column;
   }

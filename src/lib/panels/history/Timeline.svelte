@@ -255,6 +255,7 @@
     align-items: center;
     gap: 2px;
     padding: 0 10px 6px;
+    min-width: 0;
   }
   .search {
     flex: 1;
@@ -284,16 +285,19 @@
   }
   .selects {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     padding: 0 10px 8px;
+    min-width: 0;
   }
   .field.slim {
-    flex: 1;
+    flex: 1 1 90px;
     min-width: 0;
     height: 28px;
-    padding-top: 0;
-    padding-bottom: 0;
+    padding: 0 24px 0 8px;
+    background-position: right 6px center;
     font-size: var(--fs-sm);
+    text-overflow: ellipsis;
   }
   .focus {
     display: flex;
@@ -402,8 +406,9 @@
   }
   .meta {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 5px;
+    gap: 2px 5px;
     min-width: 0;
     font-size: var(--fs-xs);
     color: var(--ink-3);

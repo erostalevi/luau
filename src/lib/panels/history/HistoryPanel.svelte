@@ -38,8 +38,10 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    min-width: 0;
   }
   .views {
     padding: 0 10px 8px;
+    min-width: 0;
   }
 </style>
