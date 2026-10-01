@@ -252,7 +252,8 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             let id: String = arg(p, "id")?;
             let content: String = arg(p, "content")?;
             let session: Option<String> = opt(p, "session")?;
-            ok(core.write_card(&board, &id, &content, session)?)
+            let base: Option<String> = opt(p, "base")?;
+            ok(core.write_card_checked(&board, &id, &content, session, base.as_deref())?)
         }
         "card.path" => {
             let board: String = arg(p, "board")?;

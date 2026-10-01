@@ -696,6 +696,26 @@ impl Core {
         self.board(board)?.lock().read_content(id)
     }
 
+    /// Like [`write_card`], but refuses (`Conflict("changed_on_disk")`) when the
+    /// file no longer holds `base` — the text the editor last loaded or saved —
+    /// so an external edit is never silently overwritten.
+    pub fn write_card_checked(
+        &self,
+        board: &str,
+        id: &str,
+        content: &str,
+        session: Option<String>,
+        base: Option<&str>,
+    ) -> Result<ApplyResult> {
+        if let Some(base) = base {
+            let disk = self.board(board)?.lock().read_content(id)?;
+            if disk != markdown::normalize(base) {
+                return Err(Error::Conflict("changed_on_disk".into()));
+            }
+        }
+        self.write_card(board, id, content, session)
+    }
+
     pub fn write_card(
         &self,
         board: &str,

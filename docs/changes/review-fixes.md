@@ -258,3 +258,18 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   (`duplicate_board_id`), instead of replacing the original store in memory. "Open folder" catches it and offers
   "Give this copy its own identity" (`board.reassignId`) and then opens the copy.
 - Test: `kind_rules_cover_place_and_batches_and_copies_need_new_ids`.
+
+## D5 — External edits could be lost (medium, data)
+
+- Files: `crates/luau-core/src/store/mod.rs` (`FileSig`, `recently_touched`, `reload_external`,
+  `forget_history_for`, `op_touches`), `app/watch.rs`, `app/mod.rs` (`write_card_checked`),
+  `src-tauri/src/rpc.rs` (`card.write {base}`), `src/lib/editor/Editor.svelte`, test in `app/tests.rs`.
+- Echo suppression: each path we write is recorded with the file's size+mtime right after the write. A watcher
+  event for that file is our echo only if the file still matches (or is gone because we moved it); a real external
+  save within the 2.5 s window is now picked up. Directory touches keep the parent/child rule.
+- Watcher reloads (`reload_external`) drop undo/redo steps that involve the changed cards, so ⌘Z can no longer
+  write an old version over an external edit. Internal reloads (import) keep history.
+- `card.write` accepts `base` (the text the editor last loaded/saved). If the file on disk differs, the write is
+  refused with `changed_on_disk`; the editor then shows the existing conflict banner (keep mine / take theirs).
+  "Keep mine" writes without `base`. When the app itself rewrites the card to the same text the base is updated.
+- Test: `external_edits_are_not_overwritten_or_undone_away`; suite 5× green.

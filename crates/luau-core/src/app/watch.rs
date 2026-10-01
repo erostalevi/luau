@@ -92,7 +92,7 @@ pub fn process(core: &Core, board: &str, paths: &[PathBuf]) {
     if external.is_empty() {
         return;
     }
-    let ch = match s.reload() {
+    let ch = match s.reload_external() {
         Ok(ch) => ch,
         Err(e) => {
             tracing::warn!("reload {board}: {e}");

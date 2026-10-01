@@ -101,7 +101,8 @@ pub struct BoardStore {
     pub state: BoardState,
     undo: Vec<UndoEntry>,
     redo: Vec<UndoEntry>,
-    touched: VecDeque<(PathBuf, Instant)>,
+    /// Paths we wrote recently, with the file's size/mtime right after our write.
+    touched: VecDeque<(PathBuf, Instant, Option<FileSig>)>,
 }
 
 const UNDO_LIMIT: usize = 300;
@@ -188,25 +189,62 @@ impl BoardStore {
         Ok(ch)
     }
 
+    /// Reload after the watcher saw changes made outside the app: also drops the
+    /// undo/redo steps of the cards that changed.
+    pub fn reload_external(&mut self) -> Result<Changes> {
+        let ch = self.reload()?;
+        let ext: BTreeSet<String> = ch.nodes.union(&ch.removed).cloned().collect();
+        self.forget_history_for(&ext);
+        Ok(ch)
+    }
+
     /// Record paths written by us so the watcher can ignore the echo.
     pub(crate) fn touch(&mut self, p: &Path) {
         let now = Instant::now();
         while self
             .touched
             .front()
-            .is_some_and(|(_, t)| now.duration_since(*t) > TOUCH_WINDOW)
+            .is_some_and(|(_, t, _)| now.duration_since(*t) > TOUCH_WINDOW)
         {
             self.touched.pop_front();
         }
-        self.touched.push_back((p.to_path_buf(), now));
+        self.touched.push_back((p.to_path_buf(), now, file_sig(p)));
     }
 
-    /// True when `p` (or a parent/child of it) was written by us recently.
+    /// True when the event for `p` is the echo of our own write. For files we
+    /// wrote, the file must still look exactly as we left it (size + mtime):
+    /// a real external save right after ours is not an echo. Directory writes
+    /// (moves, group folders) keep the parent/child rule.
     pub fn recently_touched(&self, p: &Path) -> bool {
         let now = Instant::now();
-        self.touched.iter().any(|(t, at)| {
-            now.duration_since(*at) <= TOUCH_WINDOW && (p.starts_with(t) || t.starts_with(p))
-        })
+        let mut exact_seen = false;
+        let mut exact_echo = false;
+        let mut dir_echo = false;
+        for (t, at, sig) in &self.touched {
+            if now.duration_since(*at) > TOUCH_WINDOW {
+                continue;
+            }
+            match sig {
+                Some(sig) if t == p => {
+                    exact_seen = true;
+                    // Gone since our write: we moved/removed it ourselves.
+                    exact_echo |= file_sig(p).is_none_or(|now| &now == sig);
+                }
+                Some(_) => {}
+                None => dir_echo |= p.starts_with(t) || t.starts_with(p),
+            }
+        }
+        if exact_seen { exact_echo } else { dir_echo }
+    }
+
+    /// Forget undo/redo steps that involve cards changed outside the app:
+    /// replaying them would overwrite the external edit.
+    pub fn forget_history_for(&mut self, ids: &BTreeSet<String>) {
+        if ids.is_empty() {
+            return;
+        }
+        self.undo.retain(|e| !op_touches(&e.op, ids));
+        self.redo.retain(|e| !op_touches(&e.op, ids));
     }
 
     pub fn delta(&self, ch: &Changes) -> BoardDelta {
@@ -991,3 +1029,27 @@ fn read_meta(
 
 #[cfg(test)]
 mod tests;
+
+/// Size and modification time of a file (None for directories / missing).
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct FileSig(u64, Option<std::time::SystemTime>);
+
+fn file_sig(p: &Path) -> Option<FileSig> {
+    let m = fs::metadata(p).ok()?;
+    m.is_file().then(|| FileSig(m.len(), m.modified().ok()))
+}
+
+/// Whether an op reads or writes any of `ids` (cards).
+fn op_touches(op: &Op, ids: &BTreeSet<String>) -> bool {
+    match op {
+        Op::CreateCard { id, .. } | Op::WriteCard { id, .. } | Op::SetCover { id, .. } => {
+            ids.contains(id)
+        }
+        Op::Move { ids: m, .. } => m.iter().any(|i| ids.contains(i)),
+        Op::Place { items } => items.iter().any(|i| ids.contains(&i.id)),
+        Op::Trash { nodes, .. } => nodes.iter().any(|i| ids.contains(i)),
+        Op::SetArchived { nodes, .. } => nodes.iter().any(|(i, _)| ids.contains(i)),
+        Op::Batch { ops } => ops.iter().any(|o| op_touches(o, ids)),
+        _ => false,
+    }
+}

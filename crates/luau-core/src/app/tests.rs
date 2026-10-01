@@ -561,3 +561,61 @@ fn kind_rules_cover_place_and_batches_and_copies_need_new_ids() {
     assert!(matches!(e, Error::Conflict(ref m) if m.starts_with("duplicate_board_id")));
     assert_eq!(c.board_root(&b).unwrap(), root);
 }
+
+#[test]
+fn external_edits_are_not_overwritten_or_undone_away() {
+    let (d, c, _) = core();
+    let root = d.path().join("E");
+    let snap = c
+        .create_board(&root, "E", BoardKind::Kanban, &["A".into()], false)
+        .unwrap();
+    let b = snap.header.id.clone();
+    let lane = snap.lanes[0].id.clone();
+    let id = c.new_card_id();
+    c.apply(
+        &b,
+        Op::CreateCard {
+            id: id.clone(),
+            parent: Parent::Lane(lane.clone()),
+            index: None,
+            content: "# A\n".into(),
+        },
+        "n",
+        None,
+    )
+    .unwrap();
+    c.write_card(&b, &id, "# A\n\nmine\n", None).unwrap();
+    let file = root.join(&lane).join(format!("{id}.md"));
+    // Our own write is an echo; the same path changed by someone else is not.
+    {
+        let s = c.board(&b).unwrap();
+        assert!(s.lock().recently_touched(&file));
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::fs::write(&file, "# A\n\ntheirs, longer\n").unwrap();
+        assert!(
+            !s.lock().recently_touched(&file),
+            "external save right after ours"
+        );
+        // The reload drops undo steps for the card: undo cannot clobber it.
+        s.lock().reload_external().unwrap();
+        assert!(
+            s.lock()
+                .peek_undo()
+                .is_none_or(|e| !matches!(&e.op, Op::WriteCard { id: x, .. } if *x == id))
+        );
+    }
+    // A stale editor base is refused.
+    let e = c
+        .write_card_checked(&b, &id, "# A\n\nmine again\n", None, Some("# A\n\nmine\n"))
+        .unwrap_err();
+    assert!(matches!(e, Error::Conflict(ref m) if m == "changed_on_disk"));
+    c.write_card_checked(
+        &b,
+        &id,
+        "# A\n\nmerged\n",
+        None,
+        Some("# A\n\ntheirs, longer\n"),
+    )
+    .unwrap();
+    assert!(c.read_card(&b, &id).unwrap().contains("merged"));
+}

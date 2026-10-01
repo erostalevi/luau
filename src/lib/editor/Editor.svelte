@@ -44,6 +44,9 @@
   let target: Target | null = null;
   const targets = new WeakMap<View, Target>();
   const targetOf = (v: View | null) => (v ? (targets.get(v) ?? null) : null);
+  /** Text each view last loaded from / wrote to disk: sent as `base` so the
+   *  backend refuses to overwrite an external edit made in the meantime. */
+  const bases = new WeakMap<View, string>();
   let session = Math.random().toString(36).slice(2, 10);
   const outputs = new Map<string, CodeResult>();
   const previews = new Map<string, Promise<{ title: string; description: string; image: string | null; site: string } | null>>();
@@ -61,7 +64,7 @@
     return `# ${content}`;
   }
 
-  async function save(now = false, v: View | null = view, tg: Target | null = targetOf(v)) {
+  async function save(now = false, v: View | null = view, tg: Target | null = targetOf(v), force = false) {
     if (!v || !tg || readOnly) return;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = null;
@@ -72,12 +75,21 @@
     }
     const doSave = async () => {
       const toWrite = ensureTitle(content);
+      const prevSaved = lastSaved;
       lastSaved = content;
       try {
-        await rpc('card.write', { board: tg.boardId, id: tg.cardId, content: toWrite, session });
+        await rpc('card.write', { board: tg.boardId, id: tg.cardId, content: toWrite, session, base: force ? undefined : bases.get(v) });
+        bases.set(v, toWrite);
         dirty = view && view === v ? view.state.doc.toString() !== lastSaved : false;
       } catch (e) {
         dirty = true;
+        lastSaved = prevSaved;
+        if (String((e as Error).message ?? '').includes('changed_on_disk')) {
+          // Someone else changed the file: let the user choose (banner).
+          const disk = await rpc<string>('card.read', { board: tg.boardId, id: tg.cardId }).catch(() => null);
+          if (disk !== null && view === v) onconflict?.({ mine: content, theirs: disk });
+          return;
+        }
         toast.error(t('editor.saveFailed', { message: (e as Error).message }));
       }
     };
@@ -289,6 +301,7 @@
     });
     view = new EditorView({ state, parent: host! });
     if (target) targets.set(view, target);
+    bases.set(view, content);
     if (settings.get<boolean>('editor.vim')) await setup.applyVim(view, true);
     if (target) setActiveEditor({ view, boardId: target.boardId, cardId: target.cardId });
     if (autofocus) {
@@ -325,6 +338,7 @@
       annotations: [],
     });
     lastSaved = content;
+    bases.set(view, content);
     dirty = false;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = null;
@@ -337,7 +351,9 @@
 
   export function keepMine() {
     onconflict?.(null);
-    void save(true);
+    // Explicit choice: overwrite whatever is on disk now.
+    lastSaved = '';
+    void save(true, view, targetOf(view), true);
   }
 
   export async function flush() {
@@ -374,7 +390,10 @@
       void rpc<string>('card.read', { board: boardId, id: cardId }).then((disk) => {
         if (!view) return;
         const current = view.state.doc.toString();
-        if (disk === current || ensureTitle(current) === disk || disk === lastSaved || ensureTitle(lastSaved) === disk) return;
+        if (disk === current || ensureTitle(current) === disk || disk === lastSaved || ensureTitle(lastSaved) === disk) {
+          bases.set(view, disk); // disk matches us: it is the new base
+          return;
+        }
         if (!dirty) replaceDoc(disk);
         else onconflict?.({ mine: current, theirs: disk });
       });
