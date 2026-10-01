@@ -76,7 +76,7 @@ export default {
       discovery: 'Board discovery',
       search: 'Search',
       history: 'History',
-      ai: 'Local AI & summaries',
+      ai: 'AI & summaries',
       integrations: 'Integrations',
       keyboard: 'Keyboard',
       export: 'Export',

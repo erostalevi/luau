@@ -33,6 +33,8 @@
 
   let host: HTMLDivElement | undefined = $state();
   let view: View | null = null;
+  /** False until the first CodeMirror view is mounted (shows a placeholder). */
+  let ready = $state(false);
   let setup: typeof import('./cm/setup') | null = null;
   let loadedFor = '';
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -304,6 +306,7 @@
       onSelection: (has) => (cmdCtx.editorHasSelection = has),
     });
     view = new EditorView({ state, parent: host! });
+    ready = true;
     if (target) targets.set(view, target);
     bases.set(view, content);
     if (settings.get<boolean>('editor.vim')) await setup.applyVim(view, true);
@@ -412,6 +415,7 @@
     for (const m of boards.values()) sig += m.version;
     void sig;
     void i18n.locale;
+    void theme.dark; // diagrams follow light/dark
     untrack(() => view?.dispatch({ effects: refreshPreview.of(null) }));
   });
 
@@ -450,7 +454,11 @@
 
 </script>
 
-<div class="luau-editor" class:full-width={fullWidth || settings.get<boolean>('editor.fullWidth')} bind:this={host}></div>
+<div class="luau-editor" class:full-width={fullWidth || settings.get<boolean>('editor.fullWidth')} bind:this={host}>
+  {#if !ready}
+    <div class="loading" aria-hidden="true"><span class="l1"></span><span class="l2"></span><span class="l3"></span></div>
+  {/if}
+</div>
 
 <style>
   .luau-editor {
@@ -459,6 +467,37 @@
     display: flex;
     flex-direction: column;
     user-select: text;
+  }
+  /* Placeholder while the editor bundle loads (first open only). */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: min(var(--editor-w), 100%);
+    margin: 28px auto 0;
+    padding: 0 56px;
+    animation: pulse 1.2s var(--ease) infinite alternate;
+  }
+  .loading span {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--bg-hover);
+  }
+  .loading .l1 {
+    width: 55%;
+    height: 26px;
+    border-radius: 8px;
+  }
+  .loading .l2 {
+    width: 90%;
+  }
+  .loading .l3 {
+    width: 70%;
+  }
+  @keyframes pulse {
+    to {
+      opacity: 0.45;
+    }
   }
   .luau-editor :global(.cm-editor) {
     flex: 1;

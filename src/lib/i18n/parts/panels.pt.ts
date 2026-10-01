@@ -63,7 +63,7 @@ export default {
     reorderPinnedOnly: 'Quadros fixados só podem ser reordenados entre fixados.',
   },
   searchPanel: {
-    placeholder: 'Pesquisar cartões e documentos…',
+    placeholder: 'Pesquisar…',
     results: { one: '{count} resultado', other: '{count} resultados' },
     noResults: 'Nada corresponde a esta pesquisa.',
     failed: 'A pesquisa falhou',
@@ -130,8 +130,22 @@ export default {
     openAsBoard: 'Abrir como quadro',
     revealInExplorer: 'Mostrar no explorador',
     syntaxTitle: 'Sintaxe de pesquisa',
-    syntaxHint:
-      'As palavras correspondem em qualquer lugar. Use "aspas" para frases, -palavra para excluir e filtros como board:Trabalho lane:Fazendo tag:ui is:open has:image priority:high @ana due:<2026-10-01 updated:>2026-09-01 in:title case:yes.',
+    syntaxHint: 'As palavras combinam em qualquer lugar. Clique em um filtro para adicioná-lo:',
+    ex: {
+      tag: 'Tem uma etiqueta',
+      board: 'Em um quadro',
+      lane: 'Em uma lista',
+      state: 'Aberto, concluído ou arquivado',
+      due: 'Vence: atrasado, hoje, <data',
+      priority: 'Prioridade',
+      person: 'Menções e responsáveis',
+      has: 'Com imagens ou arquivos',
+      updated: 'Alterado desde uma data',
+      phrase: 'Frase exata',
+      exclude: 'Excluir',
+      title: 'Só títulos',
+      case: 'Diferenciar maiúsculas',
+    },
   },
   vboard: {
     byTag: 'Por etiqueta',

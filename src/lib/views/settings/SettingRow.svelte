@@ -95,8 +95,10 @@
 <style>
   .setting {
     position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    /* Text and control share a line while the text keeps ≥ 15rem; otherwise the
+       control wraps below instead of squeezing the description. */
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--sp-2) var(--sp-6);
     padding: var(--sp-4) var(--sp-5) var(--sp-4) var(--sp-6);
@@ -108,7 +110,8 @@
     background: var(--bg-hover);
   }
   .setting.wide {
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column;
+    align-items: stretch;
   }
   .dot {
     position: absolute;
@@ -129,6 +132,7 @@
     transform: scale(1);
   }
   .text {
+    flex: 1 1 15rem;
     min-width: 0;
   }
   .head {
@@ -170,6 +174,8 @@
     justify-content: flex-end;
     gap: var(--sp-2);
     min-width: 0;
+    max-width: 100%;
+    margin-left: auto;
   }
   .wide .control {
     justify-content: flex-start;

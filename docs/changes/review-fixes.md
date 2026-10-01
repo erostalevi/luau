@@ -364,3 +364,21 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Dialogs: the "don't ask again" checkbox state is per dialog, never carried over to the next confirmation.
 - Quick input's accessible label is translated.
 - Tests (web build): cheat sheet focused → Esc closes; palette focus stays inside on Tab.
+
+## E3 — Visual polish
+
+- Files: `src/lib/views/settings/SettingRow.svelte`, `src/lib/panels/search/SearchPanel.svelte`,
+  `src/lib/i18n/parts/panels.{en,es,pt}.ts`, `prefs.{en,es,pt}.ts`, `src/lib/editor/Editor.svelte`,
+  `src/lib/editor/cm/widgets.ts`, `src/lib/markdown/render.ts`, `src/lib/app/bootstrap.ts`.
+- Settings rows wrap: the control moves below the text when the description would get narrower than 15rem
+  (Language and other segmented controls no longer squeeze their description).
+- Settings category "Local AI & summaries" → "AI & summaries" (no truncation; es/pt too).
+- Search panel: short placeholder ("Search…"); the syntax help is a two-column list (filter chip + what it does,
+  translated); chips render without font ligatures (`>=` instead of `⩾`).
+- Editor: soft skeleton while the editor bundle loads, and the bundle is preloaded when the app is idle — no more
+  empty white sheet on first open.
+- Mermaid diagrams re-render with the right theme after a light/dark switch (live preview and rendered views);
+  rendered views keep the Inter font.
+- `[[` card-link autocomplete was re-tested key by key and works (the earlier report came from the test tool
+  typing whole strings).
+- Tests: visual checks in the web build (light theme).

@@ -63,7 +63,7 @@ export default {
     reorderPinnedOnly: 'Los tableros fijados solo se pueden reordenar entre fijados.',
   },
   searchPanel: {
-    placeholder: 'Buscar tarjetas y documentos…',
+    placeholder: 'Buscar…',
     results: { one: '{count} resultado', other: '{count} resultados' },
     noResults: 'Nada coincide con esta búsqueda.',
     failed: 'La búsqueda falló',
@@ -130,8 +130,22 @@ export default {
     openAsBoard: 'Abrir como tablero',
     revealInExplorer: 'Mostrar en el explorador',
     syntaxTitle: 'Sintaxis de búsqueda',
-    syntaxHint:
-      'Las palabras coinciden en cualquier parte. Usa "comillas" para frases, -palabra para excluir y filtros como board:Trabajo lane:Haciendo tag:ui is:open has:image priority:high @ana due:<2026-10-01 updated:>2026-09-01 in:title case:yes.',
+    syntaxHint: 'Las palabras coinciden en cualquier parte. Haz clic en un filtro para agregarlo:',
+    ex: {
+      tag: 'Tiene una etiqueta',
+      board: 'En un tablero',
+      lane: 'En una lista',
+      state: 'Abierta, hecha o archivada',
+      due: 'Vence: atrasada, hoy, <fecha',
+      priority: 'Prioridad',
+      person: 'Menciones y responsables',
+      has: 'Con imágenes o archivos',
+      updated: 'Cambiada desde una fecha',
+      phrase: 'Frase exacta',
+      exclude: 'Excluir',
+      title: 'Solo títulos',
+      case: 'Distinguir mayúsculas',
+    },
   },
   vboard: {
     byTag: 'Por etiqueta',

@@ -109,6 +109,9 @@ export async function bootstrap() {
   if (tabParam) await openCarriedTab(tabParam);
   if (!allTabs().length && settings.get('general.startPage') !== 'none') openSingleton('start');
   ui.firstRun = !settings.get<boolean>('general.firstRunDone');
+  // Warm the editor bundle while idle so the first card opens instantly.
+  const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1500));
+  idle(() => void import('$lib/editor/cm/setup').catch(() => undefined));
   if (import.meta.env.DEV) {
     const [{ boards }, { dnd }, { selection }, { ws }, reg] = await Promise.all([
       import('$lib/state/boards.svelte'),

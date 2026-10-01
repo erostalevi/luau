@@ -79,7 +79,7 @@ export default {
       discovery: 'Búsqueda de tableros',
       search: 'Búsqueda',
       history: 'Historial',
-      ai: 'IA local y resúmenes',
+      ai: 'IA y resúmenes',
       integrations: 'Integraciones',
       keyboard: 'Teclado',
       export: 'Exportación',

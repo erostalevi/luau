@@ -79,7 +79,7 @@ export default {
       discovery: 'Descoberta de quadros',
       search: 'Pesquisa',
       history: 'Histórico',
-      ai: 'IA local e resumos',
+      ai: 'IA e resumos',
       integrations: 'Integrações',
       keyboard: 'Teclado',
       export: 'Exportação',

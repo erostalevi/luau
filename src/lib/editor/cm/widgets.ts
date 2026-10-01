@@ -496,27 +496,31 @@ export class MathWidget extends WidgetType {
 
 let mermaidReady: Promise<typeof import('mermaid')['default']> | null = null;
 let mermaidSeq = 0;
+let mermaidDark: boolean | null = null;
 function loadMermaid(dark: boolean) {
-  if (!mermaidReady) {
-    mermaidReady = import('mermaid').then((m) => {
-      m.default.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'neutral', fontFamily: 'Inter Variable, system-ui' });
-      return m.default;
-    });
-  }
-  return mermaidReady;
+  mermaidReady ??= import('mermaid').then((m) => m.default);
+  return mermaidReady.then((m) => {
+    // Re-initialize when the theme changed since the last diagram.
+    if (mermaidDark !== dark) {
+      m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'neutral', fontFamily: 'Inter Variable, system-ui' });
+      mermaidDark = dark;
+    }
+    return m;
+  });
 }
 
 export class MermaidWidget extends WidgetType {
+  readonly dark = document.documentElement.dataset.theme === 'dark';
   constructor(readonly code: string) {
     super();
   }
   eq(o: MermaidWidget) {
-    return o.code === this.code;
+    return o.code === this.code && o.dark === this.dark;
   }
   toDOM() {
     const box = el('div', 'cm-mermaid');
     box.textContent = '…';
-    const dark = document.documentElement.dataset.theme === 'dark';
+    const dark = this.dark;
     void loadMermaid(dark).then(async (m) => {
       try {
         const { svg } = await m.render(`luau-mermaid-${++mermaidSeq}`, this.code);

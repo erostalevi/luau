@@ -181,7 +181,7 @@ export async function enhanceRendered(root: HTMLElement) {
   const diagrams = root.querySelectorAll<HTMLElement>('.mermaid-src');
   if (diagrams.length) {
     const m = (await import('mermaid')).default;
-    m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'neutral' });
+    m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'neutral', fontFamily: 'Inter Variable, system-ui' });
     let n = 0;
     for (const el of diagrams) {
       try {

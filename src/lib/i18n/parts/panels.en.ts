@@ -63,7 +63,7 @@ export default {
     reorderPinnedOnly: 'Pinned boards can only be reordered among pinned boards.',
   },
   searchPanel: {
-    placeholder: 'Search cards and documents…',
+    placeholder: 'Search…',
     results: { one: '{count} result', other: '{count} results' },
     noResults: 'Nothing matches this search.',
     failed: 'Search failed',
@@ -130,8 +130,22 @@ export default {
     openAsBoard: 'Open as board',
     revealInExplorer: 'Reveal in explorer',
     syntaxTitle: 'Search syntax',
-    syntaxHint:
-      'Words match anywhere. Use "quotes" for phrases, -word to exclude, and filters like board:Work lane:Doing tag:ui is:open has:image priority:high @ana due:<2026-10-01 updated:>2026-09-01 in:title case:yes.',
+    syntaxHint: 'Words match anywhere. Click a filter to add it:',
+    ex: {
+      tag: 'Has a tag',
+      board: 'In a board',
+      lane: 'In a lane',
+      state: 'Open, done or archived',
+      due: 'Due: overdue, today, <date',
+      priority: 'Priority',
+      person: 'Mentions and assignees',
+      has: 'With images or files',
+      updated: 'Changed since a date',
+      phrase: 'Exact phrase',
+      exclude: 'Leave out',
+      title: 'Titles only',
+      case: 'Match case',
+    },
   },
   vboard: {
     byTag: 'By tag',

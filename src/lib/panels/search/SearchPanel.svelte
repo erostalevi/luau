@@ -189,7 +189,7 @@
     return { title: highlightSegments(h.title || t('common.untitled'), terms, caseOn), snippet: snip };
   }
 
-  const EXAMPLES = ['tag:design', 'is:open', 'due:overdue', 'board:"Product Roadmap"', '@ana', '"exact phrase"', '-tag:wip', 'updated:>=2026-09-01', 'has:image', 'in:title'];
+  const EXAMPLES: [string, string][] = [['tag', 'tag:design'], ['board', 'board:"Product Roadmap"'], ['lane', 'lane:Doing'], ['state', 'is:open'], ['due', 'due:overdue'], ['priority', 'priority:high'], ['person', '@ana'], ['has', 'has:image'], ['updated', 'updated:>=2026-09-01'], ['phrase', '"exact phrase"'], ['exclude', '-tag:wip'], ['title', 'in:title'], ['case', 'case:yes']];
 
   function addExample(ex: string) {
     setText(search.q.trim() ? `${search.q.trim()} ${ex}` : ex);
@@ -292,8 +292,8 @@
         <div class="section-title">{t('searchPanel.syntaxTitle')}</div>
         <p class="hint">{t('searchPanel.syntaxHint')}</p>
         <div class="examples">
-          {#each EXAMPLES as ex (ex)}
-            <button class="ex" onclick={() => addExample(ex)}>{ex}</button>
+          {#each EXAMPLES as [id, ex] (id)}
+            <button class="ex" onclick={() => addExample(ex)}><code>{ex}</code><span>{t(`searchPanel.ex.${id}`)}</span></button>
           {/each}
         </div>
       </div>
@@ -552,22 +552,41 @@
     line-height: var(--lh);
   }
   .examples {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 10px;
     margin-top: 8px;
   }
   .ex {
-    height: 22px;
-    padding: 0 8px;
+    display: contents;
     border: none;
+    background: none;
+  }
+  .ex code,
+  .ex span {
+    padding: 3px 0;
+    cursor: pointer;
+    text-align: left;
+  }
+  .ex code {
+    justify-self: start;
+    align-self: start;
+    padding: 2px 7px;
     border-radius: var(--r-xs);
     background: var(--bg-hover);
     color: var(--ink-2);
     font-family: var(--font-mono);
     font-size: 11px;
+    font-variant-ligatures: none;
+    white-space: nowrap;
   }
-  .ex:hover {
+  .ex span {
+    color: var(--ink-3);
+    font-size: var(--fs-xs);
+    line-height: 1.35;
+    align-self: start;
+  }
+  .ex:hover code {
     background: var(--primary-soft);
     color: var(--primary-strong);
   }
