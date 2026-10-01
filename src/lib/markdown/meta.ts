@@ -3,8 +3,8 @@
 
 import type { Face, FaceItem, Footer, Heading, LinkRef, TaskStats } from '$lib/backend/types';
 
-const TAG_RE = /(^|[\s(\[,;])#([\p{L}\p{N}_/-]+)/gmu;
-const MENTION_RE = /(^|[\s(\[,;])@([\p{L}\p{N}][\p{L}\p{N}_.-]*)/gmu;
+const TAG_RE = /(^|[\s([,;])#([\p{L}\p{N}_/-]+)/gmu;
+const MENTION_RE = /(^|[\s([,;])@([\p{L}\p{N}][\p{L}\p{N}_.-]*)/gmu;
 const LINK_RE = /(!?)\[\[([^[\]\n]+?)\]\]/g;
 const DATE_RE = /\[(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?\]/g;
 const CARD_ID_RE = /^c[a-z0-9]{6}$/;
@@ -154,7 +154,7 @@ function stripInline(s: string): string {
 }
 
 export function parseMeta(content: string): ParsedMeta {
-  const src = content.replace(/^﻿/, '').replace(/\r\n/g, '\n');
+  const src = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   const lines = src.split('\n');
   const footer = parseFooter(lines);
   const bodyLines = lines.slice(0, footer.startLine ?? lines.length);

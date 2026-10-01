@@ -14,7 +14,6 @@ import { toast } from '$lib/state/toasts.svelte';
 import { setLocale, LOCALES, detectLocale, t, type Locale } from '$lib/i18n/index.svelte';
 import { pickSavePath, reveal } from '$lib/app/helpers';
 import { app } from '$lib/app/bootstrap';
-import { registry } from '$lib/state/registry.svelte';
 
 async function toggleSetting(key: string, onKey: string, offKey: string) {
   settings.toggle(key);

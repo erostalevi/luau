@@ -1,4 +1,4 @@
-import { LayoutGrid, FileText, FolderOpen, Plus, Pencil, Rows3, Columns3, Archive, FolderSearch, Pin, EyeOff, Repeat, Diamond, Space } from '@lucide/svelte';
+import { LayoutGrid, FileText, FolderOpen, Plus, Pencil, Rows3, Archive, FolderSearch, Pin, EyeOff, Repeat, Diamond, Space } from '@lucide/svelte';
 import type { Command } from '../registry.svelte';
 import { rpc } from '$lib/backend/rpc';
 import type { BoardSnapshot, Op, Parent } from '$lib/backend/types';

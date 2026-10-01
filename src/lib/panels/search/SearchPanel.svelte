@@ -314,7 +314,6 @@
       <button class="icon-btn sm" aria-label={t('searchPanel.openAsBoard')} use:tip={t('searchPanel.openAsBoard')} onclick={() => openSavedBoard({ q: search.q, groupBy: search.groupBy })}><LayoutGrid size={13} /></button>
       <button class="icon-btn sm" aria-label={t('commands.search.saveCurrent')} use:tip={{ text: t('commands.search.saveCurrent'), command: 'search.saveCurrent' }} onclick={() => void saveCurrent()}><BookmarkPlus size={14} /></button>
     </div>
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <div class="scroll results" id="search-results" role="listbox" aria-label={t('panels.search')} tabindex="0" bind:this={listEl} onkeydown={onKeydown}>
       {#if failed}
         <div class="empty small">{failed}</div>

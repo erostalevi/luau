@@ -92,9 +92,9 @@ export function parseNaturalDate(input: string, now = new Date()): string | null
     }
   }
   if (day !== null && month !== null && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
-    let y = year ?? today.getFullYear();
+    const y = year ?? today.getFullYear();
     let d = new Date(y, month, day);
-    if (year === null && d < addDays(today, -30)) d = new Date(++y, month, day);
+    if (year === null && d < addDays(today, -30)) d = new Date(y + 1, month, day);
     if (d.getMonth() !== month) return null;
     return iso(d);
   }

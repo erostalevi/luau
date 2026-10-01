@@ -387,7 +387,6 @@
     </div>
   {:else}
     <div class="scroller" bind:this={scroller} bind:clientHeight={viewH} onscroll={() => (scrollTop = scroller?.scrollTop ?? 0)} data-autoscroll>
-      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <div
         class="tree"
         bind:this={treeEl}

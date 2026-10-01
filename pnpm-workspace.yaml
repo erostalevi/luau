@@ -1,0 +1,8 @@
+# pnpm settings (pnpm ≥ 11 reads them here, not from package.json).
+packages:
+  - .
+allowBuilds:
+  esbuild: true
+overrides:
+  # Security advisories for lodash-es < 4.18.1 (via mermaid → chevrotain).
+  lodash-es: '>=4.18.1'

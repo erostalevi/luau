@@ -46,7 +46,7 @@
   async function pickTransition(e: MouseEvent) {
     if (!remote) return;
     const anchor = e.currentTarget as HTMLElement;
-    let list: Transition[] = [];
+    let list: Transition[];
     try {
       list = await rpc<Transition[]>('remote.transitions', { account: remote.account, key: remote.key });
     } catch (err) {
@@ -129,6 +129,7 @@
           <article class="comment">
             <header><strong>{c.author?.name ?? '—'}</strong>{#if c.created}<span class="muted small">{relTime(c.created)}</span>{/if}</header>
             <!-- Raw HTML is disabled in the renderer, so remote text cannot inject markup. -->
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown-it with html:false; links are validated -->
             <div class="md">{@html renderMarkdown(c.bodyMd, MD_OPTS)}</div>
           </article>
         {/each}

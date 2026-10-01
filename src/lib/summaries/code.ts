@@ -20,7 +20,7 @@ export async function runCodeCell(lang: string, code: string, board: string | un
     if (isTauri) await rpc('code.trust', args).catch(() => Promise.reject(new Error(t('code.trustMessage'))));
     else {
       const ok = await confirm({ title: t('code.trustTitle'), message: t('code.trustMessage'), confirmLabel: t('code.trustConfirm'), cancelFocused: true });
-      if (!ok) throw new Error(t('code.trustMessage'));
+      if (!ok) throw new Error(t('code.trustMessage'), { cause: e });
       await rpc('code.trust', args);
     }
     return run();

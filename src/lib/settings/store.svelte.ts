@@ -4,7 +4,7 @@ import { rpc } from '$lib/backend/rpc';
 import { CORE_SETTINGS, type SettingDef } from './schema';
 
 const defs = new Map<string, SettingDef>(CORE_SETTINGS.map((d) => [d.key, d]));
-let values = $state<Record<string, unknown>>({});
+const values = $state<Record<string, unknown>>({});
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const settings = {

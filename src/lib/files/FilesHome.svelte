@@ -154,7 +154,6 @@
     {:else if !docs.length}
       <div class="empty"><span>{t('filesHome.noMatch')}</span></div>
     {:else}
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <ul class="docs {layout}" bind:this={listEl} role="listbox" tabindex="-1" aria-label={t('filesHome.documents')} onkeydown={onListKey}>
         {#each docs as d, i (d.id)}
           <li

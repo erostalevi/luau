@@ -16,7 +16,7 @@
   const c = $derived(custom ? tintFromHex(custom, theme.dark) : pastel(tagHue(tag), theme.dark));
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <span
   class="chip tag"
   class:outline

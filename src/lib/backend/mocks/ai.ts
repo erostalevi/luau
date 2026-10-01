@@ -140,7 +140,7 @@ export function register(methods: Methods, api: MockApi) {
     return { ok: true, stdout: `(mock) would run ${String(p.lang)} code (${String(p.code ?? '').length} chars)\n`, stderr: '', images: [], ms: 1, exitCode: 0, timedOut: false, truncated: false };
   };
   methods['web.preview'] = (p) => {
-    let host = '';
+    let host: string;
     try {
       host = new URL(String(p.url)).hostname;
     } catch {

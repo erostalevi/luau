@@ -46,6 +46,7 @@ export function extensionOf(format: ExportFormat): string {
 /** Portable file name for an export (no path separators or reserved characters). */
 export function exportFileName(title: string, format: ExportFormat): string {
   let stem = title
+    // eslint-disable-next-line no-control-regex -- strip control characters from file names
     .replace(/[\\/:*?"<>|#[\]\u0000-\u001f]/g, '-')
     .replace(/\s+/g, ' ')
     .trim()

@@ -319,7 +319,10 @@ export function register(methods: Methods, api: MockApi) {
           Object.assign(i, { status: st.name, statusId: st.id, statusCategory: st.cat, updated: new Date().toISOString() });
           for (const [b, map] of links) {
             let touched = false;
-            for (const [card, info0] of Object.entries(map)) if (info0.key === key) ((map[card] = info(i, info0.mirror)), (touched = true));
+            for (const [card, info0] of Object.entries(map)) if (info0.key === key) {
+              map[card] = info(i, info0.mirror);
+              touched = true;
+            }
             if (touched) mirrorIds().has(b) ? mirrorSync(b) : emitLinks(b);
           }
           return { key };

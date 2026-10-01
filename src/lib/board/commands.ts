@@ -68,10 +68,19 @@ function navigate(dir: 'up' | 'down' | 'left' | 'right', extend = false) {
     const oy = o.top + o.height / 2;
     let ok = false;
     let score = 0;
-    if (dir === 'down') (ok = o.top >= r.top + 4 && oy > cy), (score = oy - cy + Math.abs(ox - cx) * 3);
-    if (dir === 'up') (ok = o.bottom <= r.bottom - 4 && oy < cy), (score = cy - oy + Math.abs(ox - cx) * 3);
-    if (dir === 'right') (ok = o.left >= r.right - 4), (score = ox - cx + Math.abs(oy - cy) * 1.5);
-    if (dir === 'left') (ok = o.right <= r.left + 4), (score = cx - ox + Math.abs(oy - cy) * 1.5);
+    if (dir === 'down') {
+      ok = o.top >= r.top + 4 && oy > cy;
+      score = oy - cy + Math.abs(ox - cx) * 3;
+    } else if (dir === 'up') {
+      ok = o.bottom <= r.bottom - 4 && oy < cy;
+      score = cy - oy + Math.abs(ox - cx) * 3;
+    } else if (dir === 'right') {
+      ok = o.left >= r.right - 4;
+      score = ox - cx + Math.abs(oy - cy) * 1.5;
+    } else if (dir === 'left') {
+      ok = o.right <= r.left + 4;
+      score = cx - ox + Math.abs(oy - cy) * 1.5;
+    }
     if (ok && (!best || score < best.score)) best = { id: el.dataset.card!, score };
   }
   if (!best) return;

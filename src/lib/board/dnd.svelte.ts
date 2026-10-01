@@ -411,7 +411,7 @@ async function drop(src: DragSource, tg: DropTarget) {
 /** "After" in the explorer tree: the next sibling row that is not being dragged
  *  (dropping "before" a dragged card makes the move fail). */
 function nextUndraggedSibling(row: HTMLElement, dragged: string[]): string | null {
-  let next = row.dataset.next ?? null;
+  const next = row.dataset.next ?? null;
   if (!next || !dragged.includes(next)) return next;
   const same = [...document.querySelectorAll<HTMLElement>('[data-tree][data-id]')].filter(
     (r) => r.dataset.board === row.dataset.board && r.dataset.parentKind === row.dataset.parentKind && r.dataset.parentId === row.dataset.parentId,

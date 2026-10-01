@@ -33,7 +33,7 @@ function inlineRule(name: string, re: RegExp, prev: (s: string, pos: number) => 
   };
 }
 
-const wordBoundary = (s: string, pos: number) => pos === 0 || /[\s(\[,;]/.test(s[pos - 1]);
+const wordBoundary = (s: string, pos: number) => pos === 0 || /[\s([,;]/.test(s[pos - 1]);
 
 export function createRenderer(o: RenderOptions): MarkdownIt {
   const md = new MarkdownItFactory({ html: false, linkify: true, typographer: false, breaks: false });
@@ -51,7 +51,7 @@ export function createRenderer(o: RenderOptions): MarkdownIt {
     if (state.src.slice(pos, pos + 2) !== '$$') return false;
     let line = start;
     const first = state.src.slice(pos + 2, state.eMarks[start]);
-    let content = '';
+    let content: string;
     if (first.trim().endsWith('$$') && first.trim().length > 2) content = first.trim().slice(0, -2);
     else {
       content = first;

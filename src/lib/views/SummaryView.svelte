@@ -332,6 +332,7 @@
             </div>
           </div>
           <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -- renderMarkdown: markdown-it with html:false -->
           <article class="md-out" onclick={onOutputClick}>{@html html}</article>
         {:else}
           <div class="empty">

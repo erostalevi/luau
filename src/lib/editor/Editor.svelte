@@ -8,7 +8,7 @@
   import { ctx as cmdCtx } from '$lib/commands/context.svelte';
   import { resolveTitle, lookupCard } from '$lib/links/titles.svelte';
   import { openCardById } from '$lib/app/open';
-  import { openExternal, reveal, pickFile } from '$lib/app/helpers';
+  import { openExternal, pickFile } from '$lib/app/helpers';
   import { cardFileUrl, attachmentDirRel } from '$lib/board/paths';
   import { tagHue } from '$lib/markdown/meta';
   import { pastel } from '$lib/theme/color';
@@ -109,7 +109,7 @@
   async function resolveTitleLinks(v: View | null = view) {
     if (!v || readOnly) return;
     const doc = v.state.doc.toString();
-    const found = [...doc.matchAll(/(!?)\[\[([^\[\]\n|#]+)((?:#[^\]\n|]*)?(?:\|[^\]\n]*)?)\]\]/g)].filter((m) => !/^c[a-z0-9]{6}$/.test(m[2].trim()));
+    const found = [...doc.matchAll(/(!?)\[\[([^[\]\n|#]+)((?:#[^\]\n|]*)?(?:\|[^\]\n]*)?)\]\]/g)].filter((m) => !/^c[a-z0-9]{6}$/.test(m[2].trim()));
     if (!found.length) return;
     const changes: { from: number; to: number; insert: string }[] = [];
     for (const m of found) {

@@ -5,7 +5,6 @@
   import { isSelected, select, selection, selectMany } from '$lib/state/selection.svelte';
   import { openMenu } from '$lib/state/menu.svelte';
   import { settings } from '$lib/settings/store.svelte';
-  import { ui } from '$lib/state/ui.svelte';
   import { contributions } from '$lib/contributions/registry.svelte';
   import { openCard } from '$lib/app/open';
   import { fmtDate, t } from '$lib/i18n/index.svelte';
@@ -19,7 +18,7 @@
   import { cardFileUrl } from './paths';
   import type { CompiledFilter } from './filter';
 
-  let { boardId, id, depth = 0, flow = 'y' }: { boardId: string; id: string; depth?: number; flow?: 'x' | 'y' } = $props();
+  let { boardId, id, depth = 0, flow: _flow = 'y' }: { boardId: string; id: string; depth?: number; flow?: 'x' | 'y' } = $props();
 
   const model = $derived(boards.get(boardId));
   const node = $derived(model?.nodes.get(id));
@@ -29,7 +28,6 @@
   const renaming = $derived(boardUi.renamingCard === id);
   const filter = getContext<() => CompiledFilter>('boardFilter');
   const dim = $derived(!!filter && node ? !filter().empty && !filter().test(node, remote) && !(node.isGroup && model?.descendants(id).some((d) => { const dn = model.nodes.get(d); return dn && filter().test(dn, model.remote.get(d)); })) : false);
-  const readOnly = $derived(!!model?.header.readOnly);
   const copyOnly = $derived(!!model?.header.readOnly && model?.header.readOnly.startsWith('mirror'));
   const today = new Date().toISOString().slice(0, 10);
   const due = $derived(node ? (node.footer.due ?? node.dates[0] ?? null) : null);
