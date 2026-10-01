@@ -54,12 +54,11 @@
         </section>
       {/each}
     </main>
-    <CardEditorHost mode="sidebar" />
+    <CardEditorHost />
   </div>
   <StatusBar />
 </div>
 
-<CardEditorHost mode="modal" />
 <QuickInput />
 <ContextMenu />
 <Dialogs />
@@ -78,6 +77,8 @@
     flex: 1;
     min-height: 0;
     display: flex;
+    /* Containing block for the docked card editor (laid over its slot). */
+    position: relative;
   }
   .panes {
     flex: 1;
