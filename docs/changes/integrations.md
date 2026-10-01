@@ -10,7 +10,7 @@ Z") and is gated by "allow push / allow pull" toggles.
 
 ## Files
 
-Rust core (`crates/lull-core/src/integrations/`, feature folder):
+Rust core (`crates/luau-core/src/integrations/`, feature folder):
 
 | File | Role |
 |---|---|
@@ -24,7 +24,7 @@ Rust core (`crates/lull-core/src/integrations/`, feature folder):
 | `trello.rs` | Trello adapter (key + token in `Authorization: OAuth …` header); lists act as statuses |
 | `slack.rs` | `auth.test`, `conversations.list` (cursor pagination), `chat.postMessage` |
 | `provider.rs` | the `IssueProvider` port as an enum (`Provider::Jira | Trello`) + capabilities |
-| `links.rs` | `<board>/.lull/remote.json`: card ↔ issue links, mirror state, private notes path, card compose/split |
+| `links.rs` | `<board>/.luau/remote.json`: card ↔ issue links, mirror state, private notes path, card compose/split |
 | `mirror.rs` | desired-state computation (lanes = board columns / statuses / Trello lists), plan (change rows), idempotent apply |
 | `gate.rs` | WriteGate: `prepare` → single-use token (10 min TTL) → `take` on commit |
 | `service.rs` | application layer: connect/test/remove/update accounts, search, linked copies, copy-from-mirror, refresh strips, mirrors CRUD + sync, prepare/commit, images, notes, watch loop |
@@ -36,14 +36,14 @@ Other files:
 | `src-tauri/src/integrations_rpc.rs` | RPC dispatch for `integrations.*`, `remote.*`, `slack.*` (all async) |
 | `src/lib/integrations/*` | `types.ts`, `state.svelte.ts`, `actions.ts`, `gate.ts`, `message.ts` (+ test), `RemoteStrip.svelte`, `RemoteHeader.svelte`, `integrations.commands.ts` |
 | `src/lib/panels/integrations/IntegrationsPanel.svelte` | panel UI |
-| `src/lib/backend/mocks/integrations.ts` | browser mock with a fake Jira project `LULL` |
+| `src/lib/backend/mocks/integrations.ts` | browser mock with a fake Jira project `LUAU` |
 | `src/lib/i18n/parts/integrations.{en,es,pt}.ts` | strings |
 
 ### Shared files touched (surgical, for merging)
 
-- `src-tauri/src/lib.rs`: one line `lull_core::integrations::start_watcher(core.clone());` in `setup`.
-- `crates/lull-core/src/store/mod.rs` (`load_board`): a board whose manifest has a `mirror` key opens with `read_only = "mirror:<provider>"`.
-- `crates/lull-core/src/app/mod.rs` (`register`): registry `mirror` flag = manifest has `mirror` (was always `false`).
+- `src-tauri/src/lib.rs`: one line `luau_core::integrations::start_watcher(core.clone());` in `setup`.
+- `crates/luau-core/src/store/mod.rs` (`load_board`): a board whose manifest has a `mirror` key opens with `read_only = "mirror:<provider>"`.
+- `crates/luau-core/src/app/mod.rs` (`register`): registry `mirror` flag = manifest has `mirror` (was always `false`).
 - `src/lib/backend/types.ts`: `RemoteInfo.mirror?: boolean`.
 
 No new crates (`keyring`, `reqwest`, `image`, `percent-encoding` were already
@@ -76,7 +76,7 @@ flowchart LR
   Bulk refresh uses `key in (…)` in chunks of 100.
 - **Linked copies** (drag from the panel, or out of a mirror): a normal card
   `# Summary\n\n<description md>\n\nJira: [KEY](url)` + a link in
-  `.lull/remote.json`. Only title + content are mirrored; local moves never
+  `.luau/remote.json`. Only title + content are mirrored; local moves never
   touch the service.
 - **Mirrors**: stored in `<app data>/mirrors/<boardId>/` as normal boards with
   `manifest.mirror`, opened read-only. Lanes = Jira board columns (status ids
@@ -84,7 +84,7 @@ flowchart LR
   Cards ordered by rank. The sync applies ops under the store lock with the
   read-only flag lifted (user ops stay refused), journals one `remoteSync`
   entry (`Origin::Remote`), is idempotent (key → card, column → lane and
-  content hashes). Private local notes live in `.lull/notes/<card>.md`.
+  content hashes). Private local notes live in `.luau/notes/<card>.md`.
 - **Pull / push**: pull on a linked card diffs Title/Description local vs
   remote (skipped when the remote did not change since the last pull — hash in
   the link); pull on a mirror shows the plan rows (columns, new/removed issues,
@@ -145,7 +145,7 @@ allow toggles on prepare **and** commit.
 
 ## Risks / assumptions / pending
 
-- **Slack sender for AI**: `lull_core::ai::set_slack_sender` does not exist on
+- **Slack sender for AI**: `luau_core::ai::set_slack_sender` does not exist on
   this branch; TODO: once the AI module lands, register a sender that calls
   `service::prepare(PrepareReq::SlackPost …)` + commit (it must stay gated).
 - Mirrors do not nest sub-tasks as groups and do not implement the Sprint /
@@ -163,7 +163,7 @@ allow toggles on prepare **and** commit.
 
 ## Tests
 
-Rust (`cargo test -p lull-core integrations`, 56 tests):
+Rust (`cargo test -p luau-core integrations`, 56 tests):
 - ADF ↔ Markdown and wiki ↔ Markdown round trips (previous draft, kept).
 - Mapping: Jira Cloud/Server issues (no emails kept), Trello cards.
 - Pagination: offset/`nextPageToken`, Slack cursor.

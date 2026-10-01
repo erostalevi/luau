@@ -1,5 +1,5 @@
 // Typed client for the AI / activity-summary / schedules RPCs.
-// Contract: src-tauri/src/ai_rpc.rs + crates/lull-core/src/ai/.
+// Contract: src-tauri/src/ai_rpc.rs + crates/luau-core/src/ai/.
 
 import { rpc, onCoreEvent } from '$lib/backend/rpc';
 

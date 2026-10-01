@@ -62,7 +62,7 @@ export function register(methods: Record<string, (p: Record<string, any>) => unk
   methods['io.renderHtml'] = (p) => html(get(p.board), p.card ?? undefined);
   methods['io.export'] = (p) => {
     const b = get(p.board);
-    const text = p.format === 'html' ? html(b, p.card ?? undefined) : p.format === 'json' ? JSON.stringify({ format: 'lull-interchange', version: 1, board: { name: b.name, kind: b.kind } }, null, 2) : markdown(b, p.card ?? undefined);
+    const text = p.format === 'html' ? html(b, p.card ?? undefined) : p.format === 'json' ? JSON.stringify({ format: 'luau-interchange', version: 1, board: { name: b.name, kind: b.kind } }, null, 2) : markdown(b, p.card ?? undefined);
     download(String(p.dest), text, p.format === 'html' ? 'text/html' : 'text/plain');
     return { path: p.dest, files: 1, bytes: text.length };
   };
@@ -92,5 +92,5 @@ export function register(methods: Record<string, (p: Record<string, any>) => unk
     download(String(p.path), JSON.stringify(p.bundle, null, 2), 'application/json');
     return p.bundle;
   };
-  methods['settings.import'] = () => ({ format: 'lull-settings', version: 1, settings: api.ls('settings', {}), keybindings: api.ls('keybindings', []), templates: [] });
+  methods['settings.import'] = () => ({ format: 'luau-settings', version: 1, settings: api.ls('settings', {}), keybindings: api.ls('keybindings', []), templates: [] });
 }

@@ -1,8 +1,8 @@
 {
-  "name": "lull",
+  "name": "luau",
   "private": true,
   "version": "0.1.0",
-  "description": "Lull — calm, local-first kanban and notes",
+  "description": "Luau — calm, local-first kanban and notes",
   "license": "MIT",
   "type": "module",
   "scripts": {

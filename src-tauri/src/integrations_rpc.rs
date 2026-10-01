@@ -1,11 +1,11 @@
 //! RPC methods for integrations (Jira, Trello, Slack, mirrors, WriteGate).
-//! Thin adapter over `lull_core::integrations::service`.
+//! Thin adapter over `luau_core::integrations::service`.
 
 use std::sync::Arc;
 
-use lull_core::app::Core;
-use lull_core::integrations::{accounts, gate, provider, service as svc};
-use lull_core::model::Parent;
+use luau_core::app::Core;
+use luau_core::integrations::{accounts, gate, provider, service as svc};
+use luau_core::model::Parent;
 use serde::Serialize;
 use serde_json::Value;
 use tauri::AppHandle;

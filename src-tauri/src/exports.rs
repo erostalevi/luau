@@ -4,9 +4,9 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use lull_core::app::Core;
-use lull_core::io::service::{ExportFormat, ImportRequest};
-use lull_core::io::templates::BoardTemplate;
+use luau_core::app::Core;
+use luau_core::io::service::{ExportFormat, ImportRequest};
+use luau_core::io::templates::BoardTemplate;
 use serde_json::Value;
 
 use crate::rpc::{R, RpcError, arg, opt};

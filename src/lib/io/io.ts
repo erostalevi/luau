@@ -76,7 +76,7 @@ export function isLoose(readOnly: string | null | undefined): boolean {
 
 // ── Settings bundle ─────────────────────────────────────────────────────────
 
-export const SETTINGS_FORMAT = 'lull-settings';
+export const SETTINGS_FORMAT = 'luau-settings';
 
 /** Keys that never leave the machine (secrets live in the OS keychain anyway). */
 export function isSecretKey(k: string): boolean {

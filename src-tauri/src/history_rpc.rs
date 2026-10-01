@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use lull_core::app::Core;
+use luau_core::app::Core;
 use serde_json::{Value, json};
 use tauri::AppHandle;
 

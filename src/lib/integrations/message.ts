@@ -4,7 +4,7 @@ import type { Prepared } from './types';
 
 export type Tr = (key: string, params?: Record<string, unknown>) => string;
 
-const SERVICE_NAMES: Record<string, string> = { jira: 'Jira', trello: 'Trello', slack: 'Slack', local: 'Lull' };
+const SERVICE_NAMES: Record<string, string> = { jira: 'Jira', trello: 'Trello', slack: 'Slack', local: 'Luau' };
 
 export function serviceName(s: string): string {
   return SERVICE_NAMES[s] ?? s;

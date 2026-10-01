@@ -1,4 +1,4 @@
-# MyKanban — Product & Technical Spec
+# Luau — Product & Technical Spec
 
 > Status: **DRAFT v0.5** — ✅ agreed · 🟡 proposal awaiting confirmation
 > Last updated: 2026-09-30
@@ -49,7 +49,7 @@ Drag-and-drop is **pointer-event based**, not HTML5 DnD. HTML5 drag-and-drop is 
 
 | Concept | Description |
 |---|---|
-| **Board** | A folder anywhere on disk, marked by a hidden `.mykanban/` directory. Types: **kanban**, **files** (§7.4), **jira** (a mirror, §9.4). |
+| **Board** | A folder anywhere on disk, marked by a hidden `.luau/` directory. Types: **kanban**, **files** (§7.4), **jira** (a mirror, §9.4). |
 | **Lane** (`k…`) | A column or row of a kanban or jira board. Rows vs columns is only a view toggle. |
 | **Card** (`c…`) | A Markdown document. A card with children is a **group card**. |
 | **Jira-linked card** | A local card copied from a Jira issue. It is locally owned, but shows live Jira info and Jira actions (§9.3). |
@@ -75,7 +75,7 @@ IDs are never shown in the UI.
 
 ```
 Project Alpha/                   ← board root: any folder name, anywhere
-├── .mykanban/                   ← hidden, app-internal; also the board marker
+├── .luau/                   ← hidden, app-internal; also the board marker
 │   ├── board.json               ← board manifest
 │   ├── jira.json                ← Jira links/mirror state (only if used, §9.5)
 │   ├── history/                 ← operation journal + content blobs (§12)
@@ -99,7 +99,7 @@ A **files board** has no lane folders. Nodes sit in the root, and the root's ord
 
 ### 4.1 Manifests
 ```jsonc
-// .mykanban/board.json
+// .luau/board.json
 { "schema": 1, "id": "b9za0e", "name": "Project Alpha",
   "type": "kanban",                              // "kanban" | "files" | "jira"
   "lanes": ["k4m2p9", "k7q1ww"],                 // kanban / jira
@@ -242,7 +242,7 @@ Group cards render their children inside themselves and can be collapsed. The co
 - v1: a search bar with an empty state. No built-in modules.
 
 ### 8.6 Board discovery ✅
-- The `.mykanban/board.json` marker holds a stable ID. A registry cache maps `id → last path`.
+- The `.luau/board.json` marker holds a stable ID. A registry cache maps `id → last path`.
 - A background incremental crawler walks the search roots (default: home folder), skipping system and heavy folders.
 - Moved boards are relocated by ID. Copies are detected by a duplicate ID, and the app offers a new ID.
 - The one-time macOS permission prompts for Desktop, Documents and Downloads are accepted and appear lazily.
@@ -287,7 +287,7 @@ Group cards render their children inside themselves and can be collapsed. The co
 ### 9.3 Jira-linked cards (copies in local boards)
 - **Creation:** by dragging from the Jira panel or a mirror board, or with the `Add Jira Issue…` command.
   - A normal local card is created: title = Jira summary, body = the description converted to Markdown (ADF / wiki markup → MD), plus a footer line `Jira: [PROJ-123](https://…)`, so the file stays understandable without the app.
-  - The link (card ID → site, issue ID, key) is stored in `.mykanban/jira.json`, not in the Markdown.
+  - The link (card ID → site, issue ID, key) is stored in `.luau/jira.json`, not in the Markdown.
 - **Local ownership:** moving, reordering, grouping or editing the card in the app **never changes anything in Jira** ✅.
 - **Live Jira info:** the Jira strip (status, assignee, priority, labels, sprint) is refreshed from Jira on every sync cycle. The local body is **never** overwritten automatically.
 - **Jira actions** (the card menu, the editor header, and palette commands with `when: cardIsJira`). These are the **only** operations that write to Jira ✅. Each one goes through the external-write confirmation (§9.6):
@@ -320,7 +320,7 @@ Group cards render their children inside themselves and can be collapsed. The co
   - Board configuration (columns and status mapping) is checked every 10 minutes and on refresh.
   - A lightweight reconciliation (fetching keys only) detects issues that were deleted or moved out of the board.
   - Each change is applied through the board's single-writer actor as `RemoteSync` operations, journaled in history (marked "from Jira").
-  - Idempotent: the key ↔ card-ID and column ↔ lane-ID maps live in `.mykanban/jira.json`, so a re-sync never duplicates anything.
+  - Idempotent: the key ↔ card-ID and column ↔ lane-ID maps live in `.luau/jira.json`, so a re-sync never duplicates anything.
 - A mirror board that has lost its account or access keeps its last state, read-only, with a "Reconnect" banner.
 
 ### 9.5 `jira.json`

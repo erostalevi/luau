@@ -2,10 +2,10 @@
 // of Markdown syntax; clicking (or moving the cursor in) reveals the source.
 
 import { WidgetType, EditorView } from '@codemirror/view';
-import { lullContext, type CodeResult } from './context';
+import { luauContext, type CodeResult } from './context';
 
 function ctxOf(view: EditorView) {
-  return view.state.facet(lullContext);
+  return view.state.facet(luauContext);
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -519,7 +519,7 @@ export class MermaidWidget extends WidgetType {
     const dark = document.documentElement.dataset.theme === 'dark';
     void loadMermaid(dark).then(async (m) => {
       try {
-        const { svg } = await m.render(`lull-mermaid-${++mermaidSeq}`, this.code);
+        const { svg } = await m.render(`luau-mermaid-${++mermaidSeq}`, this.code);
         box.innerHTML = svg;
       } catch (e) {
         box.classList.add('broken');
@@ -627,7 +627,7 @@ export class EmbedWidget extends WidgetType {
       e.preventDefault();
       c?.openCard(this.id, this.heading);
     };
-    const body = el('div', 'cm-embed-body lull-md');
+    const body = el('div', 'cm-embed-body luau-md');
     box.append(head, body);
     const cleanup = c?.renderEmbed(this.id, this.heading, body);
     (box as unknown as { _cleanup?: () => void })._cleanup = cleanup;

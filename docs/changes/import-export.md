@@ -9,14 +9,14 @@ settings portability of §16 / QUESTIONNAIRE M.87, plus "new board from template
 
 ## Files
 
-Rust core (`crates/lull-core/src/io/`, new):
+Rust core (`crates/luau-core/src/io/`, new):
 
 | File | Role |
 |---|---|
 | `mod.rs` | Shared helpers: safe relative paths, file names from titles, natural sort, `is_within`, HTML escaping |
-| `interchange.rs` | Interchange model (`lull-interchange` v1), `from_state`, import planner (interchange → ops, attachment copies, id map) |
+| `interchange.rs` | Interchange model (`luau-interchange` v1), `from_state`, import planner (interchange → ops, attachment copies, id map) |
 | `vault.rs` | Loose adapter: any Markdown folder → tree → interchange |
-| `loose.rs` | Mode C for plain folders: read-only board "as is" (`LooseLayout`), `Core::open_loose`, `lull://` resolution |
+| `loose.rs` | Mode C for plain folders: read-only board "as is" (`LooseLayout`), `Core::open_loose`, `luau://` resolution |
 | `export.rs` | Markdown file, Markdown bundle (.zip), self-contained HTML |
 | `html.rs` | Safe Markdown → HTML (tables, callouts, code, tags, card links, CSP meta, print CSS) |
 | `archive.rs` | Zip writer (temp file + rename), board `.zip`, hardened extraction |
@@ -27,13 +27,13 @@ Rust core (`crates/lull-core/src/io/`, new):
 
 Small, surgical edits outside the feature (merge-relevant):
 
-- `crates/lull-core/Cargo.toml`: `pulldown-cmark` feature `html`.
-- `crates/lull-core/src/model.rs`: `LooseLayout`, `BoardState.loose`; path helpers consult it.
-- `crates/lull-core/src/store/mod.rs`: `BoardStore::from_state`, `reload` / `read_content` handle loose boards.
-- `crates/lull-core/src/history.rs`: no journal / blobs when the folder has no `.lull` (never create a marker implicitly).
-- `crates/lull-core/src/app/files.rs`: no thumbnails cache / unlinked sweep for loose folders.
-- `crates/lull-core/src/app/registry.rs`: `BoardEntry.loose`.
-- `crates/lull-core/src/app/mod.rs`: reopen loose entries by id, rescan doesn't mark them missing, `board_file` consults loose boards.
+- `crates/luau-core/Cargo.toml`: `pulldown-cmark` feature `html`.
+- `crates/luau-core/src/model.rs`: `LooseLayout`, `BoardState.loose`; path helpers consult it.
+- `crates/luau-core/src/store/mod.rs`: `BoardStore::from_state`, `reload` / `read_content` handle loose boards.
+- `crates/luau-core/src/history.rs`: no journal / blobs when the folder has no `.luau` (never create a marker implicitly).
+- `crates/luau-core/src/app/files.rs`: no thumbnails cache / unlinked sweep for loose folders.
+- `crates/luau-core/src/app/registry.rs`: `BoardEntry.loose`.
+- `crates/luau-core/src/app/mod.rs`: reopen loose entries by id, rescan doesn't mark them missing, `board_file` consults loose boards.
 - `src-tauri/src/protocol.rs`: resolve through `core.board_file` (loose-aware).
 - `src-tauri/src/exports.rs`: RPC dispatch (below).
 - `src/lib/backend/types.ts`: `BoardEntry.loose?`.
@@ -51,7 +51,7 @@ Frontend (new): `src/lib/io/io.ts` (pure helpers), `src/lib/io/io.commands.ts`,
 | `io.renderHtml` | `board, card?` | HTML string (PDF printing) |
 | `io.inspect` | `path` | `{ kind: board/boardZip/zip/folder/interchange, name, boardId, registered, schema, boardKind, lanes, notes, truncated }` |
 | `io.import` | `path, mode (copy/overwrite/inPlace), dest?, target?, name?, inboxLane?` | `{ boardId, cards, lanes, attachments, warnings }` |
-| `templates.list` | `board?` | card templates (`.lull/templates/*.md` + `<appData>/templates/*.md`) |
+| `templates.list` | `board?` | card templates (`.luau/templates/*.md` + `<appData>/templates/*.md`) |
 | `board.createFromTemplate` | `path, name, template {kind, lanes[{name,cards}], notes}, git?` | snapshot |
 | `board.upgrade` | `board` | `{ report {from,to,files}, snapshot }` |
 | `settings.export` | `path, bundle` | validated bundle |
@@ -72,8 +72,8 @@ export:  BoardState ──► Interchange JSON | Markdown | Markdown bundle | HT
 import:  path ─► io.inspect ─► mode?
            copy (B, default)  : source ─► Interchange ─► plan ─► create board ─► Op::Batch (1 undo) ─► copy attachments
            overwrite (A)      : Op::Batch[ Trash(all lanes/root), plan… ] on the target (1 undo restores it)
-           inPlace (C)        : Lull board → open; plain folder → read-only "as is" (no .lull, nothing written)
-         sources: Lull board folder · board .zip · Markdown .zip/folder (loose adapter) · interchange .json
+           inPlace (C)        : Luau board → open; plain folder → read-only "as is" (no .luau, nothing written)
+         sources: Luau board folder · board .zip · Markdown .zip/folder (loose adapter) · interchange .json
 ```
 
 Loose adapter: top-level subfolders → lanes, root notes → inbox lane (kanban)
@@ -94,12 +94,12 @@ stays read-only), keeping unknown JSON keys, then reopens. `schema < SCHEMA` run
 - **PDF through the print dialog** (QUESTIONNAIRE 86b) instead of bundling a PDF
   engine: zero dependencies, same HTML/CSS as the HTML export (print stylesheet
   included). Depends on the webview supporting `print()` from an iframe.
-- **Mode C for foreign folders is read-only**: Lull's format needs id file names;
+- **Mode C for foreign folders is read-only**: Luau's format needs id file names;
   converting in place (renaming user files) was rejected in QUESTIONNAIRE 85. Ids
   are derived from the relative path so reloads/watcher events keep them stable.
 - **Overwrite is undoable**: implemented as one batch (trash + recreate) instead of
   replacing folders on disk.
-- **Interchange JSON**: `sourceRoot` is honoured only when it is a Lull board
+- **Interchange JSON**: `sourceRoot` is honoured only when it is a Luau board
   folder; otherwise attachments resolve next to the JSON (prevents a crafted file
   from pulling arbitrary files into a board).
 - Board templates stay localized in the UI and are sent to the core as data
@@ -112,7 +112,7 @@ stays read-only), keeping unknown JSON keys, then reopens. `schema < SCHEMA` run
 - Exports refuse destinations inside the board; files are written atomically.
 - HTML export: raw HTML in cards is rendered as text, only `http(s)`/`mailto`/relative
   links survive, SVG is never embedded, CSP meta `default-src 'none'`, no scripts.
-- Loose `lull://` resolution: regular, non-hidden files inside the folder only.
+- Loose `luau://` resolution: regular, non-hidden files inside the folder only.
 - Settings bundles: strict schema validation, size cap (8 MB), keys that look like
   secrets (`token`, `password`, `apiKey`…) are dropped on export and import; secrets
   stay in the OS keychain. Logs carry ids/counts only, never card bodies or paths of
@@ -130,11 +130,11 @@ stays read-only), keeping unknown JSON keys, then reopens. `schema < SCHEMA` run
 
 ## Tests
 
-- Rust (`cargo test -p lull-core io::`, 28 tests): round trip export → import for board
+- Rust (`cargo test -p luau-core io::`, 28 tests): round trip export → import for board
   `.zip`, interchange JSON and Markdown bundle (titles, lanes, groups, attachments,
   links, tags preserved; new ids; source untouched); overwrite in one undo step;
   foreign folder copy (inbox lane, attachment copied, originals untouched, no marker)
-  and in-place read-only open (`lull://` traversal refused); Markdown/HTML export
+  and in-place read-only open (`luau://` traversal refused); Markdown/HTML export
   (links → titles, heading shifts, embedded images, no scripts, no export inside the
   board); loose adapter scan/convert; schema rules + convert (unknown keys kept,
   idempotent); settings validation; template validation; zip traversal rejection.

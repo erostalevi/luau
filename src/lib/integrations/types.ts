@@ -1,4 +1,4 @@
-// Normalized provider model (mirrors `crates/lull-core/src/integrations/types.rs`).
+// Normalized provider model (mirrors `crates/luau-core/src/integrations/types.rs`).
 
 import type { RemoteUser } from '$lib/backend/types';
 

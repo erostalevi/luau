@@ -188,7 +188,7 @@ const naturalDates = Prec.highest(EditorView.inputHandler.of((view, from, to, te
   return true;
 }));
 
-export function lullCompletions(d: CompletionData): Extension {
+export function luauCompletions(d: CompletionData): Extension {
   return [
     autocompletion({
       override: [slashSource(d), cardLinkSource(d), tagSource(d), mentionSource(d)],

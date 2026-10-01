@@ -25,7 +25,7 @@ export default {
     emptyHint: 'Las extensiones podrán agregar comandos, paneles, acciones de tarjeta y configuraciones.',
   },
   firstRun: {
-    welcome: 'Te damos la bienvenida a Lull',
+    welcome: 'Te damos la bienvenida a Luau',
     welcomeText: 'Un lugar tranquilo para tableros y notas. Todo se queda en tu computador como archivos Markdown simples.',
     look: 'Elige un estilo',
     keys: 'Estilo de teclado',
@@ -33,7 +33,7 @@ export default {
     modal: 'Una ventana centrada',
     sidebar: 'Una barra lateral a la derecha',
     boards: '¿Dónde están tus tableros?',
-    boardsText: 'Lull encuentra tableros en cualquier parte de tu carpeta personal. macOS puede pedir acceso una vez a carpetas como Documentos; es normal.',
+    boardsText: 'Luau encuentra tableros en cualquier parte de tu carpeta personal. macOS puede pedir acceso una vez a carpetas como Documentos; es normal.',
     addFolder: 'Buscar solo en esta carpeta…',
     skip: 'Omitir',
     next: 'Siguiente',

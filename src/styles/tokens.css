@@ -1,5 +1,5 @@
 /*
- * Lull design tokens. Calm, minimal, pastel.
+ * Luau design tokens. Calm, minimal, pastel.
  * Colors derived from --primary / --secondary are computed at runtime by
  * src/lib/theme (see applyTheme) and written as CSS variables.
  */
@@ -56,89 +56,93 @@
   --card-w: 280px;
   --editor-w: 720px;
 
-  /* light palette (defaults; primary shades overwritten at runtime) */
-  --primary: #7a7cf0;
-  --primary-strong: #5b5ee6;
-  --primary-soft: #eceeff;
-  --primary-softer: #f5f5ff;
-  --primary-ring: rgb(122 124 240 / 0.35);
+  /* light palette — "Hawaii sunset": warm sand, coral, hibiscus, dusk lavender
+     (defaults; primary/secondary shades overwritten at runtime) */
+  --primary: #e9776a;
+  --primary-strong: #d45f52;
+  --primary-soft: #fdeceb;
+  --primary-softer: #fef6f4;
+  --primary-ring: rgb(233 119 106 / 0.35);
   --on-primary: #ffffff;
-  --secondary: #eef7ef;
-  --secondary-strong: #cfe8d3;
-  --secondary-ink: #3f6b48;
+  --secondary: #fdeadc;
+  --secondary-strong: #f8d3b8;
+  --secondary-ink: #8a5034;
+  --sunset: linear-gradient(120deg, #f6a77d 0%, #ef8a7c 38%, #ec8fb0 70%, #b99be0 100%);
 
-  --bg: #f6f6fa;
-  --bg-elev: #ffffff;
-  --bg-sunken: #efeff5;
-  --bg-hover: rgb(40 40 80 / 0.045);
-  --bg-active: rgb(40 40 80 / 0.08);
-  --bg-glass: rgb(248 248 252 / 0.72);
-  --bg-sidebar: rgb(244 244 250 / 0.66);
-  --bg-lane: rgb(236 237 245 / 0.62);
-  --bg-card: #ffffff;
-  --bg-overlay: rgb(24 24 40 / 0.28);
-  --ink: #23232f;
-  --ink-2: #4b4b5c;
-  --ink-3: #7c7c8f;
-  --ink-4: #a6a6b6;
-  --line: rgb(40 40 80 / 0.09);
-  --line-strong: rgb(40 40 80 / 0.16);
+  --bg: #fbf6f3;
+  --bg-elev: #fffdfc;
+  --bg-sunken: #f6eeea;
+  --bg-hover: rgb(90 50 60 / 0.045);
+  --bg-active: rgb(90 50 60 / 0.08);
+  --bg-glass: rgb(252 247 244 / 0.72);
+  --bg-sidebar: rgb(250 243 239 / 0.66);
+  --bg-lane: rgb(244 233 228 / 0.62);
+  --bg-card: #fffdfc;
+  --bg-overlay: rgb(40 22 30 / 0.28);
+  --ink: #2c2229;
+  --ink-2: #554550;
+  --ink-3: #85727c;
+  --ink-4: #b3a3aa;
+  --line: rgb(90 50 60 / 0.09);
+  --line-strong: rgb(90 50 60 / 0.16);
   --focus: var(--primary-ring);
-  --shadow-1: 0 1px 2px rgb(30 30 70 / 0.05), 0 1px 1px rgb(30 30 70 / 0.03);
-  --shadow-2: 0 2px 6px rgb(30 30 70 / 0.06), 0 8px 24px rgb(30 30 70 / 0.06);
-  --shadow-3: 0 12px 40px rgb(30 30 70 / 0.14), 0 2px 8px rgb(30 30 70 / 0.06);
-  --shadow-drag: 0 18px 50px rgb(30 30 70 / 0.22), 0 4px 12px rgb(30 30 70 / 0.1);
-  --danger: #e2657a;
-  --danger-soft: #fdecef;
+  --shadow-1: 0 1px 2px rgb(80 40 50 / 0.05), 0 1px 1px rgb(80 40 50 / 0.03);
+  --shadow-2: 0 2px 6px rgb(80 40 50 / 0.06), 0 8px 24px rgb(80 40 50 / 0.06);
+  --shadow-3: 0 12px 40px rgb(80 40 50 / 0.14), 0 2px 8px rgb(80 40 50 / 0.06);
+  --shadow-drag: 0 18px 50px rgb(80 40 50 / 0.22), 0 4px 12px rgb(80 40 50 / 0.1);
+  --danger: #df5f6f;
+  --danger-soft: #fdebee;
   --warn: #d9a441;
   --warn-soft: #fbf3e2;
-  --ok: #53a86b;
-  --ok-soft: #e8f5ec;
-  --info: #5b9bd8;
-  --info-soft: #e8f1fb;
+  --ok: #4fa476;
+  --ok-soft: #e7f5ec;
+  --info: #6a8fe0;
+  --info-soft: #eaf0fc;
 
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-  --primary: #8f91f6;
-  --primary-strong: #a9abff;
-  --primary-soft: rgb(143 145 246 / 0.16);
-  --primary-softer: rgb(143 145 246 / 0.08);
-  --primary-ring: rgb(143 145 246 / 0.45);
-  --on-primary: #14142a;
-  --secondary: rgb(160 214 170 / 0.12);
-  --secondary-strong: rgb(160 214 170 / 0.24);
-  --secondary-ink: #a8dbb2;
+  /* "Hawaii dusk": deep plum night with coral and lavender highlights */
+  --primary: #f39a8c;
+  --primary-strong: #ffb6a8;
+  --primary-soft: rgb(243 154 140 / 0.16);
+  --primary-softer: rgb(243 154 140 / 0.08);
+  --primary-ring: rgb(243 154 140 / 0.45);
+  --on-primary: #2a1418;
+  --secondary: rgb(247 190 150 / 0.12);
+  --secondary-strong: rgb(247 190 150 / 0.24);
+  --secondary-ink: #f6c6a4;
+  --sunset: linear-gradient(120deg, #f2a07c 0%, #e98579 38%, #d987a8 70%, #9d86cf 100%);
 
-  --bg: #15161c;
-  --bg-elev: #1d1e26;
-  --bg-sunken: #111217;
-  --bg-hover: rgb(255 255 255 / 0.05);
-  --bg-active: rgb(255 255 255 / 0.09);
-  --bg-glass: rgb(26 27 35 / 0.72);
-  --bg-sidebar: rgb(22 23 30 / 0.6);
-  --bg-lane: rgb(255 255 255 / 0.035);
-  --bg-card: #20212b;
+  --bg: #19141b;
+  --bg-elev: #221b25;
+  --bg-sunken: #140f16;
+  --bg-hover: rgb(255 240 245 / 0.05);
+  --bg-active: rgb(255 240 245 / 0.09);
+  --bg-glass: rgb(34 27 37 / 0.72);
+  --bg-sidebar: rgb(28 22 31 / 0.6);
+  --bg-lane: rgb(255 240 245 / 0.035);
+  --bg-card: #261e29;
   --bg-overlay: rgb(0 0 0 / 0.45);
-  --ink: #e8e8f0;
-  --ink-2: #bdbdcc;
-  --ink-3: #8a8a9c;
-  --ink-4: #5e5e70;
-  --line: rgb(255 255 255 / 0.07);
-  --line-strong: rgb(255 255 255 / 0.13);
+  --ink: #f1e9ec;
+  --ink-2: #cbbcc3;
+  --ink-3: #988690;
+  --ink-4: #66565f;
+  --line: rgb(255 240 245 / 0.07);
+  --line-strong: rgb(255 240 245 / 0.13);
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-2: 0 2px 8px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.25);
   --shadow-3: 0 16px 48px rgb(0 0 0 / 0.45), 0 2px 8px rgb(0 0 0 / 0.3);
   --shadow-drag: 0 22px 60px rgb(0 0 0 / 0.55), 0 4px 14px rgb(0 0 0 / 0.35);
-  --danger: #f08497;
-  --danger-soft: rgb(240 132 151 / 0.14);
+  --danger: #f28a98;
+  --danger-soft: rgb(242 138 152 / 0.14);
   --warn: #e6bb62;
   --warn-soft: rgb(230 187 98 / 0.14);
   --ok: #7cc792;
   --ok-soft: rgb(124 199 146 / 0.14);
-  --info: #7fb4e6;
-  --info-soft: rgb(127 180 230 / 0.14);
+  --info: #94aef0;
+  --info-soft: rgb(148 174 240 / 0.14);
 
   color-scheme: dark;
 }

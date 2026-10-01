@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Build Lull.
+// Build Luau.
 //   pnpm build --localtarget   build for this machine only (fastest)
 //   pnpm build --release       build every target this host can build; the rest
 //                              (Windows/Linux from macOS, etc.) are built by CI

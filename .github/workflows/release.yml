@@ -4,7 +4,7 @@ name: Release
 # updater manifest (latest.json). Trigger by pushing a tag `v*` or manually.
 #
 # Required secrets for signed update artifacts:
-#   TAURI_SIGNING_PRIVATE_KEY           contents of ~/.tauri/lull-updater.key
+#   TAURI_SIGNING_PRIVATE_KEY           contents of ~/.tauri/luau-updater.key
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  (empty if the key has no password)
 
 on:
@@ -78,7 +78,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', '__VERSION__') }}
-          releaseName: 'Lull __VERSION__'
+          releaseName: 'Luau __VERSION__'
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true

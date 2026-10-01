@@ -1,4 +1,4 @@
-# MyKanban — Final Questionnaire
+# Luau — Final Questionnaire
 
 Every question has a ⭐ **recommended default**.
 **How to answer:** reply `defaults` plus your exceptions only, e.g. `defaults except 7b, 21c, 58: "my text"`.
@@ -8,8 +8,8 @@ Questions marked 🔴 have no safe default, so please answer those explicitly.
 
 ## A. Product, identity & distribution
 
-1. 🔴 **App name.** It fixes the hidden folder name (`.mykanban/`), the bundle ID and the file-format identity, so it's costly to change later.
-   a) ⭐ "MyKanban" (working name)
+1. 🔴 **App name.** It fixes the hidden folder name (`.luau/`), the bundle ID and the file-format identity, so it's costly to change later.
+   a) ⭐ "Luau" (working name)
    b) Other: ___
 
 2. 🔴 **Project ownership.** It decides the repo host, license, and whether the Forpay process applies (Bitbucket, change docs, ISO evidence).
@@ -118,7 +118,7 @@ Questions marked 🔴 have no safe default, so please answer those explicitly.
     a) ⭐ Moved to trash automatically 7 days after they stop being referenced (restorable), plus a "Clean up unused files" command
     b) Never auto-clean; command only
 
-24. **Boards inside git repos.** Auto-create `.mykanban/.gitignore`?
+24. **Boards inside git repos.** Auto-create `.luau/.gitignore`?
     a) ⭐ Yes: ignore `cache/`, keep `history/` and `jira.json`
     b) Yes: ignore `cache/` and `history/`
     c) Don't touch it
@@ -136,7 +136,7 @@ Questions marked 🔴 have no safe default, so please answer those explicitly.
     b) Forever until emptied manually
 
 28. **Archive** (hide done cards without deleting them).
-    a) ⭐ Yes: an "Archive" action moves cards to `.mykanban/archive/`, keeping their history. They are searchable with `is:archived` and restorable.
+    a) ⭐ Yes: an "Archive" action moves cards to `.luau/archive/`, keeping their history. They are searchable with `is:archived` and restorable.
     b) No; use a "Done" lane or trash
 
 ---
@@ -159,7 +159,7 @@ Questions marked 🔴 have no safe default, so please answer those explicitly.
     b) Always empty
 
 32. **Card templates.**
-    a) ⭐ Yes: `.mykanban/templates/*.md` per board plus global templates in app data, chosen from "New card ▾" and the palette
+    a) ⭐ Yes: `.luau/templates/*.md` per board plus global templates in app data, chosen from "New card ▾" and the palette
     b) Not in v1
 
 33. **Quick add.**
@@ -361,7 +361,7 @@ Questions marked 🔴 have no safe default, so please answer those explicitly.
     a) ⭐ A standard set (status, type, priority, assignee, reporter, labels, sprint, epic/parent, due date, story points) plus **user-selectable custom fields per site** in Settings
     b) Standard set only
 
-73. **Private local notes on mirror cards** (a notes area stored in `.mykanban/`, never sent to Jira).
+73. **Private local notes on mirror cards** (a notes area stored in `.luau/`, never sent to Jira).
     a) Yes
     b) ⭐ No; copy the card to a local board to annotate it
 

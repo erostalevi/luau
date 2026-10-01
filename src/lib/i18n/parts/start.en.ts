@@ -25,7 +25,7 @@ export default {
     emptyHint: 'Extensions will be able to add commands, panels, card actions and settings.',
   },
   firstRun: {
-    welcome: 'Welcome to Lull',
+    welcome: 'Welcome to Luau',
     welcomeText: 'A calm place for boards and notes. Everything stays on your computer as plain Markdown files.',
     look: 'Pick a look',
     keys: 'Keyboard style',
@@ -33,7 +33,7 @@ export default {
     modal: 'A centered window',
     sidebar: 'A sidebar on the right',
     boards: 'Where are your boards?',
-    boardsText: 'Lull finds boards anywhere in your home folder. macOS may ask once for access to folders like Documents — that’s expected.',
+    boardsText: 'Luau finds boards anywhere in your home folder. macOS may ask once for access to folders like Documents — that’s expected.',
     addFolder: 'Search only this folder…',
     skip: 'Skip',
     next: 'Next',

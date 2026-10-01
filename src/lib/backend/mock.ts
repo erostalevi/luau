@@ -265,7 +265,7 @@ function seed(): MockBoard[] {
   const now = Date.now();
   const k = ['kbacklg', 'kprogrs', 'kreview', 'kdone00'];
   const cards: [string, number, string, string | null][] = [
-    ['cwelcom', 0, '# Welcome to Lull\n\nEvery card is a plain Markdown file on disk. Drag cards around, drop one *onto* another to group them, and press ⌘⇧P for commands.\n\n#guide\n', null],
+    ['cwelcom', 0, '# Welcome to Luau\n\nEvery card is a plain Markdown file on disk. Drag cards around, drop one *onto* another to group them, and press ⌘⇧P for commands.\n\n#guide\n', null],
     ['conbrd1', 0, '# Onboarding flow\n\nA calm first-run experience. #design #q4\n', null],
     ['conbsub', 0, '# Welcome screen copy\n\n- [x] Draft tone of voice\n- [ ] Review with @ana\n- [ ] Translate to es / pt\n', 'conbrd1'],
     ['conbsu2', 0, '# Pick keybinding preset\n\nLet people choose VS Code, Vim or Trello style on first launch.\n', 'conbrd1'],
@@ -349,7 +349,7 @@ export function createMockTransport(): Transport {
   const emit = (e: CoreEvent) => queueMicrotask(() => listeners.forEach((l) => l(e)));
   const ls = (k: string, d: unknown) => {
     try {
-      const v = localStorage.getItem('lull.mock.' + k);
+      const v = localStorage.getItem('luau.mock.' + k);
       return v ? JSON.parse(v) : d;
     } catch {
       return d;
@@ -357,7 +357,7 @@ export function createMockTransport(): Transport {
   };
   const lsSet = (k: string, v: unknown) => {
     try {
-      localStorage.setItem('lull.mock.' + k, JSON.stringify(v));
+      localStorage.setItem('luau.mock.' + k, JSON.stringify(v));
     } catch {
       /* ignore */
     }
@@ -419,7 +419,7 @@ export function createMockTransport(): Transport {
   const coalesceKeys = new Map<string, string>();
 
   const methods: Record<string, (p: Record<string, any>) => unknown> = {
-    'app.info': () => ({ name: 'Lull', version: '0.1.0-web', platform: 'web', arch: 'wasm', dataDir: '', configDir: '', logsDir: '', window: 'main', home: '~' }),
+    'app.info': () => ({ name: 'Luau', version: '0.1.0-web', platform: 'web', arch: 'wasm', dataDir: '', configDir: '', logsDir: '', window: 'main', home: '~' }),
     'settings.get': () => ls('settings', {}),
     'settings.set': (p) => (lsSet('settings', p.value), true),
     'keybindings.get': () => ls('keybindings', []),

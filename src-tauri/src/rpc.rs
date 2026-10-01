@@ -4,11 +4,11 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use lull_core::app::{Core, files};
-use lull_core::history::HistoryFilter;
-use lull_core::model::{BoardKind, Parent};
-use lull_core::search::SearchOptions;
-use lull_core::store::Op;
+use luau_core::app::{Core, files};
+use luau_core::history::HistoryFilter;
+use luau_core::model::{BoardKind, Parent};
+use luau_core::search::SearchOptions;
+use luau_core::store::Op;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -22,8 +22,8 @@ pub struct RpcError {
     pub message: String,
 }
 
-impl From<lull_core::Error> for RpcError {
-    fn from(e: lull_core::Error) -> Self {
+impl From<luau_core::Error> for RpcError {
+    fn from(e: luau_core::Error) -> Self {
         RpcError {
             code: e.code().into(),
             message: e.to_string(),
@@ -81,7 +81,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
     match method {
         // --- app ---------------------------------------------------------------
         "app.info" => ok(json!({
-            "name": "Lull",
+            "name": "Luau",
             "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS,
             "arch": std::env::consts::ARCH,
@@ -118,7 +118,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         "text.write" => {
             let path: PathBuf = arg(p, "path")?;
             let text: String = arg(p, "text")?;
-            lull_core::fsutil::atomic_write(&path, text.as_bytes())?;
+            luau_core::fsutil::atomic_write(&path, text.as_bytes())?;
             ok(true)
         }
         "bytes.write" => {
@@ -128,7 +128,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             let bytes = base64::engine::general_purpose::STANDARD
                 .decode(b64)
                 .map_err(|e| bad(e.to_string()))?;
-            lull_core::fsutil::atomic_write(&path, &bytes)?;
+            luau_core::fsutil::atomic_write(&path, &bytes)?;
             ok(true)
         }
         "fonts.list" => ok(crate::fonts::list()),
@@ -153,7 +153,7 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
         "path.exists" => {
             let path: PathBuf = arg(p, "path")?;
             ok(
-                json!({ "exists": path.exists(), "isDir": path.is_dir(), "isBoard": lull_core::store::is_board(&path) }),
+                json!({ "exists": path.exists(), "isDir": path.is_dir(), "isBoard": luau_core::store::is_board(&path) }),
             )
         }
         "logs.export" => {
@@ -202,8 +202,8 @@ fn dispatch(app: &AppHandle, core: &Arc<Core>, window: &str, method: &str, p: &V
             ok(true)
         }
         "discovery.defaults" => ok(json!({
-            "roots": lull_core::discovery::default_roots(),
-            "excludes": lull_core::discovery::DEFAULT_EXCLUDES,
+            "roots": luau_core::discovery::default_roots(),
+            "excludes": luau_core::discovery::DEFAULT_EXCLUDES,
         })),
         "board.reassignId" => {
             let path: PathBuf = arg(p, "path")?;

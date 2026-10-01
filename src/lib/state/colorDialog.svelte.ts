@@ -3,7 +3,7 @@
 export const colorDialog = $state<{ open: boolean; title: string; value: string; live?: (hex: string) => void; resolve: ((v: string | null) => void) | null }>({
   open: false,
   title: '',
-  value: '#7a7cf0',
+  value: '#ef8a7c',
   resolve: null,
 });
 

@@ -141,6 +141,11 @@
     font-size: var(--fs-3xl);
     font-weight: 650;
     letter-spacing: -0.02em;
+    background: var(--sunset);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    width: fit-content;
   }
   header p {
     margin: 6px 0 0;

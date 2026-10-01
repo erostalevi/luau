@@ -41,7 +41,7 @@ export default {
     exportMd: 'Export .md…',
     exported: 'Summary exported',
     writtenBy: 'Written by {model}',
-    basicEngine: 'Written by Lull (no AI)',
+    basicEngine: 'Written by Luau (no AI)',
     fallback: 'Local AI was not available ({reason}); used the basic summary.',
     past: 'Past summaries',
     noPast: 'Summaries you create will be kept here.',

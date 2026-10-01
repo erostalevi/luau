@@ -1,4 +1,4 @@
-//! Lull desktop shell: wires the framework-free `lull_core::app::Core` to
+//! Luau desktop shell: wires the framework-free `luau_core::app::Core` to
 //! Tauri (windows, menus, protocol, events, plugins).
 
 mod ai_rpc;
@@ -13,7 +13,7 @@ mod windows;
 
 use std::sync::Arc;
 
-use lull_core::app::{AppPaths, Core, CoreEvent, EventSink};
+use luau_core::app::{AppPaths, Core, CoreEvent, EventSink};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 
 pub struct AppState {
@@ -24,16 +24,16 @@ struct TauriSink(AppHandle);
 
 impl EventSink for TauriSink {
     fn emit(&self, event: CoreEvent) {
-        let _ = self.0.emit("lull://event", &event);
+        let _ = self.0.emit("luau://event", &event);
     }
 }
 
 fn init_logging(dir: &std::path::Path) -> Option<tracing_appender::non_blocking::WorkerGuard> {
     use tracing_subscriber::{EnvFilter, fmt, prelude::*};
     let _ = std::fs::create_dir_all(dir);
-    let file = tracing_appender::rolling::daily(dir, "lull.log");
+    let file = tracing_appender::rolling::daily(dir, "luau.log");
     let (nb, guard) = tracing_appender::non_blocking(file);
-    let filter = EnvFilter::try_from_env("LULL_LOG").unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_from_env("LUAU_LOG").unwrap_or_else(|_| EnvFilter::new("info"));
     let registry = tracing_subscriber::registry()
         .with(filter)
         .with(fmt::layer().with_writer(nb).with_ansi(false));
@@ -86,7 +86,7 @@ pub fn run() {
                 )
                 .build(),
         )
-        .register_asynchronous_uri_scheme_protocol("lull", |ctx, request, responder| {
+        .register_asynchronous_uri_scheme_protocol("luau", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || {
                 let core = app.state::<AppState>().core.clone();
@@ -104,7 +104,7 @@ pub fn run() {
             };
             let guard = init_logging(&paths.logs);
             app.manage(guard);
-            tracing::info!("starting Lull {}", env!("CARGO_PKG_VERSION"));
+            tracing::info!("starting Luau {}", env!("CARGO_PKG_VERSION"));
             let core = Core::new(paths, Arc::new(TauriSink(handle.clone()))).map_err(|e| {
                 Box::new(std::io::Error::other(e.to_string())) as Box<dyn std::error::Error>
             })?;
@@ -119,7 +119,7 @@ pub fn run() {
             if !background_launch {
                 windows::create(&handle, "main", "")?;
             }
-            lull_core::integrations::start_watcher(core.clone());
+            luau_core::integrations::start_watcher(core.clone());
             // Discover boards shortly after start (never blocks the UI).
             let c = core.clone();
             std::thread::spawn(move || {
@@ -136,7 +136,7 @@ pub fn run() {
             }
         })
         .build(tauri::generate_context!())
-        .expect("error while building Lull")
+        .expect("error while building Luau")
         .run(|app, event| match event {
             RunEvent::ExitRequested { api, code, .. } => {
                 let state = app.state::<AppState>();

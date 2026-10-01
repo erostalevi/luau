@@ -1,11 +1,11 @@
-//! `lull://localhost/<boardId>/<relative path>[?w=<thumb width>]`
+//! `luau://localhost/<boardId>/<relative path>[?w=<thumb width>]`
 //! Serves board files (attachments, images) to the webview with optional
 //! cached thumbnails and HTTP range support (for audio/video seeking).
 
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
-use lull_core::app::{Core, files};
+use luau_core::app::{Core, files};
 use tauri::http::{Request, Response, StatusCode, header};
 
 fn respond(status: StatusCode, mime: &str, body: Vec<u8>) -> Response<Vec<u8>> {

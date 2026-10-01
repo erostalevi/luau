@@ -30,8 +30,8 @@ async function tauriTransport(): Promise<Transport> {
   const win = getCurrentWebviewWindow();
   const listeners = new Set<Listener>();
   const menuListeners = new Set<MenuListener>();
-  await listen<CoreEvent>('lull://event', (ev) => listeners.forEach((l) => l(ev.payload)));
-  await win.listen<string>('lull://menu', (ev) => menuListeners.forEach((l) => l(ev.payload)));
+  await listen<CoreEvent>('luau://event', (ev) => listeners.forEach((l) => l(ev.payload)));
+  await win.listen<string>('luau://menu', (ev) => menuListeners.forEach((l) => l(ev.payload)));
   return {
     async call<T>(method: string, params: Record<string, unknown> = {}) {
       try {

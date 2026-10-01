@@ -1,6 +1,6 @@
-# Lull — Architecture & Conventions
+# Luau — Architecture & Conventions
 
-Lull is a Tauri 2 app: a framework-free Rust core (`crates/lull-core`), a thin
+Luau is a Tauri 2 app: a framework-free Rust core (`crates/luau-core`), a thin
 Tauri adapter (`src-tauri`), and a Svelte 5 UI (`src/`). See `SPEC.md` for the
 product spec.
 
@@ -9,10 +9,10 @@ product spec.
 ```
 src/ (Svelte 5 + TS)          UI, command registry, keybindings, editor (CodeMirror 6)
   lib/backend/rpc.ts          transport: Tauri IPC or in-browser mock (pnpm dev:web)
-src-tauri/src/                Tauri glue: windows, menus, `lull://` protocol, RPC dispatch
+src-tauri/src/                Tauri glue: windows, menus, `luau://` protocol, RPC dispatch
   rpc.rs                      single `rpc(method, params)` command → Core
   *_rpc.rs / exports.rs       per-feature dispatch modules (return Option<R>)
-crates/lull-core/src/         framework-free core (unit-testable)
+crates/luau-core/src/         framework-free core (unit-testable)
   ids, json_fmt, markdown/    pure domain
   model.rs, store/            file-backed board store, invertible ops, trash
   history.rs, search/         journal + blobs, SQLite FTS5 index
@@ -26,7 +26,7 @@ See SPEC §4. Key rules:
 - Cards are `c??????.md`; groups are folders `c??????/index.md + index.json`.
 - `index.json` order is truth for ordering, the file system for existence.
 - Loading never rewrites card files. Writes are atomic (`fsutil::atomic_write`).
-- App-internal data lives in `<board>/.lull/` (manifest, history, trash, cache).
+- App-internal data lives in `<board>/.luau/` (manifest, history, trash, cache).
 
 ## Core rules (Rust)
 
@@ -35,10 +35,10 @@ See SPEC §4. Key rules:
 - Board-kind rules are checked in `Core::check_kind_rules`; the store only checks existence.
 - Feature modules add `impl Core { … }` blocks in their own files; `Core` fields are `pub(crate)`.
 - Events to the UI: `core.sink.emit(CoreEvent::Custom { name, payload })` for feature events.
-- Errors: `lull_core::Error` (`code()` is surfaced to the UI). Never log secrets, tokens,
+- Errors: `luau_core::Error` (`code()` is surfaced to the UI). Never log secrets, tokens,
   emails or card bodies; log ids and HTTP statuses only.
 - Network: only through `reqwest` with rustls, HTTPS by default, host allow-list per account.
-- Tests: unit tests next to the code; use `tempfile` for FS tests. `cargo test -p lull-core`.
+- Tests: unit tests next to the code; use `tempfile` for FS tests. `cargo test -p luau-core`.
 
 ## RPC
 

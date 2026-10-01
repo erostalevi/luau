@@ -1,4 +1,4 @@
-//! Native menus. Custom items emit `lull://menu` with a command id that the
+//! Native menus. Custom items emit `luau://menu` with a command id that the
 //! frontend command registry executes; standard roles keep native clipboard,
 //! undo and window behaviour working (required on macOS).
 
@@ -16,16 +16,16 @@ fn item<R: Runtime>(
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let about = AboutMetadata {
-        name: Some("Lull".into()),
+        name: Some("Luau".into()),
         version: Some(env!("CARGO_PKG_VERSION").into()),
         ..Default::default()
     };
     let app_menu = Submenu::with_items(
         app,
-        "Lull",
+        "Luau",
         true,
         &[
-            &PredefinedMenuItem::about(app, Some("About Lull"), Some(about))?,
+            &PredefinedMenuItem::about(app, Some("About Luau"), Some(about))?,
             &PredefinedMenuItem::separator(app)?,
             &item(app, "app.openSettings", "Settings…", Some("CmdOrCtrl+,"))?,
             &item(app, "app.checkForUpdates", "Check for Updates…", None)?,
@@ -139,10 +139,10 @@ pub fn on_event<R: Runtime>(app: &AppHandle<R>, id: &str) {
         .map(|(l, _)| l);
     match target {
         Some(label) => {
-            let _ = app.emit_to(label.as_str(), "lull://menu", id);
+            let _ = app.emit_to(label.as_str(), "luau://menu", id);
         }
         None => {
-            let _ = app.emit("lull://menu", id);
+            let _ = app.emit("luau://menu", id);
         }
     }
 }

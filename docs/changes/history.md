@@ -17,10 +17,10 @@ Feature (new):
 - `diff.ts` (+ `diff.test.ts`) — Myers line diff, markdown-aware word diff, hunks, side-by-side pairing, collapse.
 - `actions.ts`, `historyState.svelte.ts`, `icons.ts`, `history.commands.ts`.
 - `src/lib/i18n/parts/history.{en,es,pt}.ts`, `src/lib/backend/mocks/history.ts`.
-- `crates/lull-core/src/app/trash_ops.rs` — `Core::trash_delete` (+ test).
+- `crates/luau-core/src/app/trash_ops.rs` — `Core::trash_delete` (+ test).
 - `src-tauri/src/history_rpc.rs` — `trash.delete`.
 
-Shared files (one-line additions): `crates/lull-core/src/app/mod.rs` (`mod trash_ops;`),
+Shared files (one-line additions): `crates/luau-core/src/app/mod.rs` (`mod trash_ops;`),
 `src-tauri/src/lib.rs` (`mod history_rpc;`), `src-tauri/src/rpc.rs` (dispatch chain),
 `src/lib/backend/types.ts` (`TrashEntry.archived?`, `cover?`, already serialized by Rust).
 

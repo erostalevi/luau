@@ -1,4 +1,4 @@
-// DTOs mirroring crates/lull-core (serde camelCase). Keep in sync with model.rs.
+// DTOs mirroring crates/luau-core (serde camelCase). Keep in sync with model.rs.
 
 export type BoardKind = 'kanban' | 'files';
 export type Orientation = 'columns' | 'rows';
@@ -194,7 +194,7 @@ export interface BoardEntry {
   lastOpened?: number | null;
   lastSeen: number;
   duplicates?: string[];
-  /** Plain folder opened "as is" (read-only, no `.lull`). */
+  /** Plain folder opened "as is" (read-only, no `.luau`). */
   loose?: boolean;
 }
 

@@ -41,7 +41,7 @@ export default {
     exportMd: 'Exportar .md…',
     exported: 'Resumen exportado',
     writtenBy: 'Escrito por {model}',
-    basicEngine: 'Escrito por Lull (sin IA)',
+    basicEngine: 'Escrito por Luau (sin IA)',
     fallback: 'La IA local no estaba disponible ({reason}); se usó el resumen básico.',
     past: 'Resúmenes anteriores',
     noPast: 'Aquí se guardarán los resúmenes que crees.',

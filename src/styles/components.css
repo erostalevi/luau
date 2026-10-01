@@ -270,7 +270,7 @@ mark,
   padding: 0 1px;
 }
 
-.lull-tip {
+.luau-tip {
   position: fixed;
   top: 0;
   left: 0;
@@ -289,7 +289,7 @@ mark,
   box-shadow: var(--shadow-2);
   transition: opacity var(--dur-fast) var(--ease);
 }
-.lull-tip-k {
+.luau-tip-k {
   opacity: 0.6;
   font-size: 11px;
 }

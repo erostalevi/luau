@@ -123,8 +123,8 @@ async function pickSource(): Promise<string | null> {
 const MODE_ICONS: Record<ImportMode, Component<any>> = { copy: Copy, inPlace: FolderOpen, overwrite: Replace };
 
 function modeItem(m: ImportMode, info: Inspect): QuickItem<ImportMode> {
-  const lull = info.kind === 'board';
-  const key = m === 'inPlace' ? (lull ? 'inPlaceBoard' : 'inPlaceFolder') : m;
+  const luau = info.kind === 'board';
+  const key = m === 'inPlace' ? (luau ? 'inPlaceBoard' : 'inPlaceFolder') : m;
   return { label: t(`io.modes.${key}.label`), description: t(`io.modes.${key}.desc`), icon: MODE_ICONS[m], value: m, picked: m === 'copy' };
 }
 
@@ -234,7 +234,7 @@ async function upgradeSchema() {
 // ── Settings bundle ─────────────────────────────────────────────────────────
 
 async function exportSettings() {
-  const dest = isTauri ? await pickSavePath(t('commands.io.exportSettings'), 'lull-settings.json', [{ name: 'JSON', extensions: ['json'] }]) : 'lull-settings.json';
+  const dest = isTauri ? await pickSavePath(t('commands.io.exportSettings'), 'luau-settings.json', [{ name: 'JSON', extensions: ['json'] }]) : 'luau-settings.json';
   if (!dest) return;
   try {
     const bundle = buildSettingsBundle(settings.all(), $state.snapshot(kb.user), { order: registry.data.order, mirrorOrder: registry.data.mirrorOrder });
@@ -246,7 +246,7 @@ async function exportSettings() {
 }
 
 async function importSettings() {
-  const files = isTauri ? await pickFile(t('commands.io.importSettings'), [{ name: 'JSON', extensions: ['json'] }]) : ['lull-settings.json'];
+  const files = isTauri ? await pickFile(t('commands.io.importSettings'), [{ name: 'JSON', extensions: ['json'] }]) : ['luau-settings.json'];
   if (!files?.length) return;
   let bundle: { settings: Record<string, unknown>; keybindings: any[]; templates: unknown[] };
   try {

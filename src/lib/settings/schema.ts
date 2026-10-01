@@ -75,8 +75,8 @@ export const CORE_SETTINGS: SettingDef[] = [
 
   // appearance
   s('appearance.theme', 'enum', 'system', 'appearance', { options: ['system', 'light', 'dark'] }),
-  s('appearance.primaryColor', 'color', '#7a7cf0', 'appearance'),
-  s('appearance.secondaryColor', 'color', '#eef7ef', 'appearance'),
+  s('appearance.primaryColor', 'color', '#ef8a7c', 'appearance'),
+  s('appearance.secondaryColor', 'color', '#fdeadc', 'appearance'),
   s('appearance.uiFont', 'font', 'default', 'appearance'),
   s('appearance.editorFont', 'font', 'default', 'appearance'),
   s('appearance.monoFont', 'font', 'default', 'appearance'),

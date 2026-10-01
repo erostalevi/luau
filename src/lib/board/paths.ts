@@ -1,4 +1,4 @@
-// Board-relative paths and `lull://` URLs for attachments.
+// Board-relative paths and `luau://` URLs for attachments.
 
 import { isTauri } from '$lib/backend/rpc';
 import type { BoardModel } from '$lib/state/boards.svelte';
@@ -28,7 +28,7 @@ export function attachmentDirRel(b: BoardModel, cardId: string): string {
 
 export function fileUrl(boardId: string, rel: string, width?: number): string {
   const path = `${boardId}/${rel.split('/').map(encodeURIComponent).join('/')}`;
-  const base = convert ? convert(path, 'lull') : `lull://localhost/${path}`;
+  const base = convert ? convert(path, 'luau') : `luau://localhost/${path}`;
   return width ? `${base}?w=${Math.round(width * (window.devicePixelRatio || 1))}` : base;
 }
 

@@ -24,7 +24,7 @@ export default {
     import: {
       title: 'Import',
       folder: 'A folder',
-      folderDesc: 'A Lull board or any folder of Markdown notes',
+      folderDesc: 'A Luau board or any folder of Markdown notes',
       file: 'An archive or JSON file',
       fileDesc: 'Board .zip, Markdown .zip or interchange .json',
       pickFolder: 'Choose a folder to import',

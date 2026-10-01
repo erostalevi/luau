@@ -30,7 +30,7 @@ describe('io helpers', () => {
   it('strips secret-looking keys from settings bundles', () => {
     expect(isSecretKey('jira.apiToken')).toBe(true);
     const b = buildSettingsBundle({ theme: 'dark', 'ai.secretKey': 'x' }, [{ key: 'a', command: 'b' }]);
-    expect(b.format).toBe('lull-settings');
+    expect(b.format).toBe('luau-settings');
     expect(Object.keys(b.settings)).toEqual(['theme']);
     expect(b.keybindings).toHaveLength(1);
   });

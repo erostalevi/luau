@@ -24,7 +24,7 @@ export default {
     import: {
       title: 'Importar',
       folder: 'Uma pasta',
-      folderDesc: 'Um quadro do Lull ou qualquer pasta de notas Markdown',
+      folderDesc: 'Um quadro do Luau ou qualquer pasta de notas Markdown',
       file: 'Um arquivo compactado ou JSON',
       fileDesc: '.zip de quadro, .zip de Markdown ou .json de intercâmbio',
       pickFolder: 'Escolha uma pasta para importar',

@@ -7,7 +7,7 @@ summarize what happened on the boards over a period, optionally with a **local**
 run summaries on a schedule; run Python cells; show safe link previews.
 
 ## Files
-Rust core (`crates/lull-core/src/ai/`, feature-owned):
+Rust core (`crates/luau-core/src/ai/`, feature-owned):
 - `mod.rs` — module layout + Slack hook: `pub type SlackSender`, `set_slack_sender`,
   `clear_slack_sender`, `slack_connected`, `send_to_slack` (RwLock; no Slack client here).
 - `stage.rs` — lane name → `Done / InProgress / ToDo / Other` (en/es/pt keywords,

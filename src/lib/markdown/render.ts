@@ -185,7 +185,7 @@ export async function enhanceRendered(root: HTMLElement) {
     let n = 0;
     for (const el of diagrams) {
       try {
-        const { svg } = await m.render(`lull-md-mermaid-${Date.now()}-${n++}`, el.dataset.code ?? '');
+        const { svg } = await m.render(`luau-md-mermaid-${Date.now()}-${n++}`, el.dataset.code ?? '');
         el.innerHTML = svg;
         el.classList.add('mermaid');
       } catch {

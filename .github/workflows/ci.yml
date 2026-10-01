@@ -71,4 +71,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: pnpm build:web
-      - run: cargo build -p lull
+      - run: cargo build -p luau

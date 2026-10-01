@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/icon.png" width="96" height="96" alt="Lull icon">
+  <img src="assets/icon.png" width="96" height="96" alt="Luau icon">
 </p>
 
-<h1 align="center">Lull</h1>
+<h1 align="center">Luau</h1>
 
 <p align="center">
   A calm, local-first kanban board and Markdown notes app for macOS, Windows and Linux.<br>
@@ -25,9 +25,9 @@
   <em>board view (dark)</em>
 </p>
 
-## Why Lull
+## Why Luau
 
-- **Your files, your folders.** A board is any folder on disk with a hidden `.lull/` directory.
+- **Your files, your folders.** A board is any folder on disk with a hidden `.luau/` directory.
   Lanes are folders, cards are `.md` files. Open them in any editor, sync them with git,
   Dropbox or iCloud; they stay readable without the app.
 - **Fast and light.** Tauri 2 + Rust core + Svelte 5: a small native binary that uses the system
@@ -145,7 +145,7 @@ cargo fmt --all
 
 ```
 Project Alpha/                ← any folder, anywhere
-├── .lull/                    ← hidden, app-internal (also the board marker)
+├── .luau/                    ← hidden, app-internal (also the board marker)
 │   ├── board.json            ← manifest: id, name, type, lane order, view
 │   ├── history/              ← operation journal + compressed text versions
 │   ├── trash/                ← deleted items, restorable
@@ -164,7 +164,7 @@ Project Alpha/                ← any folder, anywhere
   priorities are inline text, so files stay meaningful in any editor.
 - `index.json` order is the source of truth for ordering; the file system is the source of truth for existence.
 - JSON is pretty-printed with a stable key order for clean git diffs. Writes are atomic; loading never rewrites your files.
-- Boards created by a newer Lull open read-only instead of being silently changed.
+- Boards created by a newer Luau open read-only instead of being silently changed.
 
 ## Keyboard shortcuts (highlights)
 
@@ -186,7 +186,7 @@ Project Alpha/                ← any folder, anywhere
 
 ## Architecture
 
-A framework-free Rust core (`crates/lull-core`) owns the file system, watcher, discovery, search,
+A framework-free Rust core (`crates/luau-core`) owns the file system, watcher, discovery, search,
 history and integrations; a thin Tauri adapter (`src-tauri`) exposes it over a single RPC command;
 the Svelte 5 UI (`src/`) is built around a command registry and contribution points.
 See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for layers and conventions, and

@@ -12,7 +12,7 @@ export interface CodeResult {
   ms: number;
 }
 
-export interface LullEditorContext {
+export interface LuauEditorContext {
   boardId: string;
   cardId: string;
   /** URL for a file referenced relative to the card (or remote URL). */
@@ -34,6 +34,6 @@ export interface LullEditorContext {
   t(key: string, params?: Record<string, unknown>): string;
 }
 
-export const lullContext = Facet.define<LullEditorContext, LullEditorContext | null>({
+export const luauContext = Facet.define<LuauEditorContext, LuauEditorContext | null>({
   combine: (values) => values[values.length - 1] ?? null,
 });

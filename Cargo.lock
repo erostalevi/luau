@@ -2700,14 +2700,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
 
 [[package]]
-name = "lull"
+name = "luau"
 version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
  "chrono",
  "dirs 7.0.0",
  "fontdb",
- "lull-core",
+ "luau-core",
  "notify",
  "parking_lot",
  "percent-encoding",
@@ -2733,7 +2733,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lull-core"
+name = "luau-core"
 version = "0.1.0"
 dependencies = [
  "base64 0.23.1",

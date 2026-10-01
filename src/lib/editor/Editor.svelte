@@ -16,7 +16,7 @@
   import { t, fmtDate, i18n } from '$lib/i18n/index.svelte';
   import { toast } from '$lib/state/toasts.svelte';
   import { setActiveEditor, clearActiveEditor } from './active';
-  import type { LullEditorContext, CodeResult } from './cm/context';
+  import type { LuauEditorContext, CodeResult } from './cm/context';
   import { refreshPreview } from './cm/livePreview';
   import { fileMarkdown } from './cm/paste';
   import { renderMarkdown, enhanceRendered } from '$lib/markdown/render';
@@ -137,7 +137,7 @@
     }
   }
 
-  function makeContext(): LullEditorContext {
+  function makeContext(): LuauEditorContext {
     return {
       boardId,
       cardId,
@@ -410,17 +410,17 @@
 
 </script>
 
-<div class="lull-editor" class:full-width={fullWidth || settings.get<boolean>('editor.fullWidth')} bind:this={host}></div>
+<div class="luau-editor" class:full-width={fullWidth || settings.get<boolean>('editor.fullWidth')} bind:this={host}></div>
 
 <style>
-  .lull-editor {
+  .luau-editor {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
     user-select: text;
   }
-  .lull-editor :global(.cm-editor) {
+  .luau-editor :global(.cm-editor) {
     flex: 1;
     min-height: 0;
   }

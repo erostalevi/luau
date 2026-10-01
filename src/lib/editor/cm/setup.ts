@@ -1,4 +1,4 @@
-// Assembles the CodeMirror extension set for Lull editors.
+// Assembles the CodeMirror extension set for Luau editors.
 
 import { EditorState, Compartment, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder as cmPlaceholder, drawSelection, dropCursor, highlightSpecialChars, rectangularSelection, crosshairCursor, lineNumbers } from '@codemirror/view';
@@ -9,10 +9,10 @@ import { syntaxHighlighting, HighlightStyle, bracketMatching, indentOnInput } fr
 import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
 import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/search';
 import { tags as t } from '@lezer/highlight';
-import { lullMarkdown } from './markdown';
+import { luauMarkdown } from './markdown';
 import { livePreview, livePreviewEnabled, setOutput, outputKey } from './livePreview';
-import { lullContext, type LullEditorContext } from './context';
-import { lullCompletions, type CompletionData } from './autocomplete';
+import { luauContext, type LuauEditorContext } from './context';
+import { luauCompletions, type CompletionData } from './autocomplete';
 import { pasteAndDrop, type PasteOptions } from './paste';
 import { runRequest } from './widgets';
 
@@ -56,7 +56,7 @@ const baseTheme = EditorView.theme({
 
 export interface SetupOptions {
   doc: string;
-  ctx: LullEditorContext;
+  ctx: LuauEditorContext;
   completion: CompletionData;
   paste: PasteOptions;
   placeholder: string;
@@ -97,7 +97,7 @@ export function createState(o: SetupOptions): EditorState {
     doc: o.doc,
     extensions: [
       compartments.vim.of([]),
-      lullContext.of(o.ctx),
+      luauContext.of(o.ctx),
       history(),
       drawSelection(),
       dropCursor(),
@@ -109,7 +109,7 @@ export function createState(o: SetupOptions): EditorState {
       highlightSelectionMatches(),
       search({ top: true }),
       EditorView.lineWrapping,
-      markdown({ base: markdownLanguage, codeLanguages: languages, extensions: [lullMarkdown], addKeymap: true }),
+      markdown({ base: markdownLanguage, codeLanguages: languages, extensions: [luauMarkdown], addKeymap: true }),
       syntaxHighlighting(highlight),
       compartments.preview.of(livePreviewEnabled.of(o.livePreview)),
       livePreview(),
@@ -119,7 +119,7 @@ export function createState(o: SetupOptions): EditorState {
       compartments.readOnly.of([EditorState.readOnly.of(o.readOnly), EditorView.editable.of(!o.readOnly)]),
       compartments.tabSize.of(EditorState.tabSize.of(o.tabSize)),
       cmPlaceholder(o.placeholder),
-      lullCompletions(o.completion),
+      luauCompletions(o.completion),
       pasteAndDrop(o.paste),
       runner,
       baseTheme,

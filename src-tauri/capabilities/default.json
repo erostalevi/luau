@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissions for all Lull windows",
+  "description": "Permissions for all Luau windows",
   "windows": [
     "*"
   ],

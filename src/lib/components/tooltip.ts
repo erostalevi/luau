@@ -12,7 +12,7 @@ let lastHide = 0;
 function ensure(): HTMLDivElement {
   if (el) return el;
   el = document.createElement('div');
-  el.className = 'lull-tip';
+  el.className = 'luau-tip';
   document.body.appendChild(el);
   return el;
 }
@@ -28,7 +28,7 @@ function show(target: HTMLElement, arg: Exclude<TipArg, null | undefined>) {
   tip.appendChild(span);
   if (key) {
     const k = document.createElement('span');
-    k.className = 'lull-tip-k';
+    k.className = 'luau-tip-k';
     k.textContent = formatKey(key).join(' ');
     tip.appendChild(k);
   }

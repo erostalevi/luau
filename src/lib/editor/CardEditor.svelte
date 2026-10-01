@@ -280,10 +280,10 @@
     overflow-y: auto;
     padding: 0 28px;
   }
-  .body :global(.lull-editor .cm-scroller) {
+  .body :global(.luau-editor .cm-scroller) {
     overflow: visible;
   }
-  .body :global(.lull-editor .cm-content) {
+  .body :global(.luau-editor .cm-content) {
     padding-bottom: 24px;
   }
   .extras {

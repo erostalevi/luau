@@ -53,7 +53,7 @@ export const appCommands: Command[] = [
     category: 'help',
     icon: Bug,
     run: async () => {
-      const dest = await pickSavePath(t('commands.app.exportDiagnostics'), `lull-diagnostics-${new Date().toISOString().slice(0, 10)}.zip`, [{ name: 'Zip', extensions: ['zip'] }]);
+      const dest = await pickSavePath(t('commands.app.exportDiagnostics'), `luau-diagnostics-${new Date().toISOString().slice(0, 10)}.zip`, [{ name: 'Zip', extensions: ['zip'] }]);
       if (!dest) return;
       await rpc('logs.export', { dest });
       toast.success(t('toasts.exported'), { action: { label: t('common.reveal'), run: () => reveal(dest) } });

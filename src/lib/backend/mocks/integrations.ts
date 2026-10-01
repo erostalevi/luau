@@ -1,4 +1,4 @@
-// Browser mock for integrations: a fake Jira Cloud site with project "LULL",
+// Browser mock for integrations: a fake Jira Cloud site with project "LUAU",
 // a Trello/Slack connect that always succeeds, mirrors, links and the WriteGate.
 
 import type { MockApi } from '../mock';
@@ -8,7 +8,7 @@ import type { Account, ChangeRow, IdName, Mirror, PrepareRequest, Prepared, Remo
 
 type Methods = Record<string, (p: Record<string, any>) => unknown>;
 
-const SITE = 'https://lull-demo.atlassian.net';
+const SITE = 'https://luau-demo.atlassian.net';
 const STATUSES: { id: string; name: string; cat: StatusCategory }[] = [
   { id: '1', name: 'To Do', cat: 'todo' },
   { id: '3', name: 'In Progress', cat: 'inProgress' },
@@ -38,7 +38,7 @@ function seedIssues(): RemoteIssue[] {
   ];
   return rows.map(([summary, s, who, type, priority], i) => {
     const st = STATUSES[s];
-    const key = `LULL-${101 + i}`;
+    const key = `LUAU-${101 + i}`;
     return {
       key,
       id: String(10001 + i),
@@ -56,16 +56,16 @@ function seedIssues(): RemoteIssue[] {
       updated: new Date(Date.now() - i * 3_600_000).toISOString(),
       subtasks: [],
       attachments: [],
-      project: 'LULL',
+      project: 'LUAU',
     };
   });
 }
 
 export function register(methods: Methods, api: MockApi) {
   const issues = seedIssues();
-  const comments = new Map<string, RemoteComment[]>([['LULL-101', [{ id: 'm1', author: PEOPLE[1], bodyMd: 'I can reproduce this on **Safari 18**.', created: new Date(Date.now() - 86_400_000).toISOString() }]]]);
+  const comments = new Map<string, RemoteComment[]>([['LUAU-101', [{ id: 'm1', author: PEOPLE[1], bodyMd: 'I can reproduce this on **Safari 18**.', created: new Date(Date.now() - 86_400_000).toISOString() }]]]);
   let accounts: Account[] = api.ls('integrations.accounts', [
-    { id: 'a-demo', provider: 'jiraCloud', label: 'lull-demo.atlassian.net', baseUrl: SITE, allowedHosts: ['lull-demo.atlassian.net'], insecureHttp: false, savedQueries: [{ name: 'Bugs', query: 'project = LULL AND type = Bug' }], userName: 'Eros T.', persisted: true, created: new Date().toISOString() },
+    { id: 'a-demo', provider: 'jiraCloud', label: 'luau-demo.atlassian.net', baseUrl: SITE, allowedHosts: ['luau-demo.atlassian.net'], insecureHttp: false, savedQueries: [{ name: 'Bugs', query: 'project = LUAU AND type = Bug' }], userName: 'Eros T.', persisted: true, created: new Date().toISOString() },
   ]);
   const save = () => api.lsSet('integrations.accounts', accounts);
   const links = new Map<string, Record<string, RemoteInfo>>();
@@ -169,7 +169,7 @@ export function register(methods: Methods, api: MockApi) {
     const fields = [...new Set(changes.map((c) => c.field))];
     const empty = !changes.length && !preview;
     if (!empty) pending.set(token, run);
-    return { token, direction, service, site: service === 'slack' ? 'slack.com' : 'lull-demo.atlassian.net', target, fields, changes, preview, empty };
+    return { token, direction, service, site: service === 'slack' ? 'slack.com' : 'luau-demo.atlassian.net', target, fields, changes, preview, empty };
   }
 
   const linkOf = (board?: string, card?: string) => (board && card ? links.get(board)?.[card] : undefined);
@@ -179,7 +179,7 @@ export function register(methods: Methods, api: MockApi) {
     if (!p.token) throw new RpcError('invalid', 'invalid operation: missing_token');
     const provider = p.provider as Account['provider'];
     const host = provider === 'trello' ? 'api.trello.com' : provider === 'slack' ? 'slack.com' : String(p.baseUrl).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-    const a: Account = { id: 'a' + Math.random().toString(36).slice(2, 8), provider, label: provider === 'trello' ? 'Trello' : provider === 'slack' ? 'Lull workspace' : host, baseUrl: `https://${host}`, allowedHosts: [host], insecureHttp: !!p.insecureHttp, savedQueries: [], userName: 'Eros T.', persisted: true, created: new Date().toISOString() };
+    const a: Account = { id: 'a' + Math.random().toString(36).slice(2, 8), provider, label: provider === 'trello' ? 'Trello' : provider === 'slack' ? 'Luau workspace' : host, baseUrl: `https://${host}`, allowedHosts: [host], insecureHttp: !!p.insecureHttp, savedQueries: [], userName: 'Eros T.', persisted: true, created: new Date().toISOString() };
     accounts = [...accounts, a];
     save();
     return a;
@@ -208,9 +208,9 @@ export function register(methods: Methods, api: MockApi) {
   };
   methods['remote.comments'] = (p) => comments.get(p.key) ?? [];
   methods['remote.users'] = (p) => PEOPLE.filter((u) => u.name.toLowerCase().includes(String(p.q).toLowerCase()));
-  methods['remote.projects'] = (): IdName[] => [{ id: '100', name: 'Lull', key: 'LULL' }];
+  methods['remote.projects'] = (): IdName[] => [{ id: '100', name: 'Luau', key: 'LUAU' }];
   methods['remote.issueTypes'] = (): IdName[] => ['Task', 'Story', 'Bug'].map((n, i) => ({ id: String(i + 1), name: n }));
-  methods['remote.boards'] = (): IdName[] => [{ id: '7', name: 'Lull board', key: 'LULL', detail: 'kanban' }];
+  methods['remote.boards'] = (): IdName[] => [{ id: '7', name: 'Luau board', key: 'LUAU', detail: 'kanban' }];
 
   methods['remote.links'] = (p) => links.get(p.board) ?? {};
   methods['remote.link'] = (p) => {
@@ -342,7 +342,7 @@ export function register(methods: Methods, api: MockApi) {
           { field: 'Type', after: r.issueType ?? 'Task' },
           { field: 'Summary', after: title },
         ], () => {
-          const key = `LULL-${101 + issues.length}`;
+          const key = `LUAU-${101 + issues.length}`;
           const i: RemoteIssue = { ...issues[0], key, id: String(20000 + issues.length), url: `${SITE}/browse/${key}`, summary: title, descriptionMd: '', status: 'To Do', statusId: '1', statusCategory: 'todo', assignee: null, type: r.issueType ?? 'Task' };
           issues.push(i);
           methods['board.apply']({ board: r.board, op: { op: 'writeCard', id: r.card, content: `${content.trimEnd()}\n\nJira: [${key}](${i.url})\n` }, label: `Linked to ${key}` });

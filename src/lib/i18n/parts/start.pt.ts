@@ -25,7 +25,7 @@ export default {
     emptyHint: 'As extensões poderão adicionar comandos, painéis, ações de cartão e configurações.',
   },
   firstRun: {
-    welcome: 'Boas-vindas ao Lull',
+    welcome: 'Boas-vindas ao Luau',
     welcomeText: 'Um lugar calmo para quadros e notas. Tudo fica no seu computador como arquivos Markdown simples.',
     look: 'Escolha um visual',
     keys: 'Estilo de teclado',
@@ -33,7 +33,7 @@ export default {
     modal: 'Uma janela centralizada',
     sidebar: 'Uma barra lateral à direita',
     boards: 'Onde estão seus quadros?',
-    boardsText: 'O Lull encontra quadros em qualquer lugar da sua pasta pessoal. O macOS pode pedir acesso uma vez a pastas como Documentos — isso é esperado.',
+    boardsText: 'O Luau encontra quadros em qualquer lugar da sua pasta pessoal. O macOS pode pedir acesso uma vez a pastas como Documentos — isso é esperado.',
     addFolder: 'Pesquisar só nesta pasta…',
     skip: 'Pular',
     next: 'Próximo',

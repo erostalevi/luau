@@ -1,4 +1,4 @@
-// Lightweight card metadata parser (TS twin of lull-core/src/markdown).
+// Lightweight card metadata parser (TS twin of luau-core/src/markdown).
 // Used for optimistic UI and the browser mock; the Rust parser is authoritative.
 
 import type { Face, FaceItem, Footer, Heading, LinkRef, TaskStats } from '$lib/backend/types';

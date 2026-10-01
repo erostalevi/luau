@@ -15,7 +15,7 @@ pub fn create(app: &AppHandle, label: &str, query: &str) -> tauri::Result<Webvie
     let url = WebviewUrl::App(format!("index.html{query}").into());
     #[allow(unused_mut)]
     let mut b = WebviewWindowBuilder::new(app, label, url)
-        .title("Lull")
+        .title("Luau")
         .inner_size(1280.0, 820.0)
         .min_inner_size(640.0, 420.0)
         .visible(false)

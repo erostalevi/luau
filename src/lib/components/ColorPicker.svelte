@@ -1,7 +1,7 @@
 <script lang="ts">
   import { hexToRgb, rgbToHex } from '$lib/theme/color';
 
-  let { value = $bindable('#7a7cf0'), onchange, swatches = DEFAULT_SWATCHES }: { value?: string; onchange?: (hex: string) => void; swatches?: string[] } = $props();
+  let { value = $bindable('#ef8a7c'), onchange, swatches = DEFAULT_SWATCHES }: { value?: string; onchange?: (hex: string) => void; swatches?: string[] } = $props();
 
   // HSV model for the picker surface.
   function toHsv(hex: string): [number, number, number] {
@@ -60,8 +60,9 @@
 
 <script lang="ts" module>
   export const DEFAULT_SWATCHES = [
-    '#7a7cf0', '#9b8cf2', '#c48cf0', '#f08cc8', '#f09a9a', '#f0b88c', '#e8cf7a', '#b9d98a',
-    '#8fd1a4', '#7fcfc6', '#86b8f0', '#9aa6c4', '#eef7ef', '#eceeff', '#fdf0e6', '#f2f2f5',
+    // Hawaii sunset first (coral, hibiscus, mango, plumeria, dusk), then the rest.
+    '#ef8a7c', '#ec8fb0', '#f5a97f', '#f3c77e', '#b99be0', '#8f9df0', '#7fc8c4', '#9fd49a',
+    '#7a7cf0', '#c48cf0', '#86b8f0', '#9aa6c4', '#fdeadc', '#fde6ee', '#eef7ef', '#f4eff2',
   ];
 </script>
 

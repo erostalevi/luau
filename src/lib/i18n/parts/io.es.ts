@@ -24,7 +24,7 @@ export default {
     import: {
       title: 'Importar',
       folder: 'Una carpeta',
-      folderDesc: 'Un tablero de Lull o cualquier carpeta de notas Markdown',
+      folderDesc: 'Un tablero de Luau o cualquier carpeta de notas Markdown',
       file: 'Un archivo comprimido o JSON',
       fileDesc: '.zip de tablero, .zip de Markdown o .json de intercambio',
       pickFolder: 'Elige una carpeta para importar',

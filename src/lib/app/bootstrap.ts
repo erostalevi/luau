@@ -72,7 +72,7 @@ export async function bootstrap() {
       import('$lib/state/workspace.svelte'),
       import('$lib/commands/registry.svelte'),
     ]);
-    (window as unknown as Record<string, unknown>).__lull = { boards, dnd, selection, ws, ui, settings, runCommand: reg.runCommand, rpc };
+    (window as unknown as Record<string, unknown>).__luau = { boards, dnd, selection, ws, ui, settings, runCommand: reg.runCommand, rpc };
   }
 }
 

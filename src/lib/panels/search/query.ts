@@ -1,4 +1,4 @@
-// Search query syntax — a faithful TS mirror of crates/lull-core/src/search/query.rs
+// Search query syntax — a faithful TS mirror of crates/luau-core/src/search/query.rs
 // so the filter UI can stay in two-way sync with the query text.
 //
 //   login "exact phrase" -draft tag:backend -tag:wip board:"Project Alpha"

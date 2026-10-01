@@ -1,4 +1,4 @@
-// Lezer Markdown extensions for Lull syntax:
+// Lezer Markdown extensions for Luau syntax:
 //   [[c1a2b3c]] / [[c1a2b3c#Heading|alias]] / ![[c1a2b3c]]   CardLink / CardEmbed
 //   #tag  @person  [2026-10-03]  ==highlight==  $inline math$  $$block math$$
 
@@ -20,7 +20,7 @@ function charAt(cx: InlineContext, pos: number): number {
   return pos < cx.offset + cx.text.length && pos >= cx.offset ? cx.char(pos) : -1;
 }
 
-export const lullMarkdown: MarkdownConfig = {
+export const luauMarkdown: MarkdownConfig = {
   defineNodes: [
     { name: 'CardLink', style: t.link },
     { name: 'CardEmbed', style: t.link },

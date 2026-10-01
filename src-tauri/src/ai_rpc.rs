@@ -1,11 +1,11 @@
 //! RPC methods for local AI, activity summaries, schedules, code runner and
-//! link previews. Business logic lives in `lull_core::ai`; this is glue only.
+//! link previews. Business logic lives in `luau_core::ai`; this is glue only.
 
 use std::sync::Arc;
 
-use lull_core::ai::schedule::Schedule;
-use lull_core::ai::service::{CardSummaryRequest, FactsQuery, Notifier, SummarizeRequest};
-use lull_core::app::Core;
+use luau_core::ai::schedule::Schedule;
+use luau_core::ai::service::{CardSummaryRequest, FactsQuery, Notifier, SummarizeRequest};
+use luau_core::app::Core;
 use serde::Serialize;
 use serde_json::{Value, json};
 use tauri::AppHandle;
@@ -35,13 +35,13 @@ fn notifier(app: &AppHandle) -> Notifier {
             .title(title)
             .body(body)
             .show()
-            .map_err(|e| lull_core::Error::Other(format!("notification: {e}")))
+            .map_err(|e| luau_core::Error::Other(format!("notification: {e}")))
     })
 }
 
 /// Start the background scheduler for scheduled summaries (called once at setup).
 pub fn start_scheduler(app: &AppHandle, core: Arc<Core>) {
-    lull_core::ai::scheduler::start(core, Some(notifier(app)));
+    luau_core::ai::scheduler::start(core, Some(notifier(app)));
 }
 
 pub async fn dispatch_async(
@@ -150,12 +150,12 @@ pub fn dispatch_sync(
                         message: "export needs an absolute .md path".into(),
                     });
                 }
-                ok(lull_core::fsutil::atomic_write(&path, markdown.as_bytes())?)
+                ok(luau_core::fsutil::atomic_write(&path, markdown.as_bytes())?)
             }
-            "ai.slackConnected" => ok(lull_core::ai::slack_connected()
-                && lull_core::integrations::accounts::load(&core.paths.config)
+            "ai.slackConnected" => ok(luau_core::ai::slack_connected()
+                && luau_core::integrations::accounts::load(&core.paths.config)
                     .iter()
-                    .any(|a| a.provider == lull_core::integrations::types::ProviderKind::Slack)),
+                    .any(|a| a.provider == luau_core::integrations::types::ProviderKind::Slack)),
             _ => Err(RpcError {
                 code: "unknown".into(),
                 message: String::new(),

@@ -7,7 +7,7 @@ import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { SyntaxNode } from '@lezer/common';
 import { parseFooter } from '$lib/markdown/meta';
-import { lullContext, type CodeResult } from './context';
+import { luauContext, type CodeResult } from './context';
 import {
   BulletWidget,
   CalloutLabelWidget,
@@ -72,7 +72,7 @@ const lineDeco = (cls: string) => Decoration.line({ class: cls });
 
 function build(state: EditorState): DecorationSet {
   const enabled = state.facet(livePreviewEnabled);
-  const ctx = state.facet(lullContext);
+  const ctx = state.facet(luauContext);
   const out: Range<Decoration>[] = [];
   const doc = state.doc;
   const focused = state.field(focusField);
@@ -364,7 +364,7 @@ const linkClicks = EditorView.domEventHandlers({
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-href]');
     if (!target || e.button !== 0 || e.altKey) return false;
     const href = target.dataset.href!;
-    const ctx = view.state.facet(lullContext);
+    const ctx = view.state.facet(luauContext);
     if (!ctx) return false;
     if (target.classList.contains('cm-url') && !(e.metaKey || e.ctrlKey)) return false;
     e.preventDefault();

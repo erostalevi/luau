@@ -64,7 +64,7 @@ export function pasteAndDrop(opts: PasteOptions): Extension {
         return true;
       }
       const html = dt.getData('text/html');
-      if (html && opts.richPaste() && !html.includes('data-lull-plain')) {
+      if (html && opts.richPaste() && !html.includes('data-luau-plain')) {
         e.preventDefault();
         void htmlToMarkdown().then((conv) => {
           const md = conv(html).trim();

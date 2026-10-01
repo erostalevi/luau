@@ -34,8 +34,8 @@ export function applyTheme() {
   theme.glass = glass;
   root.dataset.glass = glass ? 'on' : 'off';
 
-  const p = settings.get<string>('appearance.primaryColor') || '#7a7cf0';
-  const sec = settings.get<string>('appearance.secondaryColor') || '#eef7ef';
+  const p = settings.get<string>('appearance.primaryColor') || '#ef8a7c';
+  const sec = settings.get<string>('appearance.secondaryColor') || '#fdeadc';
   const st = root.style;
   if (dark) {
     st.setProperty('--primary', shade(p, 0.72, 0.9));
