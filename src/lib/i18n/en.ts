@@ -3,6 +3,7 @@
 
 const en = {
   common: {
+    quickInput: 'Quick input',
     ok: 'OK',
     cancel: 'Cancel',
     confirm: 'Confirm',

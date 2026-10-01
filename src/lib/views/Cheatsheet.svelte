@@ -4,6 +4,7 @@
   import { getCommand, commandTitle } from '$lib/commands/registry.svelte';
   import { primaryKey } from '$lib/keybindings/resolver.svelte';
   import Kbd from '$lib/components/Kbd.svelte';
+  import { trapFocus } from '$lib/components/focusTrap';
   import { t } from '$lib/i18n/index.svelte';
 
   const groups: { id: string; commands: string[] }[] = [
@@ -24,6 +25,7 @@
     aria-modal="true"
     tabindex="-1"
     transition:scale={{ start: 0.97, duration: 180 }}
+    use:trapFocus={{ initial: null }}
     onkeydown={(e) => e.key === 'Escape' && (ui.cheatsheet = false)}
   >
     <h2>{t('cheatsheet.title')}</h2>

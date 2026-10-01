@@ -11,6 +11,7 @@
   import Segmented from '$lib/components/Segmented.svelte';
   import Toggle from '$lib/components/Toggle.svelte';
   import { DEFAULT_SWATCHES } from '$lib/components/ColorPicker.svelte';
+  import { trapFocus } from '$lib/components/focusTrap';
 
   let step = $state(0);
   const steps = 5;
@@ -33,7 +34,7 @@
 
 {#if ui.firstRun}
   <div class="scrim" transition:fade={{ duration: 200 }}></div>
-  <div class="fr card-surface" data-overlay role="dialog" aria-modal="true" transition:fly={{ y: 16, duration: 260 }}>
+  <div class="fr card-surface" data-overlay role="dialog" aria-modal="true" aria-label={t('firstRun.welcome')} tabindex="-1" use:trapFocus={{ initial: 'footer .btn.primary' }} onkeydown={(e) => e.key === 'Escape' && (e.preventDefault(), finish())} transition:fly={{ y: 16, duration: 260 }}>
     <div class="dots">{#each Array(steps) as _, i (i)}<span class:on={i === step}></span>{/each}</div>
     {#key step}
       <div class="body" in:fly={{ x: 24, duration: 220 }}>

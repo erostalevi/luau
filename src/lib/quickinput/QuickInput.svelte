@@ -5,6 +5,7 @@
   import { fuzzy, highlightSegments } from '$lib/util/fuzzy';
   import Kbd from '$lib/components/Kbd.svelte';
   import { t } from '$lib/i18n/index.svelte';
+  import { trapFocus } from '$lib/components/focusTrap';
 
   let input: HTMLInputElement | undefined = $state();
   let listEl: HTMLDivElement | undefined = $state();
@@ -157,7 +158,7 @@
 
 {#if st}
   <div class="qi-scrim" role="presentation" onpointerdown={() => closeQuickInput(undefined)}></div>
-  <div class="qi card-surface glass" role="dialog" aria-modal="true" aria-label={st.title ?? 'Quick input'}>
+  <div class="qi card-surface glass" role="dialog" aria-modal="true" aria-label={st.title ?? t('common.quickInput')} use:trapFocus={{ initial: 'input' }}>
     {#if st.title || st.totalSteps}
       <div class="head">
         {#if (st.step ?? 1) > 1}

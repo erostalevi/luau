@@ -349,3 +349,18 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Not changed (documented): `card_summarize` still reads one card under the board lock inside an async fn — a
   bounded, sub-millisecond read.
 - Tests: `atomic_write_keeps_links_and_permissions`; full suite 3× green.
+
+## E2 — Accessibility: focus traps, Esc, submenus, "don't ask again"
+
+- Files: `src/lib/components/focusTrap.ts` (new action), `Dialogs.svelte`, `ColorDialog.svelte`,
+  `src/lib/views/Cheatsheet.svelte`, `src/lib/views/FirstRun.svelte`, `src/lib/quickinput/QuickInput.svelte`,
+  `src/lib/components/ContextMenu.svelte`, i18n `common.quickInput`.
+- `trapFocus`: focuses the surface (or a chosen element) on open, keeps Tab/Shift+Tab inside, restores focus to the
+  previously focused element on close. Used by dialogs, color picker, cheat sheet, first-run and quick input.
+- The cheat sheet now receives focus, so Esc closes it. First-run has an accessible name, focuses the primary
+  button and Esc = Skip.
+- Context menus: ArrowRight/Enter on a submenu item moves focus into the submenu (first item active); ArrowLeft
+  returns to the parent menu.
+- Dialogs: the "don't ask again" checkbox state is per dialog, never carried over to the next confirmation.
+- Quick input's accessible label is translated.
+- Tests (web build): cheat sheet focused → Esc closes; palette focus stays inside on Tab.

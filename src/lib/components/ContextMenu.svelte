@@ -5,12 +5,20 @@
   import Kbd from './Kbd.svelte';
   import ContextMenu from './ContextMenu.svelte';
 
-  let { items = null, x = 0, y = 0, nested = false, onclose }: { items?: MenuItem[] | null; x?: number; y?: number; nested?: boolean; onclose?: () => void } = $props();
+  let {
+    items = null,
+    x = 0,
+    y = 0,
+    nested = false,
+    keyboard = false,
+    onclose,
+    onback,
+  }: { items?: MenuItem[] | null; x?: number; y?: number; nested?: boolean; keyboard?: boolean; onclose?: () => void; onback?: () => void } = $props();
 
   let box: HTMLDivElement | undefined = $state();
   let pos = $state({ x: 0, y: 0 });
   let active = $state(-1);
-  let sub = $state<{ i: number; x: number; y: number } | null>(null);
+  let sub = $state<{ i: number; x: number; y: number; keyboard: boolean } | null>(null);
 
   const list = $derived(items ?? menu.items);
   const visible = $derived(nested ? true : menu.open);
@@ -29,7 +37,9 @@
         x: Math.max(6, Math.min(bx, window.innerWidth - r.width - 6)),
         y: Math.max(6, Math.min(by, window.innerHeight - r.height - 6)),
       };
-      if (!nested) box.focus();
+      // Submenus opened from the keyboard take focus and select their first item.
+      if (!nested || keyboard) box.focus();
+      if (nested && keyboard) active = list.findIndex((it) => !it.separator && !it.disabled);
     });
   });
 
@@ -38,7 +48,7 @@
     if (it.submenu) {
       const el = (ev?.currentTarget as HTMLElement) ?? box?.children[i];
       const r = (el as HTMLElement).getBoundingClientRect();
-      sub = { i, x: r.right - 4, y: r.top - 4 };
+      sub = { i, x: r.right - 4, y: r.top - 4, keyboard: !ev };
       return;
     }
     close();
@@ -56,6 +66,10 @@
     if (e.key === 'Escape') {
       e.preventDefault();
       close();
+    } else if (e.key === 'ArrowLeft' && nested) {
+      e.preventDefault();
+      e.stopPropagation();
+      onback?.();
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       let i = active;
@@ -121,7 +135,18 @@
     {/each}
   </div>
   {#if sub && list[sub.i]?.submenu}
-    <ContextMenu items={list[sub.i].submenu} x={sub.x} y={sub.y} nested onclose={close} />
+    <ContextMenu
+      items={list[sub.i].submenu}
+      x={sub.x}
+      y={sub.y}
+      nested
+      keyboard={sub.keyboard}
+      onclose={close}
+      onback={() => {
+        sub = null;
+        box?.focus();
+      }}
+    />
   {/if}
 {/if}
 

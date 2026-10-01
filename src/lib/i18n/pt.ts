@@ -3,6 +3,7 @@
 
 const pt = {
   common: {
+    quickInput: 'Entrada rápida',
     ok: 'OK',
     cancel: 'Cancelar',
     confirm: 'Confirmar',

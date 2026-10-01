@@ -3,6 +3,7 @@
   import ColorPicker from './ColorPicker.svelte';
   import { colorDialog, closeColorDialog } from '$lib/state/colorDialog.svelte';
   import { t } from '$lib/i18n/index.svelte';
+  import { trapFocus } from './focusTrap';
 </script>
 
 {#if colorDialog.open}
@@ -14,6 +15,7 @@
     aria-modal="true"
     tabindex="-1"
     transition:scale={{ start: 0.96, duration: 160 }}
+    use:trapFocus
     onkeydown={(e) => {
       if (e.key === 'Escape') closeColorDialog(false);
       if (e.key === 'Enter') closeColorDialog(true);

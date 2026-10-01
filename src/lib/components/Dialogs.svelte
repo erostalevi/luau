@@ -4,7 +4,10 @@
   import { dialogs, closeDialog } from '$lib/state/dialogs.svelte';
   import { t } from '$lib/i18n/index.svelte';
 
-  let dontAsk = $state(false);
+  import { trapFocus } from './focusTrap';
+
+  // One "don't ask again" box per dialog (never carried over to the next one).
+  let dontAsk = $state<Record<string, boolean>>({});
 
   function focusCancel(node: HTMLElement, cancelFocused: boolean | undefined) {
     queueMicrotask(() => {
@@ -25,6 +28,7 @@
     tabindex="-1"
     transition:scale={{ start: 0.96, duration: 180 }}
     use:focusCancel={d.cancelFocused ?? true}
+    use:trapFocus={{ initial: null }}
     onkeydown={(e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -47,11 +51,11 @@
     {#if d.preview}<pre class="preview">{d.preview}</pre>{/if}
     <div class="actions">
       {#if d.dontAskLabel}
-        <label class="dont"><input type="checkbox" bind:checked={dontAsk} /> {d.dontAskLabel}</label>
+        <label class="dont"><input type="checkbox" bind:checked={dontAsk[d.id]} /> {d.dontAskLabel}</label>
       {/if}
       <span class="spacer"></span>
       <button class="btn cancel" onclick={() => closeDialog(d.id, false)}>{d.cancelLabel ?? t('common.cancel')}</button>
-      <button class="btn confirm {d.danger ? 'danger' : 'primary'}" onclick={() => closeDialog(d.id, true, dontAsk)}>{d.confirmLabel ?? t('common.confirm')}</button>
+      <button class="btn confirm {d.danger ? 'danger' : 'primary'}" onclick={() => closeDialog(d.id, true, !!dontAsk[d.id])}>{d.confirmLabel ?? t('common.confirm')}</button>
     </div>
   </div>
 {/each}
