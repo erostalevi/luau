@@ -4,7 +4,9 @@
 use std::sync::Arc;
 
 use luau_core::ai::schedule::Schedule;
-use luau_core::ai::service::{CardSummaryRequest, FactsQuery, Notifier, SummarizeRequest};
+use luau_core::ai::service::{
+    CardSummaryRequest, CardsFromTextRequest, FactsQuery, Notifier, SummarizeRequest,
+};
 use luau_core::app::Core;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -39,6 +41,26 @@ fn notifier(app: &AppHandle) -> Notifier {
     })
 }
 
+/// Register the bundled `apple-llm` sidecar (Apple on-device model). Tauri
+/// puts `externalBin` sidecars next to the app executable (`Contents/MacOS`
+/// in the bundle, `target/<profile>` in development).
+pub fn register_apple_helper() {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+    if let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+    {
+        let p = dir.join("apple-llm");
+        if p.is_file() {
+            luau_core::ai::apple::set_helper_path(p);
+        } else {
+            tracing::info!("apple-llm helper not bundled; Apple on-device AI disabled");
+        }
+    }
+}
+
 /// Start the background scheduler for scheduled summaries (called once at setup).
 pub fn start_scheduler(app: &AppHandle, core: Arc<Core>) {
     luau_core::ai::scheduler::start(core, Some(notifier(app)));
@@ -71,6 +93,14 @@ pub async fn dispatch_async(
         "card.summarize" => match de::<CardSummaryRequest>(p) {
             Ok(req) => core
                 .card_summarize(req)
+                .await
+                .map_err(Into::into)
+                .and_then(ok),
+            Err(e) => Err(e),
+        },
+        "ai.cardsFromText" => match de::<CardsFromTextRequest>(p) {
+            Ok(req) => core
+                .ai_cards_from_text(req)
                 .await
                 .map_err(Into::into)
                 .and_then(ok),

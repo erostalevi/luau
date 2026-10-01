@@ -3,15 +3,19 @@
 //! Layout (hexagonal):
 //! - pure domain: [`stage`] (lane → stage inference), [`facts`] (journal →
 //!   activity facts), [`prompt`] (facts → chat messages), [`render`]
-//!   (deterministic Markdown), [`schedule`] (due-time computation), and the
+//!   (deterministic Markdown), [`cards`] (clipboard → card drafts),
+//!   [`schedule`] (due-time computation), and the
 //!   SSRF address rules in [`web`].
-//! - adapters: [`llm`] (Ollama / OpenAI-compatible HTTP), [`code`] (python
+//! - adapters: [`apple`] (on-device model helper), [`llm`] (Ollama /
+//!   OpenAI-compatible HTTP), [`code`] (python
 //!   subprocess), [`web`] (link previews), [`store`] (app-data JSON files).
 //! - application: [`service`] (`impl Core`) and [`scheduler`] (background thread).
 //!
 //! Slack delivery is pluggable: the Slack integration registers a sender with
 //! [`set_slack_sender`]; scheduled summaries call it when present.
 
+pub mod apple;
+pub mod cards;
 pub mod code;
 pub mod facts;
 pub mod llm;

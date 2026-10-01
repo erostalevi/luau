@@ -159,8 +159,8 @@ export default {
       'history.maxMb': { label: 'History size limit', desc: 'Megabytes of versions per board before the oldest are pruned.' },
       'ai.provider': {
         label: 'Local AI',
-        desc: 'Runs on this computer only. Auto finds Ollama or LM Studio.',
-        options: { auto: 'Auto', ollama: 'Ollama', openai: 'OpenAI-compatible (local)', off: 'Off' },
+        desc: 'Runs on this computer only. Auto uses Apple’s built-in model when available, then Ollama or LM Studio, else the basic writer.',
+        options: { auto: 'Auto', apple: 'Apple on-device', ollama: 'Ollama', openai: 'OpenAI-compatible (local)', off: 'Off' },
       },
       'ai.endpoint': { label: 'AI address', desc: 'Where your local model server listens.' },
       'ai.model': { label: 'AI model', desc: 'Model used for summaries. Empty picks one automatically.' },

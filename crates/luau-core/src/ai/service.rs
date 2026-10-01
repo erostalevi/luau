@@ -11,6 +11,8 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use super::apple;
+use super::cards::{self, CardDraft};
 use super::code::{self, CodeResult, RunOptions};
 use super::facts::{self, ActivityFacts, BoardView, CardView, Period};
 use super::llm::{self, AiConfig, AiStatus};
@@ -127,6 +129,34 @@ pub struct CardSummary {
     pub cached: bool,
 }
 
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CardsFromTextRequest {
+    /// Clipboard text (untrusted).
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardOut {
+    pub title: String,
+    /// Whole card file (for a new card).
+    pub markdown: String,
+    /// `## Title` section (for inserting into an open document).
+    pub section: String,
+    pub draft: CardDraft,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardsFromText {
+    pub cards: Vec<CardOut>,
+    /// The text was cut to fit the model.
+    pub truncated: bool,
+    pub provider: String,
+    pub model: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScheduleView {
@@ -174,7 +204,19 @@ pub fn strip_think(s: &str) -> String {
         }
         out.replace_range(a..b + "</think>".len(), "");
     }
-    out.trim().to_string()
+    let out = out.trim();
+    // Small models sometimes wrap the whole answer in a code fence.
+    if let Some(inner) = out
+        .strip_prefix("```")
+        .and_then(|r| r.strip_suffix("```"))
+        .and_then(|r| r.split_once('\n'))
+        .map(|(lang, body)| (lang.trim(), body))
+        .filter(|(lang, body)| matches!(*lang, "" | "markdown" | "md") && !body.contains("```"))
+        .map(|(_, body)| body)
+    {
+        return inner.trim().to_string();
+    }
+    out.to_string()
 }
 
 fn card_view(st: &BoardState) -> BoardView {
@@ -331,6 +373,12 @@ impl Core {
                 r.error.unwrap_or_else(|| "local AI unavailable".into()),
             ));
         }
+        if r.provider == llm::Provider::Apple.as_str() {
+            return Ok(vec![llm::ModelInfo {
+                name: llm::APPLE_MODEL.into(),
+                ..Default::default()
+            }]);
+        }
         llm::list_models(
             llm::Provider::parse(&r.provider),
             &llm::parse_endpoint(&r.endpoint)?,
@@ -407,33 +455,57 @@ impl Core {
             match llm::resolve(&cfg).await {
                 Err(e) => (basic(), "basic", None, Some(e.to_string())),
                 Ok(r) => {
-                    let messages = prompt::build_messages(&PromptInput {
-                        facts: &facts,
-                        detail,
-                        locale,
-                        user_prompt: user_prompt.as_deref(),
-                        zone: Zone::Local,
-                        now: Local::now().naive_local(),
-                    });
-                    progress("writing");
-                    let mut on_chunk = |t: &str| {
-                        if !rid.is_empty() {
-                            self.emit_custom(EV_CHUNK, json!({ "requestId": rid, "text": t }));
-                        }
-                    };
-                    match llm::chat(&r, &messages, cfg.temperature, cfg.timeout, &mut on_chunk)
-                        .await
-                    {
-                        Ok(text) if !strip_think(&text).is_empty() => {
-                            (strip_think(&text), "ai", Some(r.model.clone()), None)
-                        }
-                        Ok(_) => (
-                            basic(),
-                            "basic",
-                            None,
-                            Some("the model returned nothing".into()),
-                        ),
-                        Err(e) => (basic(), "basic", None, Some(e.to_string())),
+                    // Small context windows (Apple on-device): trim the facts
+                    // to fit, and retry once with half the room on overflow.
+                    let mut budget = r.context.map(prompt::Budget::for_context);
+                    let mut retried = false;
+                    loop {
+                        let messages = prompt::build_messages(&PromptInput {
+                            facts: &facts,
+                            detail,
+                            locale,
+                            user_prompt: user_prompt.as_deref(),
+                            zone: Zone::Local,
+                            now: Local::now().naive_local(),
+                            budget,
+                        });
+                        progress("writing");
+                        let mut on_chunk = |t: &str| {
+                            if !rid.is_empty() {
+                                self.emit_custom(EV_CHUNK, json!({ "requestId": rid, "text": t }));
+                            }
+                        };
+                        let max_tokens = budget.map(|b| b.summary_tokens(detail));
+                        let res = llm::chat(
+                            &r,
+                            &messages,
+                            cfg.temperature,
+                            cfg.timeout,
+                            max_tokens,
+                            &mut on_chunk,
+                        )
+                        .await;
+                        break match res {
+                            Err(e)
+                                if !retried
+                                    && budget.is_some()
+                                    && e.to_string() == apple::ERR_CONTEXT =>
+                            {
+                                retried = true;
+                                budget = budget.map(|b| b.halved());
+                                continue;
+                            }
+                            Ok(text) if !strip_think(&text).is_empty() => {
+                                (strip_think(&text), "ai", Some(r.model.clone()), None)
+                            }
+                            Ok(_) => (
+                                basic(),
+                                "basic",
+                                None,
+                                Some("the model returned nothing".into()),
+                            ),
+                            Err(e) => (basic(), "basic", None, Some(e.to_string())),
+                        };
                     }
                 }
             }
@@ -534,7 +606,17 @@ impl Core {
         if req.engine != Engine::Basic {
             let cfg = AiConfig::from_settings(&settings);
             if let Ok(r) = llm::resolve(&cfg).await {
-                let body: String = content.chars().take(MAX_CARD_CHARS).collect();
+                // Fit small context windows (Apple on-device).
+                let max = r
+                    .context
+                    .map(|c| {
+                        prompt::Budget::for_context(c)
+                            .prompt_chars()
+                            .saturating_sub(600)
+                    })
+                    .unwrap_or(MAX_CARD_CHARS)
+                    .min(MAX_CARD_CHARS);
+                let body: String = content.chars().take(max).collect();
                 let messages = vec![
                     Message {
                         role: "system",
@@ -562,6 +644,7 @@ impl Core {
                     &messages,
                     cfg.temperature,
                     cfg.timeout.min(Duration::from_secs(120)),
+                    r.context.map(|_| 400),
                     &mut on_chunk,
                 )
                 .await
@@ -586,6 +669,82 @@ impl Core {
         }
         let _ = store::write_json(&cache, &out);
         Ok(out)
+    }
+
+    // --- clipboard → cards ---------------------------------------------------------------
+
+    /// Let the local AI turn pasted text into validated card drafts. Fails
+    /// (no fallback) when no AI is available: the UI offers "as is" instead.
+    pub async fn ai_cards_from_text(&self, req: CardsFromTextRequest) -> Result<CardsFromText> {
+        let text = req.text.replace("\r\n", "\n");
+        if text.trim().is_empty() {
+            return Err(Error::invalid("the clipboard has no text"));
+        }
+        if text.len() > cards::MAX_INPUT_BYTES {
+            return Err(Error::invalid("the clipboard text is too long"));
+        }
+        let cfg = self.ai_config();
+        let r = llm::resolve(&cfg).await?;
+        let today = Local::now().date_naive();
+        let timeout = cfg.timeout.min(Duration::from_secs(120));
+        let temperature = cfg.temperature.min(0.3);
+        let mut budget = r.context.map(prompt::Budget::for_context);
+        // Step 1: one card or many (tiny call; on failure step 2 decides).
+        let shape_room = budget
+            .map(|b| b.prompt_chars().saturating_sub(800))
+            .unwrap_or(cards::MAX_INPUT_CHARS);
+        let shape = match llm::chat_json(
+            &r,
+            &cards::shape_messages(&text, shape_room),
+            &cards::shape_schema(),
+            0.0,
+            timeout,
+        )
+        .await
+        {
+            Ok(raw) => cards::parse_shape(&strip_think(&raw)),
+            Err(_) => cards::Shape::Unknown,
+        };
+        let items = cards::list_items(&text);
+        let (min, max) = cards::card_bounds(shape, items);
+        let schema = cards::schema(min, max);
+        // Step 2: the cards. Apple puts the schema into the prompt: leave room.
+        let room = |b: prompt::Budget| {
+            let fixed =
+                cards::system_prompt(today).chars().count() + schema.to_string().len() + 200;
+            b.prompt_chars().saturating_sub(fixed)
+        };
+        let mut retried = false;
+        loop {
+            let max_chars = budget.map(room).unwrap_or(cards::MAX_INPUT_CHARS);
+            let (messages, truncated) =
+                cards::build_messages(&text, today, max_chars, shape, items);
+            let res = llm::chat_json(&r, &messages, &schema, temperature, timeout).await;
+            let raw = match res {
+                Err(e) if !retried && budget.is_some() && e.to_string() == apple::ERR_CONTEXT => {
+                    retried = true;
+                    budget = budget.map(|b| b.halved());
+                    continue;
+                }
+                r => r?,
+            };
+            let drafts =
+                cards::parse_drafts(&strip_think(&raw), cards::Source { text: &text, today })?;
+            return Ok(CardsFromText {
+                cards: drafts
+                    .into_iter()
+                    .map(|d| CardOut {
+                        title: d.title.clone(),
+                        markdown: d.to_markdown(),
+                        section: d.to_section(),
+                        draft: d,
+                    })
+                    .collect(),
+                truncated: truncated || retried,
+                provider: r.provider.as_str().into(),
+                model: r.model.clone(),
+            });
+        }
     }
 
     // --- schedules ----------------------------------------------------------------------
@@ -910,6 +1069,11 @@ mod tests {
     fn think_blocks_and_slack() {
         assert_eq!(strip_think("<think>hmm</think>\n# Title\nx"), "# Title\nx");
         assert_eq!(strip_think("plain"), "plain");
+        assert_eq!(strip_think("```markdown\n# T\n- a\n```"), "# T\n- a");
+        assert_eq!(
+            strip_think("```rust\nfn x() {}\n```"),
+            "```rust\nfn x() {}\n```"
+        );
         let s = slack_markdown(
             "# Activity summary\n_period_\n\n## Work\n### Completed (1)\n- **Fix** login",
         );
@@ -1077,6 +1241,113 @@ mod tests {
             })
             .is_err()
         );
+    }
+
+    /// Real activity summary and clipboard cards through the core with the
+    /// Apple on-device model. Skipped when the helper or model is unavailable.
+    #[test]
+    fn real_apple_summary_and_cards_when_available() {
+        let Some(helper) = crate::ai::apple::tests::built_helper() else {
+            eprintln!("skipped: apple-llm helper not built");
+            return;
+        };
+        crate::ai::apple::set_helper_path(helper);
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        if !rt.block_on(crate::ai::apple::availability()).available() {
+            eprintln!("skipped: Apple on-device model unavailable");
+            return;
+        }
+        let (d, c) = core();
+        let snap = c
+            .create_board(
+                &d.path().join("board"),
+                "Trabajo",
+                BoardKind::Kanban,
+                &["Por hacer".into(), "En curso".into(), "Hecho".into()],
+                false,
+            )
+            .unwrap();
+        let bid = snap.header.id.clone();
+        let lanes: Vec<String> = snap.lanes.iter().map(|l| l.id.clone()).collect();
+        // Enough activity to exceed the on-device context without trimming.
+        for i in 0..120 {
+            let id = c.new_card_id();
+            let content = format!(
+                "# Tarea {i}: revisar el informe trimestral del cliente {i}\n\n#trabajo\n\n---\npriority: {}\n",
+                ["low", "medium", "high"][i % 3]
+            );
+            c.apply(
+                &bid,
+                Op::CreateCard {
+                    id: id.clone(),
+                    parent: crate::model::Parent::Lane(lanes[0].clone()),
+                    index: None,
+                    content,
+                },
+                "Create",
+                None,
+            )
+            .unwrap();
+            if i % 2 == 0 {
+                c.apply(
+                    &bid,
+                    Op::Move {
+                        ids: vec![id],
+                        to: crate::model::Parent::Lane(lanes[1 + i % 4 / 2].clone()),
+                        before: None,
+                    },
+                    "Move",
+                    None,
+                )
+                .unwrap();
+            }
+        }
+        let st = rt.block_on(c.ai_status());
+        assert_eq!(st.provider, "apple", "{st:?}");
+        let t = std::time::Instant::now();
+        let r = rt
+            .block_on(c.summarize(SummarizeRequest {
+                from: "2000-01-01T00:00:00Z".into(),
+                to: "2100-01-01T00:00:00Z".into(),
+                boards: vec![bid],
+                detail: 5,
+                engine: Engine::Ai,
+                locale: "es".into(),
+                save: false,
+                ..Default::default()
+            }))
+            .unwrap();
+        eprintln!(
+            "apple summary: engine={} fallback={:?} in {:?}\n{}",
+            r.engine,
+            r.fallback_reason,
+            t.elapsed(),
+            r.markdown
+        );
+        assert_eq!(r.engine, "ai", "fallback: {:?}", r.fallback_reason);
+        assert_eq!(r.model.as_deref(), Some(llm::APPLE_MODEL));
+
+        let t = std::time::Instant::now();
+        let out = rt
+            .block_on(c.ai_cards_from_text(CardsFromTextRequest {
+                text: "Para el lunes:\n- llamar a Ana por el contrato (urgente)\n- comprar café para la oficina\n- revisar el bug de login con Luis #backend".into(),
+            }))
+            .unwrap();
+        eprintln!(
+            "apple cards: {} in {:?}\n{}",
+            out.cards.len(),
+            t.elapsed(),
+            out.cards
+                .iter()
+                .map(|c| c.markdown.as_str())
+                .collect::<Vec<_>>()
+                .join("\n----\n")
+        );
+        assert!(!out.cards.is_empty() && out.cards.len() <= cards::MAX_CARDS);
+        assert!(out.cards.iter().all(|c| c.markdown.starts_with("# ")));
     }
 
     #[test]

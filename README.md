@@ -67,8 +67,11 @@
   `"exact phrase"` `-tag:wip`…). The filter UI stays in sync with the query, and searches can be saved and opened
   as boards.
 - **History** timeline with a word-level diff and *restore this version*, plus **Trash** and **Archive** views.
-- **Activity summaries** ("what did I do yesterday?") written by a **local** model (Ollama, LM Studio…) or a
-  built-in basic writer. They can be scheduled, with delivery by notification or Slack.
+- **Activity summaries** ("what did I do yesterday?") written by a **local** model — Apple's built-in on-device
+  model on Apple Silicon Macs with Apple Intelligence (zero setup), Ollama, LM Studio… — or a built-in basic
+  writer. They can be scheduled, with delivery by notification or Slack.
+- **Create card from clipboard**: paste text as one card, or let the local AI split it into cards with tasks,
+  tags, due dates and assignees.
 
 <p align="center">
   <img src="docs/screenshots/summary-light.jpg" alt="Activity summary view with period presets, detail slider and the history timeline" width="430">

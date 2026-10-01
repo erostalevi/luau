@@ -84,6 +84,15 @@ export async function copyText(text: string) {
   } else await navigator.clipboard.writeText(text);
 }
 
+/** Plain text on the clipboard ('' when empty or unreadable). Never reads images. */
+export async function readClipboardText(): Promise<string> {
+  if (isTauri) {
+    const { readText } = await import('@tauri-apps/plugin-clipboard-manager');
+    return (await readText().catch(() => '')) ?? '';
+  }
+  return navigator.clipboard.readText().catch(() => '');
+}
+
 export function joinPath(...parts: string[]): string {
   const sep = parts[0]?.includes('\\') && !parts[0].includes('/') ? '\\' : '/';
   return parts

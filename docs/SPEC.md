@@ -241,9 +241,19 @@ CodeMirror 6 with **live preview** (Obsidian/Notion-like). Markdown stays the so
   - A detail slider (1–5) and a custom prompt.
   - Stage inference from lane names (en/es/pt), copy as Markdown, plain text or Slack, and export.
   - Past summaries are kept.
-- **Models:** **Ollama** or any **OpenAI-compatible local** endpoint (LM Studio, llama.cpp). Models can be
+- **Models:** provider **auto** (default) uses **Apple's on-device model** (FoundationModels, macOS 26+ on Apple
+  Silicon with Apple Intelligence on: no download, no setup) when available, else a running **Ollama** or any
+  **OpenAI-compatible local** endpoint (LM Studio, llama.cpp), else the *basic* writer. Ollama models can be
   pulled from the app.
+  - Apple's model is reached through a bundled helper (`apple-llm`, JSON over stdin/stdout, one process per
+    request, timeout, prompts never logged). Its small context window (4k–8k tokens) is respected: facts are
+    trimmed to fit and the answer length is capped.
+  - Settings › AI shows the writer in use and why (e.g. "turn on Apple Intelligence").
   - Without a model, a deterministic *basic* writer is used.
+- **Create card from clipboard** (command): *As is* (first line → `# Title`, rest verbatim) or *Let AI review it*
+  (local AI only: one or several cards with title, description, tasks, `#tags` and a property footer; strict JSON
+  schema, validated and capped in the core, preview with the card count before inserting). Kanban → the active
+  lane after the selection; files board with a document open → Markdown sections at the cursor. One undo step.
 - **Scheduled summaries:** several schedules, each with days, time, period, boards, prompt and detail level. They
   run in the background, catch up after sleep, and deliver by native notification and/or **Slack**.
 - **Card summaries:** basic or AI.

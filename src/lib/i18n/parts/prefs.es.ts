@@ -201,8 +201,8 @@ export default {
       'history.maxMb': { label: 'Límite de tamaño del historial', desc: 'Megabytes de versiones por tablero antes de eliminar las más antiguas.' },
       'ai.provider': {
         label: 'IA local',
-        desc: 'Se ejecuta solo en este computador. Automático encuentra Ollama o LM Studio.',
-        options: { auto: 'Automático', ollama: 'Ollama', openai: 'Compatible con OpenAI (local)', off: 'Desactivada' },
+        desc: 'Se ejecuta solo en este computador. Automático usa el modelo integrado de Apple si está disponible, luego Ollama o LM Studio y, si no, el redactor básico.',
+        options: { auto: 'Automático', apple: 'Apple en el dispositivo', ollama: 'Ollama', openai: 'Compatible con OpenAI (local)', off: 'Desactivada' },
       },
       'ai.endpoint': { label: 'Dirección de la IA', desc: 'Dónde escucha tu servidor de modelos local.' },
       'ai.model': { label: 'Modelo de IA', desc: 'Modelo usado para los resúmenes. Si está vacío, se elige uno automáticamente.' },
