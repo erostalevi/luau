@@ -31,13 +31,39 @@ export function register(methods: Methods, api: MockApi) {
           const list = DONE.test(l.name) ? completed : DOING.test(l.name) ? started : pending;
           for (const c of l.order) list.push({ id: c, title: title(c), lane: l.name });
         }
-        return { id, name: s.header.name, created: [], completed, started, moved: [], edited: [], deleted: [], archived: [], external: [], pending, overdue: [] };
+        return {
+          id,
+          name: s.header.name,
+          created: [],
+          completed,
+          started,
+          moved: [],
+          edited: [],
+          deleted: [],
+          archived: [],
+          external: [],
+          pending,
+          overdue: [],
+        };
       });
     const sum = (k: 'completed' | 'started' | 'pending') => boards.reduce((a, b) => a + b[k].length, 0);
     return {
       period: { from: p.from, to: p.to },
       boards,
-      totals: { boards: boards.length, created: 0, completed: sum('completed'), started: sum('started'), moved: 0, edited: 0, deleted: 0, archived: 0, external: 0, pending: sum('pending'), overdue: 0, events: 1 },
+      totals: {
+        boards: boards.length,
+        created: 0,
+        completed: sum('completed'),
+        started: sum('started'),
+        moved: 0,
+        edited: 0,
+        deleted: 0,
+        archived: 0,
+        external: 0,
+        pending: sum('pending'),
+        overdue: 0,
+        events: 1,
+      },
     };
   }
 
@@ -47,7 +73,10 @@ export function register(methods: Methods, api: MockApi) {
     const out = ['# Activity summary', `_${new Date(f.period.from).toDateString()} – ${new Date(f.period.to).toDateString()}_`];
     for (const b of f.boards) {
       out.push('', `## ${b.name}`);
-      for (const [label, list] of [['Completed', b.completed], ['Started', b.started]] as const) {
+      for (const [label, list] of [
+        ['Completed', b.completed],
+        ['Started', b.started],
+      ] as const) {
         if (!list.length) continue;
         out.push('', `### ${label} (${list.length})`, ...list.slice(0, lim).map((i) => `- ${name(i)}`));
         if (list.length > lim) out.push(`- …and ${list.length - lim} more`);
@@ -57,7 +86,15 @@ export function register(methods: Methods, api: MockApi) {
     return out.join('\n');
   }
 
-  methods['ai.status'] = () => ({ provider: 'none', available: false, endpoint: 'http://localhost:11434', model: null, models: [], remote: false, error: 'mock: no local AI in the browser' });
+  methods['ai.status'] = () => ({
+    provider: 'none',
+    available: false,
+    endpoint: 'http://localhost:11434',
+    model: null,
+    models: [],
+    remote: false,
+    error: 'mock: no local AI in the browser',
+  });
   methods['ai.models'] = () => [];
   methods['ai.pullModel'] = () => {
     throw new Error('mock: downloading models needs Ollama');
@@ -72,11 +109,35 @@ export function register(methods: Methods, api: MockApi) {
     if (p.save !== false) {
       id = rid('s');
       const list = load<any[]>('ai.summaries', []);
-      list.unshift({ id, created, title: p.title || `Activity summary · ${new Date(p.from).toLocaleDateString()}`, from: p.from, to: p.to, boards: p.boards ?? [], detail: p.detail ?? 3, prompt: p.prompt ?? '', engine: 'basic', model: null, scheduleId: p.scheduleId ?? null, markdown, delivery: [] });
+      list.unshift({
+        id,
+        created,
+        title: p.title || `Activity summary · ${new Date(p.from).toLocaleDateString()}`,
+        from: p.from,
+        to: p.to,
+        boards: p.boards ?? [],
+        detail: p.detail ?? 3,
+        prompt: p.prompt ?? '',
+        engine: 'basic',
+        model: null,
+        scheduleId: p.scheduleId ?? null,
+        markdown,
+        delivery: [],
+      });
       save('ai.summaries', list.slice(0, 200));
     }
     if (p.requestId) for (const stage of ['facts', 'done']) api.emit({ type: 'custom', name: 'summary.progress', payload: { requestId: p.requestId, stage } });
-    return { id, title: 'Activity summary', markdown, engine: 'basic', model: null, fallbackReason: p.engine === 'basic' ? null : 'local AI not available', created, facts: f, delivery: [] };
+    return {
+      id,
+      title: 'Activity summary',
+      markdown,
+      engine: 'basic',
+      model: null,
+      fallbackReason: p.engine === 'basic' ? null : 'local AI not available',
+      created,
+      facts: f,
+      delivery: [],
+    };
   };
   methods['card.summarize'] = (p) => {
     const s: BoardSnapshot = api.snapshot(p.board);
@@ -92,10 +153,15 @@ export function register(methods: Methods, api: MockApi) {
     if (!s) throw new Error('not found');
     return s;
   };
-  methods['summaries.delete'] = (p) => save('ai.summaries', load<any[]>('ai.summaries', []).filter((x) => x.id !== p.id));
+  methods['summaries.delete'] = (p) =>
+    save(
+      'ai.summaries',
+      load<any[]>('ai.summaries', []).filter((x) => x.id !== p.id),
+    );
   methods['summaries.export'] = () => null;
 
-  methods['schedules.list'] = () => load<any[]>('ai.schedules', []).map((s) => ({ ...s, nextRun: s.enabled ? new Date(Date.now() + 86_400_000).toISOString() : null }));
+  methods['schedules.list'] = () =>
+    load<any[]>('ai.schedules', []).map((s) => ({ ...s, nextRun: s.enabled ? new Date(Date.now() + 86_400_000).toISOString() : null }));
   methods['schedules.save'] = (p) => {
     const s = { ...p.schedule };
     if (!String(s.name ?? '').trim()) throw new Error('schedule needs a name');
@@ -112,14 +178,30 @@ export function register(methods: Methods, api: MockApi) {
     save('ai.schedules', list);
     return s;
   };
-  methods['schedules.delete'] = (p) => save('ai.schedules', load<any[]>('ai.schedules', []).filter((x) => x.id !== p.id));
+  methods['schedules.delete'] = (p) =>
+    save(
+      'ai.schedules',
+      load<any[]>('ai.schedules', []).filter((x) => x.id !== p.id),
+    );
   methods['schedules.runNow'] = (p) => {
     const s = load<any[]>('ai.schedules', []).find((x) => x.id === p.id);
     if (!s) throw new Error('not found');
     const to = new Date();
     const from = new Date(to.getTime() - 86_400_000);
-    const r = methods['activity.summarize']({ from: from.toISOString(), to: to.toISOString(), boards: s.boards, detail: s.detail, engine: 'basic', title: s.name, scheduleId: s.id, links: false }) as Record<string, unknown>;
-    save('ai.schedules', load<any[]>('ai.schedules', []).map((x) => (x.id === s.id ? { ...x, lastRun: to.toISOString(), lastStatus: 'ok' } : x)));
+    const r = methods['activity.summarize']({
+      from: from.toISOString(),
+      to: to.toISOString(),
+      boards: s.boards,
+      detail: s.detail,
+      engine: 'basic',
+      title: s.name,
+      scheduleId: s.id,
+      links: false,
+    }) as Record<string, unknown>;
+    save(
+      'ai.schedules',
+      load<any[]>('ai.schedules', []).map((x) => (x.id === s.id ? { ...x, lastRun: to.toISOString(), lastStatus: 'ok' } : x)),
+    );
     api.emit({ type: 'custom', name: 'schedules.ran', payload: { id: s.id, summaryId: r.id } });
     return { ...r, delivery: ['notification: unavailable'] };
   };
@@ -137,7 +219,16 @@ export function register(methods: Methods, api: MockApi) {
     if (!load<string[]>('ai.trust', []).includes(p.board ?? '*')) {
       throw new RpcError('conflict', 'needs_trust');
     }
-    return { ok: true, stdout: `(mock) would run ${String(p.lang)} code (${String(p.code ?? '').length} chars)\n`, stderr: '', images: [], ms: 1, exitCode: 0, timedOut: false, truncated: false };
+    return {
+      ok: true,
+      stdout: `(mock) would run ${String(p.lang)} code (${String(p.code ?? '').length} chars)\n`,
+      stderr: '',
+      images: [],
+      ms: 1,
+      exitCode: 0,
+      timedOut: false,
+      truncated: false,
+    };
   };
   methods['web.preview'] = (p) => {
     let host: string;
@@ -146,6 +237,15 @@ export function register(methods: Methods, api: MockApi) {
     } catch {
       return null;
     }
-    return { url: p.url, title: host, description: 'Link preview (mock)', image: null, site: host, favicon: null, insecure: String(p.url).startsWith('http:'), fetched: new Date().toISOString() };
+    return {
+      url: p.url,
+      title: host,
+      description: 'Link preview (mock)',
+      image: null,
+      site: host,
+      favicon: null,
+      insecure: String(p.url).startsWith('http:'),
+      fetched: new Date().toISOString(),
+    };
   };
 }

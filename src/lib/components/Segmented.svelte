@@ -16,7 +16,12 @@
     full = false,
   }: { options: Option[]; value: T; onchange?: (v: T) => void; size?: 'sm' | 'md'; full?: boolean } = $props();
 
-  const idx = $derived(Math.max(0, options.findIndex((o) => o.value === value)));
+  const idx = $derived(
+    Math.max(
+      0,
+      options.findIndex((o) => o.value === value),
+    ),
+  );
 </script>
 
 <div class="seg {size}" class:full role="tablist" style:--n={options.length} style:--i={idx}>

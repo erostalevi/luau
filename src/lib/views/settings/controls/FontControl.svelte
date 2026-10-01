@@ -13,7 +13,7 @@
 <select
   class="field"
   aria-label={label}
-  value={value}
+  {value}
   onfocus={loadFonts}
   onpointerdown={loadFonts}
   onchange={(e) => setSetting(def.key, e.currentTarget.value)}

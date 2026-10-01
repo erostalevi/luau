@@ -43,16 +43,44 @@ function slashItems(d: CompletionData): SlashItem[] {
     { id: 'quote', label: t('slash.quote'), keywords: 'quote blockquote', insert: '> ', block: true },
     { id: 'callout', label: t('slash.callout'), keywords: 'callout note info tip warning', insert: '> [!note] ', block: true },
     { id: 'code', label: t('slash.code'), keywords: 'code snippet fence', insert: '```\n\n```', cursor: 4, block: true },
-    { id: 'python', label: t('slash.python'), detail: t('slash.pythonDetail'), keywords: 'python run notebook jupyter cell', insert: '```python\n\n```', cursor: 10, block: true },
+    {
+      id: 'python',
+      label: t('slash.python'),
+      detail: t('slash.pythonDetail'),
+      keywords: 'python run notebook jupyter cell',
+      insert: '```python\n\n```',
+      cursor: 10,
+      block: true,
+    },
     { id: 'table', label: t('slash.table'), keywords: 'table grid', insert: tableMarkdown(3, 2), cursor: 2, block: true },
     { id: 'divider', label: t('slash.divider'), keywords: 'divider hr rule line separator', insert: '---\n', block: true },
     { id: 'math', label: t('slash.math'), keywords: 'math latex katex equation formula', insert: '$$\n\n$$', cursor: 3, block: true },
-    { id: 'mermaid', label: t('slash.mermaid'), keywords: 'mermaid diagram chart flow graph', insert: '```mermaid\ngraph LR\n  A --> B\n```', cursor: 11, block: true },
-    { id: 'image', label: t('slash.file'), detail: t('slash.fileDetail'), keywords: 'image picture file attachment pdf upload', insert: (v, f, to) => d.insertFile(v, f, to) },
+    {
+      id: 'mermaid',
+      label: t('slash.mermaid'),
+      keywords: 'mermaid diagram chart flow graph',
+      insert: '```mermaid\ngraph LR\n  A --> B\n```',
+      cursor: 11,
+      block: true,
+    },
+    {
+      id: 'image',
+      label: t('slash.file'),
+      detail: t('slash.fileDetail'),
+      keywords: 'image picture file attachment pdf upload',
+      insert: (v, f, to) => d.insertFile(v, f, to),
+    },
     { id: 'link', label: t('slash.cardLink'), keywords: 'link card reference wiki', insert: '[[', block: false },
     { id: 'embed', label: t('slash.embed'), keywords: 'embed transclude card include', insert: '![[', block: false },
     { id: 'date', label: t('slash.today'), keywords: 'date today now', insert: `[${new Date().toISOString().slice(0, 10)}] ` },
-    { id: 'toc', label: t('slash.properties'), keywords: 'properties priority due assignee labels metadata', insert: '\n---\npriority: \n', cursor: 15, block: true },
+    {
+      id: 'toc',
+      label: t('slash.properties'),
+      keywords: 'properties priority due assignee labels metadata',
+      insert: '\n---\npriority: \n',
+      cursor: 15,
+      block: true,
+    },
   ];
 }
 
@@ -160,15 +188,18 @@ function cardLinkSource(d: CompletionData) {
     return {
       from: open,
       filter: false,
-      options: [...hits.map((h) => ({
-        label: h.title || d.t('common.untitled'),
-        detail: h.board,
-        type: 'card',
-        apply: (view: EditorView, _c: Completion, from: number, to: number) => {
-          const close = after === ']]' ? '' : ']]';
-          view.dispatch({ changes: { from, to, insert: `${h.id}${close}` }, selection: { anchor: from + h.id.length + 2 }, userEvent: 'input.complete' });
-        },
-      })), ...create],
+      options: [
+        ...hits.map((h) => ({
+          label: h.title || d.t('common.untitled'),
+          detail: h.board,
+          type: 'card',
+          apply: (view: EditorView, _c: Completion, from: number, to: number) => {
+            const close = after === ']]' ? '' : ']]';
+            view.dispatch({ changes: { from, to, insert: `${h.id}${close}` }, selection: { anchor: from + h.id.length + 2 }, userEvent: 'input.complete' });
+          },
+        })),
+        ...create,
+      ],
     };
   };
 }

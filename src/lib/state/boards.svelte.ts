@@ -2,18 +2,7 @@
 
 import { SvelteMap } from 'svelte/reactivity';
 import { rpc, onCoreEvent } from '$lib/backend/rpc';
-import type {
-  ApplyResult,
-  BoardDelta,
-  BoardHeader,
-  BoardSnapshot,
-  LaneDto,
-  NodeDto,
-  Op,
-  Parent,
-  RemoteInfo,
-  UndoResult,
-} from '$lib/backend/types';
+import type { ApplyResult, BoardDelta, BoardHeader, BoardSnapshot, LaneDto, NodeDto, Op, Parent, RemoteInfo, UndoResult } from '$lib/backend/types';
 import { toast } from './toasts.svelte';
 import { t } from '$lib/i18n/index.svelte';
 

@@ -108,7 +108,9 @@
   <header class="top">
     <h2 class="section-title">{t('panels.integrations')}</h2>
     <span class="grow"></span>
-    <button class="icon-btn sm" onclick={connectMenu} use:tip={t('integrations.connectService')} aria-label={t('integrations.connectService')}><Plug size={15} /></button>
+    <button class="icon-btn sm" onclick={connectMenu} use:tip={t('integrations.connectService')} aria-label={t('integrations.connectService')}
+      ><Plug size={15} /></button
+    >
   </header>
 
   {#if integ.loaded && !integ.accounts.length}
@@ -152,20 +154,41 @@
             rows="1"
             bind:value={integ.query}
             onkeydown={onKey}
-            placeholder={isJira ? (current.defaultQuery || t('integrations.jqlPlaceholder')) : t('integrations.trelloPlaceholder')}
+            placeholder={isJira ? current.defaultQuery || t('integrations.jqlPlaceholder') : t('integrations.trelloPlaceholder')}
             aria-label={isJira ? 'JQL' : t('integrations.search')}
-            spellcheck="false"
-          ></textarea>
+            spellcheck="false"></textarea>
           {#if integ.query}
-            <button class="icon-btn sm" onclick={() => { integ.query = ''; void A.search(); }} aria-label={t('integrations.clear')}><X size={13} /></button>
+            <button
+              class="icon-btn sm"
+              onclick={() => {
+                integ.query = '';
+                void A.search();
+              }}
+              aria-label={t('integrations.clear')}><X size={13} /></button
+            >
           {/if}
-          <button class="icon-btn sm" onclick={() => A.saveQuery()} disabled={!integ.query.trim()} use:tip={t('integrations.saveQuery')}><Bookmark size={13} /></button>
+          <button class="icon-btn sm" onclick={() => A.saveQuery()} disabled={!integ.query.trim()} use:tip={t('integrations.saveQuery')}
+            ><Bookmark size={13} /></button
+          >
         </div>
         <div class="saved">
-          <button class="chip" class:on={!integ.query} onclick={() => { integ.query = ''; void A.search(); }}>{isJira ? t('integrations.myOpenIssues') : t('integrations.allCards')}</button>
+          <button
+            class="chip"
+            class:on={!integ.query}
+            onclick={() => {
+              integ.query = '';
+              void A.search();
+            }}>{isJira ? t('integrations.myOpenIssues') : t('integrations.allCards')}</button
+          >
           {#each current.savedQueries as q (q.name)}
             <span class="chip saved-q" class:on={integ.query === q.query}>
-              <button onclick={() => { integ.query = q.query; void A.search(); }} use:tip={q.query}>{q.name}</button>
+              <button
+                onclick={() => {
+                  integ.query = q.query;
+                  void A.search();
+                }}
+                use:tip={q.query}>{q.name}</button
+              >
               <button class="x" onclick={() => A.removeQuery(q.name)} aria-label={t('common.remove')}><X size={10} /></button>
             </span>
           {/each}
@@ -179,7 +202,13 @@
           <p class="muted small pad">{t('integrations.noResults')}</p>
         {/if}
         {#each integ.results as i (i.key)}
-          <button class="issue" onpointerdown={(e) => drag(e, i)} onclick={() => openExternal(i.url)} oncontextmenu={(e) => issueMenu(e, i)} use:tip={t('integrations.dragHint')}>
+          <button
+            class="issue"
+            onpointerdown={(e) => drag(e, i)}
+            onclick={() => openExternal(i.url)}
+            oncontextmenu={(e) => issueMenu(e, i)}
+            use:tip={t('integrations.dragHint')}
+          >
             <span class="dot {i.statusCategory}"></span>
             <span class="key">{i.key}</span>
             <span class="sum grow">{i.summary}</span>
@@ -209,7 +238,9 @@
           <button class="mname grow" onclick={() => openBoardTab(m.id)}>
             <span>{m.name}</span>
             <span class="muted small">
-              {#if m.lastError}<span class="err">{t('integrations.syncFailed')}</span>{:else if m.lastSync}{t('integrations.syncedAgo', { when: relTime(m.lastSync) })}{/if}
+              {#if m.lastError}<span class="err">{t('integrations.syncFailed')}</span>{:else if m.lastSync}{t('integrations.syncedAgo', {
+                  when: relTime(m.lastSync),
+                })}{/if}
             </span>
           </button>
           <span use:tip={t('integrations.mirror.watchTip')}><Eye size={12} class="muted" /></span>
@@ -221,8 +252,14 @@
     </section>
 
     <footer class="gates">
-      <label class="gate"><Toggle checked={allowPull} label={t('commands.remote.toggleAllowPull')} onchange={() => A.toggleAllow('pull')} /> <span>{t('integrations.allowPull')}</span></label>
-      <label class="gate"><Toggle checked={allowPush} label={t('commands.remote.toggleAllowPush')} onchange={() => A.toggleAllow('push')} /> <span>{t('integrations.allowPush')}</span></label>
+      <label class="gate"
+        ><Toggle checked={allowPull} label={t('commands.remote.toggleAllowPull')} onchange={() => A.toggleAllow('pull')} />
+        <span>{t('integrations.allowPull')}</span></label
+      >
+      <label class="gate"
+        ><Toggle checked={allowPush} label={t('commands.remote.toggleAllowPush')} onchange={() => A.toggleAllow('push')} />
+        <span>{t('integrations.allowPush')}</span></label
+      >
       {#if integ.lastSync}<span class="muted small">{t('integrations.lastCheck', { when: relTime(integ.lastSync) })}</span>{/if}
     </footer>
   {/if}
@@ -342,7 +379,9 @@
     box-shadow: inset 0 0 0 1px var(--line);
   }
   .qbox:focus-within {
-    box-shadow: inset 0 0 0 1px var(--primary), 0 0 0 3px var(--primary-ring);
+    box-shadow:
+      inset 0 0 0 1px var(--primary),
+      0 0 0 3px var(--primary-ring);
   }
   .q {
     flex: 1;

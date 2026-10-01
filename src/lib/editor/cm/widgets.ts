@@ -21,7 +21,8 @@ const ICON = {
   play: '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>',
   copy: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
   cal: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
-  globe: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>',
+  globe:
+    '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>',
 };
 
 // --- tasks & lists ---------------------------------------------------------
@@ -199,7 +200,7 @@ export class LinkPreviewWidget extends WidgetType {
       desc.textContent = p.description;
       if (p.image) {
         const img = el('img', 'thumb');
-    img.referrerPolicy = 'no-referrer';
+        img.referrerPolicy = 'no-referrer';
         img.src = p.image;
         img.alt = '';
         img.loading = 'lazy';
@@ -447,7 +448,7 @@ export class CodeOutputWidget extends WidgetType {
     if (r.stderr) box.appendChild(el('pre', 'err', r.stderr));
     for (const img of r.images) {
       const i = el('img');
-    i.referrerPolicy = 'no-referrer';
+      i.referrerPolicy = 'no-referrer';
       i.src = `data:image/png;base64,${img}`;
       i.alt = '';
       box.appendChild(i);
@@ -497,7 +498,7 @@ export class MathWidget extends WidgetType {
   }
 }
 
-let mermaidReady: Promise<typeof import('mermaid')['default']> | null = null;
+let mermaidReady: Promise<(typeof import('mermaid'))['default']> | null = null;
 let mermaidSeq = 0;
 let mermaidDark: boolean | null = null;
 function loadMermaid(dark: boolean) {
@@ -557,7 +558,13 @@ export class TableWidget extends WidgetType {
     const rows = this.source
       .trim()
       .split('\n')
-      .map((l) => l.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((x) => x.trim()));
+      .map((l) =>
+        l
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .split(/(?<!\\)\|/)
+          .map((x) => x.trim()),
+      );
     const align = (rows[1] ?? []).map((s) => (s.startsWith(':') && s.endsWith(':') ? 'center' : s.endsWith(':') ? 'right' : 'left'));
     const head = el('thead');
     const htr = el('tr');
@@ -672,7 +679,10 @@ export class PropertiesWidget extends WidgetType {
         const label = c?.t(`priority.${p}`);
         val.textContent = label && label !== `priority.${p}` ? label : v;
       } else if (k === 'labels' || k === 'assignees') {
-        for (const item of v.split(',').map((s) => s.trim()).filter(Boolean)) {
+        for (const item of v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)) {
           const chip = el('span', k === 'assignees' ? 'cm-mention' : 'cm-tag', item);
           if (k === 'labels' && c) chip.setAttribute('style', c.tagStyle(item.replace(/^#/, '')));
           val.appendChild(chip);

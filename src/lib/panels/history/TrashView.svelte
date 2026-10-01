@@ -74,7 +74,9 @@
 
 <div class="actions">
   <button class="btn ghost sm" disabled={!board} onclick={() => void cleanupTrash([board])}><Eraser size={14} />{t('history.trash.cleanup')}</button>
-  <button class="btn ghost sm danger" disabled={!entries.length} onclick={() => void emptyTrash(board)}><Flame size={14} />{t('history.trash.emptyTrash')}</button>
+  <button class="btn ghost sm danger" disabled={!entries.length} onclick={() => void emptyTrash(board)}
+    ><Flame size={14} />{t('history.trash.emptyTrash')}</button
+  >
 </div>
 
 <div class="list">
@@ -91,12 +93,16 @@
     {@const soon = daysLeft(e.deletedAt, ttl) <= 1}
     <div class="row-item">
       <span class="ic">
-        {#if e.kind === 'lane'}<Columns3 size={13} strokeWidth={1.9} />{:else if e.isGroup}<Layers size={13} strokeWidth={1.9} />{:else}<Trash2 size={13} strokeWidth={1.9} />{/if}
+        {#if e.kind === 'lane'}<Columns3 size={13} strokeWidth={1.9} />{:else if e.isGroup}<Layers size={13} strokeWidth={1.9} />{:else}<Trash2
+            size={13}
+            strokeWidth={1.9}
+          />{/if}
       </span>
       <span class="body">
         <span class="text">{e.title || t('common.untitled')}</span>
         <span class="meta">
-          {#if e.kind === 'lane'}<span class="chip">{t('history.trash.lane')}</span>{:else if e.isGroup}<span class="chip">{t('history.trash.group')}</span>{/if}
+          {#if e.kind === 'lane'}<span class="chip">{t('history.trash.lane')}</span>{:else if e.isGroup}<span class="chip">{t('history.trash.group')}</span
+            >{/if}
           {#if e.count > 1}<span>{t('history.trash.cards', { count: e.count })}</span><span class="dot">·</span>{/if}
           <span>{t('history.trash.deleted', { when: relTime(e.deletedAt) })}</span>
           <span class="dot">·</span>
@@ -104,8 +110,18 @@
         </span>
       </span>
       <span class="btns">
-        <button class="icon-btn sm" onclick={() => void restoreFromTrash(board, [e])} use:tip={t('history.trash.restore')} aria-label={t('history.trash.restore')}><RotateCcw size={14} /></button>
-        <button class="icon-btn sm danger" onclick={() => void deleteForever(board, e)} use:tip={t('history.trash.deleteForever')} aria-label={t('history.trash.deleteForever')}><Flame size={14} /></button>
+        <button
+          class="icon-btn sm"
+          onclick={() => void restoreFromTrash(board, [e])}
+          use:tip={t('history.trash.restore')}
+          aria-label={t('history.trash.restore')}><RotateCcw size={14} /></button
+        >
+        <button
+          class="icon-btn sm danger"
+          onclick={() => void deleteForever(board, e)}
+          use:tip={t('history.trash.deleteForever')}
+          aria-label={t('history.trash.deleteForever')}><Flame size={14} /></button
+        >
       </span>
     </div>
   {/each}

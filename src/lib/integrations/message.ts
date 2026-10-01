@@ -40,4 +40,3 @@ export function changeMessage(p: Prepared, locale = 'en', tr: Tr): string {
   const fields = [...new Set(p.fields.map((f) => fieldLabel(f.replace(/ .*$/, ''), tr)))];
   return tr('integrations.gate.message', { fields: joinList(fields, locale), target: changeTarget(p, tr) });
 }
-

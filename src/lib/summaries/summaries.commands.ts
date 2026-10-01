@@ -61,8 +61,20 @@ async function summarizeCard() {
 }
 
 export const commands: Command[] = [
-  { id: 'summary.create', title: 'commands.summary.create', category: 'ai', icon: Sparkles, run: (args?: Record<string, unknown>) => openSummary({ ...(args ?? {}), view: 'summary' }) },
-  { id: 'summary.yesterday', title: 'commands.summary.yesterday', category: 'ai', icon: History, run: () => openSummary({ view: 'summary', preset: 'yesterday', auto: true }) },
+  {
+    id: 'summary.create',
+    title: 'commands.summary.create',
+    category: 'ai',
+    icon: Sparkles,
+    run: (args?: Record<string, unknown>) => openSummary({ ...(args ?? {}), view: 'summary' }),
+  },
+  {
+    id: 'summary.yesterday',
+    title: 'commands.summary.yesterday',
+    category: 'ai',
+    icon: History,
+    run: () => openSummary({ view: 'summary', preset: 'yesterday', auto: true }),
+  },
   { id: 'summary.openSchedules', title: 'commands.summary.openSchedules', category: 'ai', icon: CalendarClock, run: () => openSummary({ view: 'schedules' }) },
   { id: 'card.summarize', title: 'commands.card.summarize', category: 'card', icon: ScrollText, run: summarizeCard },
   { id: 'ai.testConnection', title: 'commands.ai.testConnection', category: 'ai', icon: PlugZap, run: () => testConnection() },

@@ -39,7 +39,10 @@ export function loadSaved() {
 }
 
 function persistSaved() {
-  uiSet('savedSearches', search.saved.map((s) => ({ ...s })));
+  uiSet(
+    'savedSearches',
+    search.saved.map((s) => ({ ...s })),
+  );
 }
 
 export function addSaved(name: string, q: string): SavedSearch {

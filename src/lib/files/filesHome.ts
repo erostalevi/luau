@@ -75,6 +75,8 @@ export function visibleDocs(
   },
 ): DocItem[] {
   const list = all.filter((d) => (opts.showArchived || !d.archived) && matchesFilter(d, opts.filter));
-  list.sort((a, b) => (opts.sort === 'recent' ? b.mtime - a.mtime || a.title.localeCompare(b.title) : a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })));
+  list.sort((a, b) =>
+    opts.sort === 'recent' ? b.mtime - a.mtime || a.title.localeCompare(b.title) : a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+  );
   return opts.limit ? list.slice(0, opts.limit) : list;
 }

@@ -14,7 +14,18 @@ import { copyText } from '$lib/app/helpers';
 import { cardMenu } from '$lib/board/cardMenu';
 import { t } from '$lib/i18n/index.svelte';
 import { revealCard, openRow } from '$lib/panels/explorer/explorerActions';
-import { search, loadSaved, addSaved, renameSaved, removeSaved, restoreSaved, updateSaved, hasContent, type SavedSearch, type GroupBy } from './searchState.svelte';
+import {
+  search,
+  loadSaved,
+  addSaved,
+  renameSaved,
+  removeSaved,
+  restoreSaved,
+  updateSaved,
+  hasContent,
+  type SavedSearch,
+  type GroupBy,
+} from './searchState.svelte';
 import { effectiveCase, withCase } from './sync';
 
 export function focusSearch(q?: string) {
@@ -44,7 +55,13 @@ export async function saveCurrent(): Promise<SavedSearch | null> {
     return null;
   }
   loadSaved();
-  const name = await inputBox({ title: t('commands.search.saveCurrent'), prompt: q, value: q.length <= 40 ? q : '', placeholder: t('searchPanel.namePlaceholder'), validate: (v) => (v.trim() ? null : t('validation.required')) });
+  const name = await inputBox({
+    title: t('commands.search.saveCurrent'),
+    prompt: q,
+    value: q.length <= 40 ? q : '',
+    placeholder: t('searchPanel.namePlaceholder'),
+    validate: (v) => (v.trim() ? null : t('validation.required')),
+  });
   if (typeof name !== 'string') return null;
   const s = addSaved(name, q);
   toast.success(t('searchPanel.saved', { name: s.name }), { action: { label: t('searchPanel.openAsBoard'), run: () => openSavedBoard(s) } });
@@ -97,7 +114,10 @@ export async function pickSaved(): Promise<SavedSearch | null> {
 
 export async function openHit(h: SearchHit, side = false) {
   if (side && h.kind === 'doc') {
-    await openRow({ key: '', type: 'card', depth: 0, parentKey: null, boardId: h.board, id: h.id, label: h.title, expandable: false, expanded: false, kind: 'files' }, true);
+    await openRow(
+      { key: '', type: 'card', depth: 0, parentKey: null, boardId: h.board, id: h.id, label: h.title, expandable: false, expanded: false, kind: 'files' },
+      true,
+    );
     return;
   }
   if (h.kind === 'doc') await openDocTab(h.board, h.id);

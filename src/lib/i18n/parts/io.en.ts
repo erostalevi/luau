@@ -54,7 +54,8 @@ export default {
     },
     repair: {
       title: 'Repair this board',
-      message: 'Its settings file (board.json) is damaged, so the board is open read-only. Repair rebuilds it from the lanes and cards found on disk; a copy of the damaged file stays in .luau/cache/recovered.',
+      message:
+        'Its settings file (board.json) is damaged, so the board is open read-only. Repair rebuilds it from the lanes and cards found on disk; a copy of the damaged file stays in .luau/cache/recovered.',
       confirm: 'Repair',
       done: 'Board repaired',
       failed: 'Could not repair the board: {message}',

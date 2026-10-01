@@ -146,7 +146,16 @@ function computeTarget(x: number, y: number): DropTarget | null {
   // Custom zones (tabs, integrations…)
   const custom = hit.closest<HTMLElement>('[data-dropzone]');
   if (custom) {
-    return { type: 'custom', boardId: custom.dataset.board ?? '', parent: { kind: 'root' }, before: null, zone: 'into', el: custom, custom: custom.dataset.dropzone, valid: true };
+    return {
+      type: 'custom',
+      boardId: custom.dataset.board ?? '',
+      parent: { kind: 'root' },
+      before: null,
+      zone: 'into',
+      el: custom,
+      custom: custom.dataset.dropzone,
+      valid: true,
+    };
   }
 
   // Explorer tree rows.
@@ -282,12 +291,15 @@ function paintTarget(tg: DropTarget | null) {
     const r = tg.el.getBoundingClientRect();
     const horizontal = tg.el.dataset.flow !== 'rows';
     const at = tg.zone === 'after' ? (horizontal ? r.right + 6 : r.bottom + 6) : horizontal ? r.left - 6 : r.top - 6;
-    Object.assign(ind.style, horizontal
-      ? { left: `${at - 1.5}px`, top: `${r.top}px`, width: '3px', height: `${r.height}px`, opacity: '1' }
-      : { left: `${r.left}px`, top: `${at - 1.5}px`, width: `${r.width}px`, height: '3px', opacity: '1' });
+    Object.assign(
+      ind.style,
+      horizontal
+        ? { left: `${at - 1.5}px`, top: `${r.top}px`, width: '3px', height: `${r.height}px`, opacity: '1' }
+        : { left: `${r.left}px`, top: `${at - 1.5}px`, width: `${r.width}px`, height: '3px', opacity: '1' },
+    );
     return;
   }
-  const listEl = tg.type === 'tree' ? null : tg.type === 'list' ? tg.el : tg.el.parentElement?.closest<HTMLElement>('[data-list]') ?? null;
+  const listEl = tg.type === 'tree' ? null : tg.type === 'list' ? tg.el : (tg.el.parentElement?.closest<HTMLElement>('[data-list]') ?? null);
   if (listEl) listEl.classList.add('dnd-list-over');
   const axis = flowAxis(listEl);
   let rect: DOMRect;
@@ -299,7 +311,11 @@ function paintTarget(tg: DropTarget | null) {
     const el = (listEl ?? document).querySelector<HTMLElement>(`[data-card="${tg.before}"]`);
     rect = (el ?? tg.el).getBoundingClientRect();
   } else {
-    const items = listEl ? [...listEl.querySelectorAll<HTMLElement>(':scope > [data-card], :scope > .flip-item > [data-card]')].filter((e) => !dnd.source?.ids?.includes(e.dataset.card!)) : [];
+    const items = listEl
+      ? [...listEl.querySelectorAll<HTMLElement>(':scope > [data-card], :scope > .flip-item > [data-card]')].filter(
+          (e) => !dnd.source?.ids?.includes(e.dataset.card!),
+        )
+      : [];
     const last = items[items.length - 1];
     if (last) {
       rect = last.getBoundingClientRect();
@@ -397,7 +413,11 @@ async function drop(src: DragSource, tg: DropTarget) {
     return;
   }
   if (src.boardId === tg.boardId) {
-    await apply(tg.boardId, { op: 'move', ids, to: tg.parent, before: tg.before }, ids.length > 1 ? t('ops.moveCards', { count: ids.length }) : t('ops.moveCard'));
+    await apply(
+      tg.boardId,
+      { op: 'move', ids, to: tg.parent, before: tg.before },
+      ids.length > 1 ? t('ops.moveCards', { count: ids.length }) : t('ops.moveCard'),
+    );
   } else {
     try {
       await rpc('board.moveAcross', { from: src.boardId, ids, to: tg.boardId, parent: tg.parent, before: tg.before });

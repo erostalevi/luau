@@ -189,7 +189,21 @@
     return { title: highlightSegments(h.title || t('common.untitled'), terms, caseOn), snippet: snip };
   }
 
-  const EXAMPLES: [string, string][] = [['tag', 'tag:design'], ['board', 'board:"Product Roadmap"'], ['lane', 'lane:Doing'], ['state', 'is:open'], ['due', 'due:overdue'], ['priority', 'priority:high'], ['person', '@ana'], ['has', 'has:image'], ['updated', 'updated:>=2026-09-01'], ['phrase', '"exact phrase"'], ['exclude', '-tag:wip'], ['title', 'in:title'], ['case', 'case:yes']];
+  const EXAMPLES: [string, string][] = [
+    ['tag', 'tag:design'],
+    ['board', 'board:"Product Roadmap"'],
+    ['lane', 'lane:Doing'],
+    ['state', 'is:open'],
+    ['due', 'due:overdue'],
+    ['priority', 'priority:high'],
+    ['person', '@ana'],
+    ['has', 'has:image'],
+    ['updated', 'updated:>=2026-09-01'],
+    ['phrase', '"exact phrase"'],
+    ['exclude', '-tag:wip'],
+    ['title', 'in:title'],
+    ['case', 'case:yes'],
+  ];
 
   function addExample(ex: string) {
     setText(search.q.trim() ? `${search.q.trim()} ${ex}` : ex);
@@ -218,11 +232,23 @@
     />
     {#if busy}<Loader size={13} class="spin busy" />{/if}
     {#if search.q}
-      <button class="icon-btn sm" aria-label={t('commands.search.clear')} use:tip={{ text: t('commands.search.clear'), command: 'search.clear' }} onclick={() => (setText(''), input?.focus())}>
+      <button
+        class="icon-btn sm"
+        aria-label={t('commands.search.clear')}
+        use:tip={{ text: t('commands.search.clear'), command: 'search.clear' }}
+        onclick={() => (setText(''), input?.focus())}
+      >
         <X size={13} />
       </button>
     {/if}
-    <button class="icon-btn sm" class:active={caseOn} aria-pressed={caseOn} aria-label={t('commands.search.toggleCase')} use:tip={{ text: t('commands.search.toggleCase'), command: 'search.toggleCase' }} onclick={toggleCase}>
+    <button
+      class="icon-btn sm"
+      class:active={caseOn}
+      aria-pressed={caseOn}
+      aria-label={t('commands.search.toggleCase')}
+      use:tip={{ text: t('commands.search.toggleCase'), command: 'search.toggleCase' }}
+      onclick={toggleCase}
+    >
       <CaseSensitive size={16} strokeWidth={1.8} />
     </button>
     <button
@@ -257,7 +283,9 @@
     <div class="chips">
       {#each parsed.filters as f, i (i + f.key + f.value + f.cmp)}
         <span class="fchip" class:neg={f.negate}>
-          <button class="fchip-l" use:tip={t('searchPanel.chipNegate')} onclick={() => toggleNegate(i)}>{#if f.negate}<span class="not">{t('searchPanel.not')}</span>{/if}{chipLabel(f)}</button>
+          <button class="fchip-l" use:tip={t('searchPanel.chipNegate')} onclick={() => toggleNegate(i)}
+            >{#if f.negate}<span class="not">{t('searchPanel.not')}</span>{/if}{chipLabel(f)}</button
+          >
           <button class="fchip-x" aria-label={t('common.remove')} onclick={() => dropChip(i)}><X size={11} strokeWidth={2.2} /></button>
         </span>
       {/each}
@@ -279,8 +307,12 @@
                     <span class="sq">{s.q}</span>
                   </span>
                 </button>
-                <button class="icon-btn sm" aria-label={t('searchPanel.openAsBoard')} use:tip={t('searchPanel.openAsBoard')} onclick={() => openSavedBoard(s)}><LayoutGrid size={13} /></button>
-                <button class="icon-btn sm" aria-label={t('common.more')} onclick={(e) => openMenuAt(e.currentTarget as HTMLElement, savedMenu(s))}><MoreHorizontal size={13} /></button>
+                <button class="icon-btn sm" aria-label={t('searchPanel.openAsBoard')} use:tip={t('searchPanel.openAsBoard')} onclick={() => openSavedBoard(s)}
+                  ><LayoutGrid size={13} /></button
+                >
+                <button class="icon-btn sm" aria-label={t('common.more')} onclick={(e) => openMenuAt(e.currentTarget as HTMLElement, savedMenu(s))}
+                  ><MoreHorizontal size={13} /></button
+                >
               </li>
             {/each}
           </ul>
@@ -311,8 +343,18 @@
         ]}
         bind:value={search.groupBy}
       />
-      <button class="icon-btn sm" aria-label={t('searchPanel.openAsBoard')} use:tip={t('searchPanel.openAsBoard')} onclick={() => openSavedBoard({ q: search.q, groupBy: search.groupBy })}><LayoutGrid size={13} /></button>
-      <button class="icon-btn sm" aria-label={t('commands.search.saveCurrent')} use:tip={{ text: t('commands.search.saveCurrent'), command: 'search.saveCurrent' }} onclick={() => void saveCurrent()}><BookmarkPlus size={14} /></button>
+      <button
+        class="icon-btn sm"
+        aria-label={t('searchPanel.openAsBoard')}
+        use:tip={t('searchPanel.openAsBoard')}
+        onclick={() => openSavedBoard({ q: search.q, groupBy: search.groupBy })}><LayoutGrid size={13} /></button
+      >
+      <button
+        class="icon-btn sm"
+        aria-label={t('commands.search.saveCurrent')}
+        use:tip={{ text: t('commands.search.saveCurrent'), command: 'search.saveCurrent' }}
+        onclick={() => void saveCurrent()}><BookmarkPlus size={14} /></button
+      >
     </div>
     <div class="scroll results" id="search-results" role="listbox" aria-label={t('panels.search')} tabindex="0" bind:this={listEl} onkeydown={onKeydown}>
       {#if failed}
@@ -352,7 +394,9 @@
                   {#each s.title as seg, si (si)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}
                 </span>
                 {#if s.snippet.length && h.snippet.trim() && h.snippet.trim() !== h.title}
-                  <span class="hs">{#each s.snippet as seg, si (si)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
+                  <span class="hs"
+                    >{#each s.snippet as seg, si (si)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span
+                  >
                 {/if}
                 <span class="hm">
                   {#if search.groupBy === 'lane'}<span>{h.boardName}</span>{:else if h.laneName}<span>{h.laneName}</span>{/if}

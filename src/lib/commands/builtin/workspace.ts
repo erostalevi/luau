@@ -44,11 +44,26 @@ export const workspaceCommands: Command[] = [
       persistUi();
     },
   },
-  { id: 'search.focus', title: 'commands.search.focus', category: 'search', hidden: true, run: () => ((ui.left.visible = true), (ui.left.section = 'search'), ui.searchFocus++) },
+  {
+    id: 'search.focus',
+    title: 'commands.search.focus',
+    category: 'search',
+    hidden: true,
+    run: () => ((ui.left.visible = true), (ui.left.section = 'search'), ui.searchFocus++),
+  },
   { id: 'panel.history', title: 'commands.panel.history', category: 'view', icon: History, run: () => showSection('history') },
   { id: 'panel.integrations', title: 'commands.panel.integrations', category: 'view', icon: Plug, run: () => showSection('integrations') },
   { id: 'panel.extensions', title: 'commands.panel.extensions', category: 'view', icon: Blocks, run: () => showSection('extensions') },
-  { id: 'tab.close', title: 'commands.tab.close', category: 'tabs', icon: X, run: () => { const tab = activeTab(); if (tab) closeTab(tab.id, true); } },
+  {
+    id: 'tab.close',
+    title: 'commands.tab.close',
+    category: 'tabs',
+    icon: X,
+    run: () => {
+      const tab = activeTab();
+      if (tab) closeTab(tab.id, true);
+    },
+  },
   { id: 'tab.reopen', title: 'commands.tab.reopen', category: 'tabs', icon: RotateCcw, run: () => reopenClosed() },
   { id: 'tab.next', title: 'commands.tab.next', category: 'tabs', run: () => cycleTab(1) },
   { id: 'tab.previous', title: 'commands.tab.previous', category: 'tabs', run: () => cycleTab(-1) },

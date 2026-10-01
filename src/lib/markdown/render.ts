@@ -39,12 +39,28 @@ export function createRenderer(o: RenderOptions): MarkdownIt {
   const md = new MarkdownItFactory({ html: false, linkify: true, typographer: false, breaks: false });
   md.use(footnote);
 
-  md.inline.ruler.before('link', 'card_link', inlineRule('card_link', /^!?\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/, () => true));
-  md.inline.ruler.before('link', 'date_chip', inlineRule('date_chip', /^\[(\d{4}-\d{2}-\d{2})(?:[ T]\d{1,2}:\d{2})?\](?![([:\]])/, (s, p) => s[p - 1] !== '['));
+  md.inline.ruler.before(
+    'link',
+    'card_link',
+    inlineRule('card_link', /^!?\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/, () => true),
+  );
+  md.inline.ruler.before(
+    'link',
+    'date_chip',
+    inlineRule('date_chip', /^\[(\d{4}-\d{2}-\d{2})(?:[ T]\d{1,2}:\d{2})?\](?![([:\]])/, (s, p) => s[p - 1] !== '['),
+  );
   md.inline.ruler.push('tag', inlineRule('tag', /^#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/u, wordBoundary));
   md.inline.ruler.push('mention', inlineRule('mention', /^@([\p{L}\p{N}][\p{L}\p{N}_.-]*)/u, wordBoundary));
-  md.inline.ruler.before('emphasis', 'highlight', inlineRule('highlight', /^==([^=\n]+)==/, () => true));
-  md.inline.ruler.before('escape', 'math_inline', inlineRule('math_inline', /^\$([^$\s](?:[^$\n]*[^$\s])?)\$(?!\d)/, (s, p) => s[p - 1] !== '\\'));
+  md.inline.ruler.before(
+    'emphasis',
+    'highlight',
+    inlineRule('highlight', /^==([^=\n]+)==/, () => true),
+  );
+  md.inline.ruler.before(
+    'escape',
+    'math_inline',
+    inlineRule('math_inline', /^\$([^$\s](?:[^$\n]*[^$\s])?)\$(?!\d)/, (s, p) => s[p - 1] !== '\\'),
+  );
 
   md.block.ruler.before('fence', 'math_block', (state: StateBlock, start: number, end: number, silent: boolean) => {
     const pos = state.bMarks[start] + state.tShift[start];
@@ -84,7 +100,8 @@ export function createRenderer(o: RenderOptions): MarkdownIt {
   };
   md.renderer.rules.mention = (tokens, i) => `<span class="mention">@${esc((tokens[i].meta as unknown as RegExpExecArray)[1])}</span>`;
   md.renderer.rules.highlight = (tokens, i) => `<mark>${esc((tokens[i].meta as unknown as RegExpExecArray)[1])}</mark>`;
-  md.renderer.rules.math_inline = (tokens, i) => `<span class="math" data-tex="${esc((tokens[i].meta as unknown as RegExpExecArray)[1])}">${esc((tokens[i].meta as unknown as RegExpExecArray)[1])}</span>`;
+  md.renderer.rules.math_inline = (tokens, i) =>
+    `<span class="math" data-tex="${esc((tokens[i].meta as unknown as RegExpExecArray)[1])}">${esc((tokens[i].meta as unknown as RegExpExecArray)[1])}</span>`;
   md.renderer.rules.math_block = (tokens, i) => `<div class="math-block" data-tex="${esc(tokens[i].content)}">${esc(tokens[i].content)}</div>`;
 
   const fence = md.renderer.rules.fence!;
@@ -184,7 +201,12 @@ export async function enhanceRendered(root: HTMLElement) {
   const diagrams = root.querySelectorAll<HTMLElement>('.mermaid-src');
   if (diagrams.length) {
     const m = (await import('mermaid')).default;
-    m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'neutral', fontFamily: 'Inter Variable, system-ui' });
+    m.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'neutral',
+      fontFamily: 'Inter Variable, system-ui',
+    });
     let n = 0;
     for (const el of diagrams) {
       try {

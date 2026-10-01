@@ -29,7 +29,10 @@ const eff: Keybinding[] = [
   { key: 'ctrl+alt+x', command: 'card.archive', source: 'user' },
 ];
 
-const rows = buildRows(['palette.commands', 'app.openKeybindings', 'panel.toggle', 'editor.bold', 'card.new', 'nav.down', 'my.ext', 'card.archive', 'card.rename'], eff);
+const rows = buildRows(
+  ['palette.commands', 'app.openKeybindings', 'panel.toggle', 'editor.bold', 'card.new', 'nav.down', 'my.ext', 'card.archive', 'card.rename'],
+  eff,
+);
 const row = (cmd: string) => rows.find((r) => r.command === cmd)!;
 
 describe('sourceKind', () => {

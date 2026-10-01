@@ -4,7 +4,18 @@
   import { allCommands, commandTitle, commandCategory, getCommand, runCommand } from '$lib/commands/registry.svelte';
   import { effectiveBindings, kb, saveUserKeybindings } from '$lib/keybindings/resolver.svelte';
   import { eventToStroke, isMac } from '$lib/keybindings/keys';
-  import { buildRows, conflictCount, changeKey, addKey, removeKey, changeWhen, resetCommand, isCustomized, isSingleKeyBinding, type BindingRow } from '$lib/keybindings/editor/model';
+  import {
+    buildRows,
+    conflictCount,
+    changeKey,
+    addKey,
+    removeKey,
+    changeWhen,
+    resetCommand,
+    isCustomized,
+    isSingleKeyBinding,
+    type BindingRow,
+  } from '$lib/keybindings/editor/model';
   import { parseKbQuery, filterRows } from '$lib/keybindings/editor/filter';
   import { ChordRecorder } from '$lib/keybindings/editor/recorder';
   import { validateWhen } from '$lib/keybindings/editor/when';
@@ -121,7 +132,12 @@
       { label: t('keys.editor.changeWhen'), icon: Filter, run: () => void editWhen(row), disabled: !row.key },
       { separator: true },
       { label: t('keys.editor.remove'), icon: Trash2, danger: true, run: () => void save(removeKey(kb.user, row, isMac)), disabled: !row.key },
-      { label: t('keys.editor.reset'), icon: RotateCcw, run: () => void save(resetCommand(kb.user, row.command)), disabled: !isCustomized(kb.user, row.command) },
+      {
+        label: t('keys.editor.reset'),
+        icon: RotateCcw,
+        run: () => void save(resetCommand(kb.user, row.command)),
+        disabled: !isCustomized(kb.user, row.command),
+      },
       { separator: true },
       { label: t('keys.editor.copyId'), icon: Copy, run: () => void copyText(row.command) },
       { label: t('keys.editor.sameKeys'), icon: Layers, run: () => ((recordSearch = true), (searchKeys = row.key)), disabled: !row.key },
@@ -149,7 +165,9 @@
       <button class="btn sm" onclick={() => runCommand('app.toggleSingleKeys')}>
         {settings.get<boolean>('board.singleKeyShortcuts') ? t('keys.editor.singleOn') : t('keys.editor.singleOff')}
       </button>
-      <button class="icon-btn" onclick={() => app.info && reveal(`${app.info.configDir}/keybindings.json`)} use:tip={t('keys.editor.openJson')}><FileJson size={16} /></button>
+      <button class="icon-btn" onclick={() => app.info && reveal(`${app.info.configDir}/keybindings.json`)} use:tip={t('keys.editor.openJson')}
+        ><FileJson size={16} /></button
+      >
     </div>
   </header>
   <div class="search">
@@ -164,7 +182,9 @@
   </div>
   <div class="table" role="grid">
     <div class="thead" role="row">
-      <span>{t('keys.editor.command')}</span><span>{t('keys.editor.keybinding')}</span><span>{t('keys.editor.when')}</span><span>{t('keys.editor.sourceCol')}</span>
+      <span>{t('keys.editor.command')}</span><span>{t('keys.editor.keybinding')}</span><span>{t('keys.editor.when')}</span><span
+        >{t('keys.editor.sourceCol')}</span
+      >
     </div>
     {#each visible as row (row.id)}
       {@const tx = text(row)}
@@ -183,7 +203,9 @@
           {tx.title}
         </span>
         <span class="key">
-          {#if row.key}<Kbd keys={row.key} />{#if isSingleKeyBinding(row)}<span class="badge">{t('keys.editor.single')}</span>{/if}{:else}<span class="none">—</span>{/if}
+          {#if row.key}<Kbd keys={row.key} />{#if isSingleKeyBinding(row)}<span class="badge">{t('keys.editor.single')}</span>{/if}{:else}<span class="none"
+              >—</span
+            >{/if}
         </span>
         <span class="when mono">{row.when ?? ''}</span>
         <span class="src">{sourceLabel(row)}</span>
@@ -198,9 +220,13 @@
   <div class="scrim" role="presentation" onpointerdown={stopEdit}></div>
   <div class="overlay card-surface" role="dialog" aria-modal="true">
     <p class="muted">{t('keys.editor.recordPrompt')}</p>
-    <div class="recorded">{#if recorded}<Kbd keys={recorded} />{:else}<span class="muted">…</span>{/if}</div>
+    <div class="recorded">
+      {#if recorded}<Kbd keys={recorded} />{:else}<span class="muted">…</span>{/if}
+    </div>
     {#if conflicts}
-      <button class="conflict" onclick={() => ((recordSearch = true), (searchKeys = recorded), stopEdit())}>{t('keys.editor.conflicts', { count: conflicts })}</button>
+      <button class="conflict" onclick={() => ((recordSearch = true), (searchKeys = recorded), stopEdit())}
+        >{t('keys.editor.conflicts', { count: conflicts })}</button
+      >
     {/if}
     <p class="hint muted">{t('keys.editor.recordHint')}</p>
     <div class="actions">

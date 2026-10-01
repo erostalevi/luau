@@ -4,7 +4,16 @@ import { BASE, PRESETS } from '../defaults';
 
 describe('validateWhen', () => {
   it('accepts empty and valid expressions', () => {
-    for (const e of ['', '   ', 'boardFocus', '!inputFocus', "boardType == 'kanban'", 'a && (b || !c)', 'config.board.singleKeyShortcuts && x != "y"', 'count == 3']) {
+    for (const e of [
+      '',
+      '   ',
+      'boardFocus',
+      '!inputFocus',
+      "boardType == 'kanban'",
+      'a && (b || !c)',
+      'config.board.singleKeyShortcuts && x != "y"',
+      'count == 3',
+    ]) {
       expect(validateWhen(e), e).toBeNull();
     }
   });

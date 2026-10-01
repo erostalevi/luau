@@ -4,7 +4,18 @@
 import type { MockApi } from '../mock';
 import { RpcError } from '../rpc';
 import type { RemoteInfo } from '../types';
-import type { Account, ChangeRow, IdName, Mirror, PrepareRequest, Prepared, RemoteComment, RemoteIssue, StatusCategory, Transition } from '$lib/integrations/types';
+import type {
+  Account,
+  ChangeRow,
+  IdName,
+  Mirror,
+  PrepareRequest,
+  Prepared,
+  RemoteComment,
+  RemoteIssue,
+  StatusCategory,
+  Transition,
+} from '$lib/integrations/types';
 
 type Methods = Record<string, (p: Record<string, any>) => unknown>;
 
@@ -63,9 +74,22 @@ function seedIssues(): RemoteIssue[] {
 
 export function register(methods: Methods, api: MockApi) {
   const issues = seedIssues();
-  const comments = new Map<string, RemoteComment[]>([['LUAU-101', [{ id: 'm1', author: PEOPLE[1], bodyMd: 'I can reproduce this on **Safari 18**.', created: new Date(Date.now() - 86_400_000).toISOString() }]]]);
+  const comments = new Map<string, RemoteComment[]>([
+    ['LUAU-101', [{ id: 'm1', author: PEOPLE[1], bodyMd: 'I can reproduce this on **Safari 18**.', created: new Date(Date.now() - 86_400_000).toISOString() }]],
+  ]);
   let accounts: Account[] = api.ls('integrations.accounts', [
-    { id: 'a-demo', provider: 'jiraCloud', label: 'luau-demo.atlassian.net', baseUrl: SITE, allowedHosts: ['luau-demo.atlassian.net'], insecureHttp: false, savedQueries: [{ name: 'Bugs', query: 'project = LUAU AND type = Bug' }], userName: 'Eros T.', persisted: true, created: new Date().toISOString() },
+    {
+      id: 'a-demo',
+      provider: 'jiraCloud',
+      label: 'luau-demo.atlassian.net',
+      baseUrl: SITE,
+      allowedHosts: ['luau-demo.atlassian.net'],
+      insecureHttp: false,
+      savedQueries: [{ name: 'Bugs', query: 'project = LUAU AND type = Bug' }],
+      userName: 'Eros T.',
+      persisted: true,
+      created: new Date().toISOString(),
+    },
   ]);
   const save = () => api.lsSet('integrations.accounts', accounts);
   const links = new Map<string, Record<string, RemoteInfo>>();
@@ -82,7 +106,21 @@ export function register(methods: Methods, api: MockApi) {
     if (dir === 'pull' && s['integrations.allowPull'] === false) throw new RpcError('invalid', 'invalid operation: pull_disabled');
   };
   const custom = (name: string, payload: unknown) => api.emit({ type: 'custom', name, payload });
-  const info = (i: RemoteIssue, mirror = false): RemoteInfo => ({ provider: 'jira', account: 'a-demo', key: i.key, url: i.url, status: i.status, statusCategory: i.statusCategory, assignee: i.assignee ?? null, priority: i.priority, labels: i.labels, type: i.type, sprint: i.sprint, updated: i.updated, mirror });
+  const info = (i: RemoteIssue, mirror = false): RemoteInfo => ({
+    provider: 'jira',
+    account: 'a-demo',
+    key: i.key,
+    url: i.url,
+    status: i.status,
+    statusCategory: i.statusCategory,
+    assignee: i.assignee ?? null,
+    priority: i.priority,
+    labels: i.labels,
+    type: i.type,
+    sprint: i.sprint,
+    updated: i.updated,
+    mirror,
+  });
   const issue = (key: string) => {
     const i = issues.find((x) => x.key === key);
     if (!i) throw new RpcError('not_found', 'not found: remote_404');
@@ -126,7 +164,10 @@ export function register(methods: Methods, api: MockApi) {
     const q = (query || '').toLowerCase();
     if (!q || q.includes('currentuser')) return issues.filter((i) => i.assignee?.id === 'u-eros' || (!q && i.statusCategory !== 'done'));
     if (q.includes('type = bug')) return issues.filter((i) => i.type === 'Bug');
-    const text = q.replace(/project\s*=\s*\w+/g, '').replace(/and|order by.*$/g, '').trim();
+    const text = q
+      .replace(/project\s*=\s*\w+/g, '')
+      .replace(/and|order by.*$/g, '')
+      .trim();
     return issues.filter((i) => !text || `${i.key} ${i.summary}`.toLowerCase().includes(text));
   }
 
@@ -163,7 +204,14 @@ export function register(methods: Methods, api: MockApi) {
     custom('integrations.mirrors', {});
   }
 
-  function gate(direction: 'push' | 'pull', service: string, target: string, changes: ChangeRow[], run: () => unknown, preview: string | null = null): Prepared {
+  function gate(
+    direction: 'push' | 'pull',
+    service: string,
+    target: string,
+    changes: ChangeRow[],
+    run: () => unknown,
+    preview: string | null = null,
+  ): Prepared {
     allowed(direction);
     const token = 'w' + Math.random().toString(36).slice(2);
     const fields = [...new Set(changes.map((c) => c.field))];
@@ -178,8 +226,26 @@ export function register(methods: Methods, api: MockApi) {
   methods['integrations.connect'] = (p) => {
     if (!p.token) throw new RpcError('invalid', 'invalid operation: missing_token');
     const provider = p.provider as Account['provider'];
-    const host = provider === 'trello' ? 'api.trello.com' : provider === 'slack' ? 'slack.com' : String(p.baseUrl).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-    const a: Account = { id: 'a' + Math.random().toString(36).slice(2, 8), provider, label: provider === 'trello' ? 'Trello' : provider === 'slack' ? 'Luau workspace' : host, baseUrl: `https://${host}`, allowedHosts: [host], insecureHttp: !!p.insecureHttp, savedQueries: [], userName: 'Eros T.', persisted: true, created: new Date().toISOString() };
+    const host =
+      provider === 'trello'
+        ? 'api.trello.com'
+        : provider === 'slack'
+          ? 'slack.com'
+          : String(p.baseUrl)
+              .replace(/^https?:\/\//, '')
+              .replace(/\/.*$/, '');
+    const a: Account = {
+      id: 'a' + Math.random().toString(36).slice(2, 8),
+      provider,
+      label: provider === 'trello' ? 'Trello' : provider === 'slack' ? 'Luau workspace' : host,
+      baseUrl: `https://${host}`,
+      allowedHosts: [host],
+      insecureHttp: !!p.insecureHttp,
+      savedQueries: [],
+      userName: 'Eros T.',
+      persisted: true,
+      created: new Date().toISOString(),
+    };
     accounts = [...accounts, a];
     save();
     return a;
@@ -222,7 +288,11 @@ export function register(methods: Methods, api: MockApi) {
     const parent = p.parent;
     const list = parent.kind === 'lane' ? (snap.lanes.find((l) => l.id === parent.id)?.order ?? []) : parent.kind === 'root' ? snap.rootOrder : [];
     const index = p.before ? list.indexOf(p.before) : null;
-    methods['board.apply']({ board: p.board, op: { op: 'createCard', id, parent, index: index !== null && index >= 0 ? index : null, content: compose(i) }, label: 'Add Jira issue' });
+    methods['board.apply']({
+      board: p.board,
+      op: { op: 'createCard', id, parent, index: index !== null && index >= 0 ? index : null, content: compose(i) },
+      label: 'Add Jira issue',
+    });
     links.set(p.board, { ...(links.get(p.board) ?? {}), [id]: info(i) });
     emitLinks(p.board);
     return id;
@@ -251,7 +321,17 @@ export function register(methods: Methods, api: MockApi) {
     allowed('pull');
     const snap = methods['board.create']({ path: `mirrors/${p.name}`, name: p.name, kind: 'kanban', lanes: [] }) as { header: { id: string } };
     const id = snap.header.id;
-    mirrors.push({ id, name: p.name, path: `mirrors/${id}`, account: p.account, provider: 'jiraCloud', source: p.source, watch: !!p.watch, lastSync: null, lastError: null });
+    mirrors.push({
+      id,
+      name: p.name,
+      path: `mirrors/${id}`,
+      account: p.account,
+      provider: 'jiraCloud',
+      source: p.source,
+      watch: !!p.watch,
+      lastSync: null,
+      lastError: null,
+    });
     mirrorSync(id);
     api.emit({ type: 'registryChanged', registry: methods['registry.get']({}) as any });
     return id;
@@ -279,7 +359,10 @@ export function register(methods: Methods, api: MockApi) {
         const i = issue(l.key);
         const content = String(methods['card.read']({ board: r.board, id: r.card }));
         const title = content.match(/^# (.*)$/m)?.[1] ?? '';
-        const body = content.replace(/^# .*\n+/, '').replace(new RegExp(`\\n*Jira: \\[${l.key}\\]\\(.*\\)\\s*$`), '').trim();
+        const body = content
+          .replace(/^# .*\n+/, '')
+          .replace(new RegExp(`\\n*Jira: \\[${l.key}\\]\\(.*\\)\\s*$`), '')
+          .trim();
         const changes = [
           ...(title !== i.summary ? [{ field: 'Summary', before: i.summary, after: title }] : []),
           ...(body !== i.descriptionMd.trim() ? [{ field: 'Description', before: i.descriptionMd.slice(0, 400), after: body.slice(0, 400) }] : []),
@@ -301,14 +384,23 @@ export function register(methods: Methods, api: MockApi) {
         const current = String(methods['card.read']({ board: r.board, id: r.card }));
         const next = compose(i);
         const changes = current === next ? [] : [{ field: 'Description', before: current.slice(0, 200), after: next.slice(0, 200) }];
-        return gate('pull', 'jira', i.summary, changes, () => methods['board.apply']({ board: r.board, op: { op: 'writeCard', id: r.card, content: next }, label: 'Pulled from Jira' }));
+        return gate('pull', 'jira', i.summary, changes, () =>
+          methods['board.apply']({ board: r.board, op: { op: 'writeCard', id: r.card, content: next }, label: 'Pulled from Jira' }),
+        );
       }
       case 'comment': {
         const key = linkOf(r.board, r.card)?.key ?? r.key!;
-        return gate('push', 'jira', key, [{ field: 'Comment', before: null, after: r.body.slice(0, 120) }], () => {
-          comments.set(key, [...(comments.get(key) ?? []), { id: 'm' + Date.now(), author: PEOPLE[2], bodyMd: r.body, created: new Date().toISOString() }]);
-          return { key };
-        }, r.body);
+        return gate(
+          'push',
+          'jira',
+          key,
+          [{ field: 'Comment', before: null, after: r.body.slice(0, 120) }],
+          () => {
+            comments.set(key, [...(comments.get(key) ?? []), { id: 'm' + Date.now(), author: PEOPLE[2], bodyMd: r.body, created: new Date().toISOString() }]);
+            return { key };
+          },
+          r.body,
+        );
       }
       case 'transition': {
         const l = linkOf(r.board, r.card);
@@ -319,10 +411,11 @@ export function register(methods: Methods, api: MockApi) {
           Object.assign(i, { status: st.name, statusId: st.id, statusCategory: st.cat, updated: new Date().toISOString() });
           for (const [b, map] of links) {
             let touched = false;
-            for (const [card, info0] of Object.entries(map)) if (info0.key === key) {
-              map[card] = info(i, info0.mirror);
-              touched = true;
-            }
+            for (const [card, info0] of Object.entries(map))
+              if (info0.key === key) {
+                map[card] = info(i, info0.mirror);
+                touched = true;
+              }
             if (touched) mirrorIds().has(b) ? mirrorSync(b) : emitLinks(b);
           }
           return { key };
@@ -340,19 +433,41 @@ export function register(methods: Methods, api: MockApi) {
       case 'create': {
         const content = String(methods['card.read']({ board: r.board, id: r.card }));
         const title = content.match(/^# (.*)$/m)?.[1] ?? content.split('\n')[0];
-        return gate('push', 'jira', r.project, [
-          { field: 'Project', after: r.project },
-          { field: 'Type', after: r.issueType ?? 'Task' },
-          { field: 'Summary', after: title },
-        ], () => {
-          const key = `LUAU-${101 + issues.length}`;
-          const i: RemoteIssue = { ...issues[0], key, id: String(20000 + issues.length), url: `${SITE}/browse/${key}`, summary: title, descriptionMd: '', status: 'To Do', statusId: '1', statusCategory: 'todo', assignee: null, type: r.issueType ?? 'Task' };
-          issues.push(i);
-          methods['board.apply']({ board: r.board, op: { op: 'writeCard', id: r.card, content: `${content.trimEnd()}\n\nJira: [${key}](${i.url})\n` }, label: `Linked to ${key}` });
-          links.set(r.board, { ...(links.get(r.board) ?? {}), [r.card]: info(i) });
-          emitLinks(r.board);
-          return { key, url: i.url };
-        });
+        return gate(
+          'push',
+          'jira',
+          r.project,
+          [
+            { field: 'Project', after: r.project },
+            { field: 'Type', after: r.issueType ?? 'Task' },
+            { field: 'Summary', after: title },
+          ],
+          () => {
+            const key = `LUAU-${101 + issues.length}`;
+            const i: RemoteIssue = {
+              ...issues[0],
+              key,
+              id: String(20000 + issues.length),
+              url: `${SITE}/browse/${key}`,
+              summary: title,
+              descriptionMd: '',
+              status: 'To Do',
+              statusId: '1',
+              statusCategory: 'todo',
+              assignee: null,
+              type: r.issueType ?? 'Task',
+            };
+            issues.push(i);
+            methods['board.apply']({
+              board: r.board,
+              op: { op: 'writeCard', id: r.card, content: `${content.trimEnd()}\n\nJira: [${key}](${i.url})\n` },
+              label: `Linked to ${key}`,
+            });
+            links.set(r.board, { ...(links.get(r.board) ?? {}), [r.card]: info(i) });
+            emitLinks(r.board);
+            return { key, url: i.url };
+          },
+        );
       }
       case 'slackPost':
         return gate('push', 'slack', `#${r.channelName}`, [{ field: 'Message', after: r.text.slice(0, 120) }], () => ({ ok: true }), r.text);

@@ -1,5 +1,10 @@
 <script lang="ts">
-  let { checked = $bindable(false), onchange, label, disabled = false }: { checked?: boolean; onchange?: (v: boolean) => void; label?: string; disabled?: boolean } = $props();
+  let {
+    checked = $bindable(false),
+    onchange,
+    label,
+    disabled = false,
+  }: { checked?: boolean; onchange?: (v: boolean) => void; label?: string; disabled?: boolean } = $props();
 </script>
 
 <button

@@ -9,7 +9,12 @@ const lock = readFileSync('Cargo.lock', 'utf8');
 const crates = new Map();
 for (const m of lock.matchAll(/\[\[package\]\]\nname = "([^"]+)"\nversion = "([^"]+)"/g)) crates.set(m[1], m[2]);
 
-const mm = (v) => v.replace(/^[^\d]*/, '').split('.').slice(0, 2).join('.');
+const mm = (v) =>
+  v
+    .replace(/^[^\d]*/, '')
+    .split('.')
+    .slice(0, 2)
+    .join('.');
 const pairs = Object.keys(pkg.dependencies ?? {})
   .filter((n) => n.startsWith('@tauri-apps/'))
   .map((n) => [n, n === '@tauri-apps/api' ? 'tauri' : `tauri-plugin-${n.slice('@tauri-apps/plugin-'.length)}`]);

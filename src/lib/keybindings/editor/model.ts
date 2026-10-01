@@ -34,7 +34,15 @@ export function buildRows(commandIds: string[], effective: Keybinding[]): Bindin
   effective.forEach((b, i) => {
     const { kind, detail } = sourceKind(b.source);
     bound.add(b.command);
-    rows.push({ id: `b${i}:${b.command}:${b.key}`, command: b.command, key: b.key, when: b.when || undefined, args: b.args, source: kind, sourceDetail: detail });
+    rows.push({
+      id: `b${i}:${b.command}:${b.key}`,
+      command: b.command,
+      key: b.key,
+      when: b.when || undefined,
+      args: b.args,
+      source: kind,
+      sourceDetail: detail,
+    });
   });
   for (const id of commandIds) {
     if (!bound.has(id)) rows.push({ id: `c:${id}`, command: id, key: '', source: 'none' });

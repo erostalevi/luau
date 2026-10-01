@@ -47,7 +47,9 @@ export const i18n = $state({ locale: 'en' as Locale, ready: 0 });
 
 /** Narrow any stored/typed value to a supported locale ('es-CL' → 'es', unknown → 'en'). */
 export function normalizeLocale(value: unknown): Locale {
-  const id = String(value ?? '').slice(0, 2).toLowerCase();
+  const id = String(value ?? '')
+    .slice(0, 2)
+    .toLowerCase();
   return LOCALES.some((l) => l.id === id) ? (id as Locale) : 'en';
 }
 
@@ -59,9 +61,7 @@ export async function setLocale(value: Locale) {
   i18n.ready++;
   document.documentElement.lang = locale;
   // Native menus follow the app language (desktop only).
-  void import('$lib/backend/rpc')
-    .then((m) => (m.isTauri ? m.rpc('menu.setLocale', { locale }) : null))
-    .catch(() => undefined);
+  void import('$lib/backend/rpc').then((m) => (m.isTauri ? m.rpc('menu.setLocale', { locale }) : null)).catch(() => undefined);
 }
 
 /** First supported language in the OS/browser preference list, else English. */

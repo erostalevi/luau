@@ -1,7 +1,33 @@
+<script lang="ts" module>
+  export const DEFAULT_SWATCHES = [
+    // Hawaii sunset first (coral, hibiscus, mango, plumeria, dusk), then the rest.
+    '#ef8a7c',
+    '#ec8fb0',
+    '#f5a97f',
+    '#f3c77e',
+    '#b99be0',
+    '#8f9df0',
+    '#7fc8c4',
+    '#9fd49a',
+    '#7a7cf0',
+    '#c48cf0',
+    '#86b8f0',
+    '#9aa6c4',
+    '#fdeadc',
+    '#fde6ee',
+    '#eef7ef',
+    '#f4eff2',
+  ];
+</script>
+
 <script lang="ts">
   import { hexToRgb, rgbToHex } from '$lib/theme/color';
 
-  let { value = $bindable('#ef8a7c'), onchange, swatches = DEFAULT_SWATCHES }: { value?: string; onchange?: (hex: string) => void; swatches?: string[] } = $props();
+  let {
+    value = $bindable('#ef8a7c'),
+    onchange,
+    swatches = DEFAULT_SWATCHES,
+  }: { value?: string; onchange?: (hex: string) => void; swatches?: string[] } = $props();
 
   // HSV model for the picker surface.
   function toHsv(hex: string): [number, number, number] {
@@ -58,21 +84,20 @@
   }
 </script>
 
-<script lang="ts" module>
-  export const DEFAULT_SWATCHES = [
-    // Hawaii sunset first (coral, hibiscus, mango, plumeria, dusk), then the rest.
-    '#ef8a7c', '#ec8fb0', '#f5a97f', '#f3c77e', '#b99be0', '#8f9df0', '#7fc8c4', '#9fd49a',
-    '#7a7cf0', '#c48cf0', '#86b8f0', '#9aa6c4', '#fdeadc', '#fde6ee', '#eef7ef', '#f4eff2',
-  ];
-</script>
-
 <div class="cp">
   <div class="swatches">
     {#each swatches as s (s)}
       <button class="sw" class:on={s.toLowerCase() === value.toLowerCase()} style:background={s} aria-label={s} onclick={() => commit(s)}></button>
     {/each}
   </div>
-  <div class="sv" role="slider" aria-valuenow={Math.round(hsv[1] * 100)} tabindex="0" style:background-color={fromHsv(hsv[0], 1, 1)} onpointerdown={(e) => drag(e, 'sv')}>
+  <div
+    class="sv"
+    role="slider"
+    aria-valuenow={Math.round(hsv[1] * 100)}
+    tabindex="0"
+    style:background-color={fromHsv(hsv[0], 1, 1)}
+    onpointerdown={(e) => drag(e, 'sv')}
+  >
     <div class="knob" style:left="{hsv[1] * 100}%" style:top="{(1 - hsv[2]) * 100}%" style:background={value}></div>
   </div>
   <div class="hue" role="slider" aria-valuenow={Math.round(hsv[0])} tabindex="0" onpointerdown={(e) => drag(e, 'h')}>

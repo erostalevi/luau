@@ -70,7 +70,12 @@
           <span class="text">{l.name}</span>
           <span class="meta">{t('history.trash.cards', { count: l.order.length })}</span>
         </span>
-        <button class="icon-btn sm" onclick={() => void unarchive(boardId, [], [l.id])} use:tip={t('history.archive.unarchive')} aria-label={t('history.archive.unarchive')}><ArchiveRestore size={14} /></button>
+        <button
+          class="icon-btn sm"
+          onclick={() => void unarchive(boardId, [], [l.id])}
+          use:tip={t('history.archive.unarchive')}
+          aria-label={t('history.archive.unarchive')}><ArchiveRestore size={14} /></button
+        >
       </div>
     {/each}
   {/if}
@@ -85,8 +90,18 @@
           {#if laneName(c.lane)}<span class="meta">{t('history.archive.inLane', { lane: laneName(c.lane) ?? '' })}</span>{/if}
         </span>
         <span class="btns">
-          <button class="icon-btn sm" onclick={() => void openCard(boardId, c.id)} use:tip={t('history.actions.openCard')} aria-label={t('history.actions.openCard')}><ExternalLink size={14} /></button>
-          <button class="icon-btn sm" onclick={() => void unarchive(boardId, [c.id], [])} use:tip={t('history.archive.unarchive')} aria-label={t('history.archive.unarchive')}><ArchiveRestore size={14} /></button>
+          <button
+            class="icon-btn sm"
+            onclick={() => void openCard(boardId, c.id)}
+            use:tip={t('history.actions.openCard')}
+            aria-label={t('history.actions.openCard')}><ExternalLink size={14} /></button
+          >
+          <button
+            class="icon-btn sm"
+            onclick={() => void unarchive(boardId, [c.id], [])}
+            use:tip={t('history.archive.unarchive')}
+            aria-label={t('history.archive.unarchive')}><ArchiveRestore size={14} /></button
+          >
         </span>
       </div>
     {/each}

@@ -35,7 +35,11 @@
           <div class="pane-top">
             {#if i === 0 && !ui.left.visible}
               <div class="reopen drag-region" class:mac={macChrome}>
-                <button class="icon-btn no-drag" onclick={() => ((ui.left.visible = true), persistUi())} use:tip={{ text: t('panels.show'), command: 'panel.toggle' }}>
+                <button
+                  class="icon-btn no-drag"
+                  onclick={() => ((ui.left.visible = true), persistUi())}
+                  use:tip={{ text: t('panels.show'), command: 'panel.toggle' }}
+                >
                   <PanelLeftOpen size={16} strokeWidth={1.8} />
                 </button>
               </div>

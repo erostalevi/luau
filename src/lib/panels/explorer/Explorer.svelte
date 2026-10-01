@@ -188,7 +188,18 @@
     if (r.type === 'card') {
       const m = boards.get(r.boardId);
       const copyOnly = !!m?.header.readOnly && m.header.readOnly.startsWith('mirror');
-      startDrag(e, { kind: 'cards', boardId: r.boardId, ids: [r.id], copyOnly: copyOnly || !!registry.data.boards.find((b) => b.id === r.boardId)?.mirror, label: r.label }, null, scroller ? [scroller] : []);
+      startDrag(
+        e,
+        {
+          kind: 'cards',
+          boardId: r.boardId,
+          ids: [r.id],
+          copyOnly: copyOnly || !!registry.data.boards.find((b) => b.id === r.boardId)?.mirror,
+          label: r.label,
+        },
+        null,
+        scroller ? [scroller] : [],
+      );
     } else if (r.type === 'board' && r.entry && !r.entry.missing) {
       startDrag(e, boardDragSource(r.entry), null, scroller ? [scroller] : []);
     }
@@ -304,7 +315,8 @@
 
   function onFocusIn() {
     ctx.explorerFocus = true;
-    if (!rows.some((r) => r.key === explorer.focusKey && focusable(r))) explorer.focusKey = activeKey && rows.some((r) => r.key === activeKey) ? activeKey : edge(rows, false);
+    if (!rows.some((r) => r.key === explorer.focusKey && focusable(r)))
+      explorer.focusKey = activeKey && rows.some((r) => r.key === activeKey) ? activeKey : edge(rows, false);
   }
 
   function onFocusOut(e: FocusEvent) {
@@ -357,13 +369,28 @@
     {#if registry.scanning}
       <span class="scan" use:tip={t('explorer.scanning')}><Loader size={13} class="spin" /></span>
     {/if}
-    <button class="icon-btn sm" aria-label={t('commands.board.new')} use:tip={{ text: t('commands.board.new'), command: 'board.new' }} onclick={() => void runCommand('board.new')}>
+    <button
+      class="icon-btn sm"
+      aria-label={t('commands.board.new')}
+      use:tip={{ text: t('commands.board.new'), command: 'board.new' }}
+      onclick={() => void runCommand('board.new')}
+    >
       <Plus size={15} strokeWidth={1.8} />
     </button>
-    <button class="icon-btn sm" aria-label={t('commands.explorer.revealActive')} use:tip={{ text: t('commands.explorer.revealActive'), command: 'explorer.revealActive' }} onclick={() => revealActive()}>
+    <button
+      class="icon-btn sm"
+      aria-label={t('commands.explorer.revealActive')}
+      use:tip={{ text: t('commands.explorer.revealActive'), command: 'explorer.revealActive' }}
+      onclick={() => revealActive()}
+    >
       <LocateFixed size={14} strokeWidth={1.8} />
     </button>
-    <button class="icon-btn sm" aria-label={t('commands.explorer.collapseAll')} use:tip={{ text: t('commands.explorer.collapseAll'), command: 'explorer.collapseAll' }} onclick={collapseAll}>
+    <button
+      class="icon-btn sm"
+      aria-label={t('commands.explorer.collapseAll')}
+      use:tip={{ text: t('commands.explorer.collapseAll'), command: 'explorer.collapseAll' }}
+      onclick={collapseAll}
+    >
       <ChevronsDownUp size={14} strokeWidth={1.8} />
     </button>
     <button
@@ -435,7 +462,13 @@
             oncontextmenu={(e) => onContextMenu(e, r)}
           >
             {#if r.expandable}
-              <button class="chev" class:open={r.expanded} tabindex="-1" aria-label={r.expanded ? t('explorer.collapse') : t('explorer.expand')} onclick={(e) => chevron(e, r)}>
+              <button
+                class="chev"
+                class:open={r.expanded}
+                tabindex="-1"
+                aria-label={r.expanded ? t('explorer.collapse') : t('explorer.expand')}
+                onclick={(e) => chevron(e, r)}
+              >
                 <ChevronRight size={13} strokeWidth={2} />
               </button>
             {:else}
@@ -488,13 +521,23 @@
             {:else if r.type === 'error'}
               <TriangleAlert size={13} strokeWidth={1.8} />
               <span class="muted grow">{t('explorer.loadFailed')}</span>
-              <button class="icon-btn sm" tabindex="-1" aria-label={t('common.retry')} onclick={(e) => (e.stopPropagation(), retry(r.boardId))}><RotateCw size={12} /></button>
+              <button class="icon-btn sm" tabindex="-1" aria-label={t('common.retry')} onclick={(e) => (e.stopPropagation(), retry(r.boardId))}
+                ><RotateCw size={12} /></button
+              >
             {:else if r.type === 'empty'}
-              <span class="muted grow">{r.kind === 'files' || boards.get(r.boardId)?.kind === 'files' ? t('explorer.noDocs') : boards.get(r.boardId)?.lanes.length ? t('explorer.noCards') : t('explorer.noLanes')}</span>
+              <span class="muted grow"
+                >{r.kind === 'files' || boards.get(r.boardId)?.kind === 'files'
+                  ? t('explorer.noDocs')
+                  : boards.get(r.boardId)?.lanes.length
+                    ? t('explorer.noCards')
+                    : t('explorer.noLanes')}</span
+              >
             {:else if r.type === 'hint'}
               <Fingerprint size={12} strokeWidth={1.8} />
               <span class="muted grow" title={r.path}>{t('explorer.copyFound')}</span>
-              <button class="icon-btn sm" tabindex="-1" aria-label={t('cards.reveal')} onclick={(e) => (e.stopPropagation(), openMenu(e, rowMenu(r)))}><FolderSearch size={12} /></button>
+              <button class="icon-btn sm" tabindex="-1" aria-label={t('cards.reveal')} onclick={(e) => (e.stopPropagation(), openMenu(e, rowMenu(r)))}
+                ><FolderSearch size={12} /></button
+              >
             {/if}
           </div>
         {/each}

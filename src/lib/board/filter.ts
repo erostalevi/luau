@@ -33,12 +33,17 @@ export function compileFilter(text: string): CompiledFilter {
     } else if (s.startsWith('is:')) {
       const v = s.slice(3);
       p = (n, r) =>
-        v === 'open' ? n.tasks.total > n.tasks.done
-        : v === 'done' ? (n.tasks.total > 0 && n.tasks.done === n.tasks.total) || r?.statusCategory === 'done'
-        : v === 'archived' ? n.archived
-        : v === 'group' ? n.isGroup
-        : v === 'remote' || v === 'jira' ? !!r
-        : true;
+        v === 'open'
+          ? n.tasks.total > n.tasks.done
+          : v === 'done'
+            ? (n.tasks.total > 0 && n.tasks.done === n.tasks.total) || r?.statusCategory === 'done'
+            : v === 'archived'
+              ? n.archived
+              : v === 'group'
+                ? n.isGroup
+                : v === 'remote' || v === 'jira'
+                  ? !!r
+                  : true;
     } else if (s.startsWith('due:')) {
       const v = s.slice(4);
       const due = (n: NodeDto) => n.footer.due ?? n.dates[0] ?? null;

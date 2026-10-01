@@ -1,4 +1,28 @@
-import { Plus, FilePlus2, Columns3, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Indent, Outdent, Trash2, Archive, Copy, Link, Pencil, Tag, CalendarDays, Flag, UserPlus, ArrowRightLeft, Image, LayoutTemplate, ExternalLink, SquareDashedMousePointer } from '@lucide/svelte';
+import {
+  Plus,
+  FilePlus2,
+  Columns3,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Indent,
+  Outdent,
+  Trash2,
+  Archive,
+  Copy,
+  Link,
+  Pencil,
+  Tag,
+  CalendarDays,
+  Flag,
+  UserPlus,
+  ArrowRightLeft,
+  Image,
+  LayoutTemplate,
+  ExternalLink,
+  SquareDashedMousePointer,
+} from '@lucide/svelte';
 import type { Command } from '$lib/commands/registry.svelte';
 import type { Parent } from '$lib/backend/types';
 import { rpc } from '$lib/backend/rpc';
@@ -229,8 +253,18 @@ async function moveTo() {
       const groups = [...b.nodes.values()]
         .filter((n) => !ids.includes(n.id) && !ids.some((i) => b.isAncestor(i, n.id)))
         .slice(0, 400)
-        .map((n) => ({ label: n.title || t('common.untitled'), description: t('cards.insideCard'), value: { kind: 'card', id: n.id } as Parent, icon: FilePlus2 }));
-      return pickOne([...items, { kind: 'separator', label: t('cards.insideCard') }, ...groups], { title: t('cards.pickDestination'), step: 2, totalSteps: 3, matchOnDescription: false });
+        .map((n) => ({
+          label: n.title || t('common.untitled'),
+          description: t('cards.insideCard'),
+          value: { kind: 'card', id: n.id } as Parent,
+          icon: FilePlus2,
+        }));
+      return pickOne([...items, { kind: 'separator', label: t('cards.insideCard') }, ...groups], {
+        title: t('cards.pickDestination'),
+        step: 2,
+        totalSteps: 3,
+        matchOnDescription: false,
+      });
     },
     () =>
       pickOne(
@@ -279,7 +313,7 @@ async function pickDate(title: string): Promise<string | null | undefined> {
     d.setDate(d.getDate() + n);
     return isoDate(d);
   };
-  const nextMonday = add(((8 - today.getDay()) % 7) || 7);
+  const nextMonday = add((8 - today.getDay()) % 7 || 7);
   const items: QuickItem<string>[] = [
     { label: t('dates.today'), description: fmtDate(add(0), { weekday: 'short', month: 'short', day: 'numeric' }), value: add(0) },
     { label: t('dates.tomorrow'), description: fmtDate(add(1), { weekday: 'short', month: 'short', day: 'numeric' }), value: add(1) },
@@ -308,12 +342,15 @@ async function forEachTarget(fn: (b: BoardModel, id: string) => Promise<unknown>
 
 const ON_BOARD = "tabKind == 'board'";
 
-
 /** The user's own @name (setting `general.yourName`); asks once when unset. */
 export async function myName(): Promise<string | null> {
   const cur = (settings.get<string>('general.yourName') ?? '').trim().replace(/^@/, '');
   if (cur) return cur;
-  const v = await inputBox({ title: t('cards.askName'), placeholder: '@name', validate: (x) => (/^@?[\p{L}\p{N}._-]{1,40}$/u.test(x.trim()) ? null : t('validation.required')) });
+  const v = await inputBox({
+    title: t('cards.askName'),
+    placeholder: '@name',
+    validate: (x) => (/^@?[\p{L}\p{N}._-]{1,40}$/u.test(x.trim()) ? null : t('validation.required')),
+  });
   if (typeof v !== 'string' || !v.trim()) return null;
   const name = v.trim().replace(/^@/, '');
   settings.set('general.yourName', name);
@@ -432,7 +469,16 @@ export const boardCardCommands: Command[] = [
       if (c) void openCard(c.board.id, c.id);
     },
   },
-  { id: 'card.peek', title: 'commands.card.peek', category: 'card', hidden: true, run: () => { const c = activeCard(); if (c) openEditor(c.board.id, c.id); } },
+  {
+    id: 'card.peek',
+    title: 'commands.card.peek',
+    category: 'card',
+    hidden: true,
+    run: () => {
+      const c = activeCard();
+      if (c) openEditor(c.board.id, c.id);
+    },
+  },
   { id: 'card.moveUp', title: 'commands.card.moveUp', category: 'card', icon: ArrowUp, run: () => moveWithin(-1) },
   { id: 'card.moveDown', title: 'commands.card.moveDown', category: 'card', icon: ArrowDown, run: () => moveWithin(1) },
   { id: 'card.moveLeft', title: 'commands.card.moveLeft', category: 'card', icon: ArrowLeft, when: "boardType == 'kanban'", run: () => moveLane(-1) },
@@ -550,7 +596,10 @@ export const boardCardCommands: Command[] = [
       const people = await rpc<string[]>('search.people').catch(() => []);
       const who = await quickPick(
         people.map((p) => ({ label: `@${p}`, value: p })),
-        { title: t('cards.assign'), allowCustom: (s) => (s.trim() ? { label: t('cards.assignNew', { name: s.trim().replace(/^@/, '') }), value: s.trim().replace(/^@/, '') } : null) },
+        {
+          title: t('cards.assign'),
+          allowCustom: (s) => (s.trim() ? { label: t('cards.assignNew', { name: s.trim().replace(/^@/, '') }), value: s.trim().replace(/^@/, '') } : null),
+        },
       );
       if (typeof who !== 'string') return;
       await forEachTarget(async (b, id) => {
@@ -596,7 +645,13 @@ export const boardCardCommands: Command[] = [
       if (typeof mode !== 'string') return;
       if (mode === 'none') return void apply(c.board.id, { op: 'setCover', id: c.id, cover: null }, t('cards.setCover'));
       if (!imgs.length) return toast.info(t('cards.noImages'));
-      const file = imgs.length === 1 ? imgs[0].file : await pickOne(imgs.map((a) => ({ label: a.display, value: a.file })), { title: t('cards.pickImage'), step: 2, totalSteps: 2 });
+      const file =
+        imgs.length === 1
+          ? imgs[0].file
+          : await pickOne(
+              imgs.map((a) => ({ label: a.display, value: a.file })),
+              { title: t('cards.pickImage'), step: 2, totalSteps: 2 },
+            );
       if (typeof file === 'string') await apply(c.board.id, { op: 'setCover', id: c.id, cover: { file, mode } }, t('cards.setCover'));
     },
   },

@@ -56,8 +56,7 @@
         input.style.height = 'auto';
         input.style.height = `${input.scrollHeight}px`;
       }
-    }}
-  ></textarea>
+    }}></textarea>
   <div class="hint"><CornerDownLeft size={11} /> {t('board.quickAddHint')}</div>
 </div>
 

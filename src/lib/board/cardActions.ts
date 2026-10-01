@@ -41,7 +41,11 @@ export async function trashCards(boardId: string, ids: string[]) {
 }
 
 export async function setArchived(boardId: string, ids: string[], archived: boolean) {
-  const r = await apply(boardId, { op: 'setArchived', nodes: ids.map((i) => [i, archived] as [string, boolean]), lanes: [] }, archived ? t('ops.archive') : t('ops.unarchive'));
+  const r = await apply(
+    boardId,
+    { op: 'setArchived', nodes: ids.map((i) => [i, archived] as [string, boolean]), lanes: [] },
+    archived ? t('ops.archive') : t('ops.unarchive'),
+  );
   if (r && archived) toast.info(t('toasts.archived', { count: ids.length }), { action: { label: t('common.undo'), run: () => void runCommand('edit.undo') } });
 }
 

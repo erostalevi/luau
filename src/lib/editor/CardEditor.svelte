@@ -1,5 +1,28 @@
 <script lang="ts">
-  import { ChevronRight, X, Pin, PinOff, PanelRight, Maximize2, MoreHorizontal, Link, Archive, Trash2, FolderSearch, History, Eye, EyeOff, ArrowLeft, ArrowRight, Paperclip, FileText, Image as ImageIcon, Plus, CornerDownRight, TriangleAlert } from '@lucide/svelte';
+  import {
+    ChevronRight,
+    X,
+    Pin,
+    PinOff,
+    PanelRight,
+    Maximize2,
+    MoreHorizontal,
+    Link,
+    Archive,
+    Trash2,
+    FolderSearch,
+    History,
+    Eye,
+    EyeOff,
+    ArrowLeft,
+    ArrowRight,
+    Paperclip,
+    FileText,
+    Image as ImageIcon,
+    Plus,
+    CornerDownRight,
+    TriangleAlert,
+  } from '@lucide/svelte';
   import { rpc } from '$lib/backend/rpc';
   import { boards } from '$lib/state/boards.svelte';
   import { ui, closeEditor } from '$lib/state/ui.svelte';
@@ -15,11 +38,7 @@
   import { t, relTime } from '$lib/i18n/index.svelte';
   import Editor from './Editor.svelte';
 
-  let {
-    boardId,
-    cardId,
-    variant,
-  }: { boardId: string; cardId: string; variant: 'modal' | 'sidebar' | 'page' } = $props();
+  let { boardId, cardId, variant }: { boardId: string; cardId: string; variant: 'modal' | 'sidebar' | 'page' } = $props();
 
   const model = $derived(boards.get(boardId));
   const node = $derived(model?.nodes.get(cardId));
@@ -95,8 +114,18 @@
   <div class="ce {variant}">
     <header class="bar" class:drag-region={variant === 'page'}>
       {#if variant !== 'page'}
-        <button class="icon-btn sm no-drag" disabled={!ui.editor.back.length} onclick={() => runCommand('card.back')} use:tip={{ text: t('commands.card.back'), command: 'card.back' }}><ArrowLeft size={14} /></button>
-        <button class="icon-btn sm no-drag" disabled={!ui.editor.fwd.length} onclick={() => runCommand('card.forward')} use:tip={{ text: t('commands.card.forward'), command: 'card.forward' }}><ArrowRight size={14} /></button>
+        <button
+          class="icon-btn sm no-drag"
+          disabled={!ui.editor.back.length}
+          onclick={() => runCommand('card.back')}
+          use:tip={{ text: t('commands.card.back'), command: 'card.back' }}><ArrowLeft size={14} /></button
+        >
+        <button
+          class="icon-btn sm no-drag"
+          disabled={!ui.editor.fwd.length}
+          onclick={() => runCommand('card.forward')}
+          use:tip={{ text: t('commands.card.forward'), command: 'card.forward' }}><ArrowRight size={14} /></button
+        >
       {/if}
       <nav class="crumbs no-drag" aria-label="breadcrumb">
         <button class="crumb" onclick={() => runCommand('board.openById', boardId)}>{model.header.name}</button>
@@ -108,16 +137,30 @@
       </nav>
       <span class="grow"></span>
       <span class="saved muted" title={new Date(node.mtime).toLocaleString()}>{relTime(node.mtime)}</span>
-      <button class="icon-btn sm no-drag" class:active={!preview} onclick={() => runCommand('editor.togglePreview')} use:tip={{ text: preview ? t('editor.sourceMode') : t('editor.livePreview'), command: 'editor.togglePreview' }}>
+      <button
+        class="icon-btn sm no-drag"
+        class:active={!preview}
+        onclick={() => runCommand('editor.togglePreview')}
+        use:tip={{ text: preview ? t('editor.sourceMode') : t('editor.livePreview'), command: 'editor.togglePreview' }}
+      >
         {#if preview}<Eye size={15} />{:else}<EyeOff size={15} />{/if}
       </button>
       {#if variant === 'sidebar'}
-        <button class="icon-btn sm no-drag" class:active={pinned} onclick={() => settings.toggle('editor.sidebarPinned')} use:tip={pinned ? t('editor.unpin') : t('editor.pin')}>
+        <button
+          class="icon-btn sm no-drag"
+          class:active={pinned}
+          onclick={() => settings.toggle('editor.sidebarPinned')}
+          use:tip={pinned ? t('editor.unpin') : t('editor.pin')}
+        >
           {#if pinned}<PinOff size={15} />{:else}<Pin size={15} />{/if}
         </button>
-        <button class="icon-btn sm no-drag" onclick={() => settings.set('editor.openMode', 'modal')} use:tip={t('editor.asModal')}><Maximize2 size={14} /></button>
+        <button class="icon-btn sm no-drag" onclick={() => settings.set('editor.openMode', 'modal')} use:tip={t('editor.asModal')}
+          ><Maximize2 size={14} /></button
+        >
       {:else if variant === 'modal'}
-        <button class="icon-btn sm no-drag" onclick={() => settings.set('editor.openMode', 'sidebar')} use:tip={t('editor.asSidebar')}><PanelRight size={15} /></button>
+        <button class="icon-btn sm no-drag" onclick={() => settings.set('editor.openMode', 'sidebar')} use:tip={t('editor.asSidebar')}
+          ><PanelRight size={15} /></button
+        >
       {/if}
       <button class="icon-btn sm no-drag" onclick={moreMenu} use:tip={t('common.more')}><MoreHorizontal size={15} /></button>
       {#if variant !== 'page'}
@@ -142,7 +185,15 @@
     {/if}
 
     <div class="body">
-      <Editor bind:this={editor} {boardId} {cardId} autofocus={variant !== 'page' || !node.title} readOnly={readOnly} fullWidth={variant === 'page' && false} onconflict={(c) => (conflict = c)} />
+      <Editor
+        bind:this={editor}
+        {boardId}
+        {cardId}
+        autofocus={variant !== 'page' || !node.title}
+        {readOnly}
+        fullWidth={variant === 'page' && false}
+        onconflict={(c) => (conflict = c)}
+      />
 
       <div class="extras">
         {#if node.isGroup || model.kind === 'files'}
@@ -160,7 +211,9 @@
                 {/if}
               {/each}
               {#if !readOnly}
-                <button class="child add" onclick={addSubcard}><Plus size={13} /> {model.kind === 'files' ? t('editor.addSubdoc') : t('cards.newSubcard')}</button>
+                <button class="child add" onclick={addSubcard}
+                  ><Plus size={13} /> {model.kind === 'files' ? t('editor.addSubdoc') : t('cards.newSubcard')}</button
+                >
               {/if}
             </div>
           </section>

@@ -11,7 +11,10 @@
   let error = $state('');
 
   $effect(() => {
-    if (!boards.get(boardId)) openBoard({ id: boardId }).then(syncWorkspaceCtx).catch((e) => (error = String(e?.message ?? e)));
+    if (!boards.get(boardId))
+      openBoard({ id: boardId })
+        .then(syncWorkspaceCtx)
+        .catch((e) => (error = String(e?.message ?? e)));
     else syncWorkspaceCtx();
   });
 </script>

@@ -32,8 +32,26 @@ export interface Query {
 }
 
 export const KEYS = [
-  'tag', 'label', 'board', 'lane', 'is', 'has', 'status', 'priority', 'assignee', 'mention', 'due', 'updated',
-  'created', 'links', 'linkedfrom', 'type', 'in', 'case', 'id', 'key',
+  'tag',
+  'label',
+  'board',
+  'lane',
+  'is',
+  'has',
+  'status',
+  'priority',
+  'assignee',
+  'mention',
+  'due',
+  'updated',
+  'created',
+  'links',
+  'linkedfrom',
+  'type',
+  'in',
+  'case',
+  'id',
+  'key',
 ] as const;
 
 const KEY_SET = new Set<string>(KEYS);

@@ -1,6 +1,22 @@
 <script lang="ts">
   import { setContext, onDestroy } from 'svelte';
-  import { Columns3, Rows3, Search, Archive, Plus, MoreHorizontal, AlignVerticalSpaceAround, AlignHorizontalSpaceAround, ZoomIn, FolderSearch, Pencil, Repeat, Download, Diamond, TriangleAlert } from '@lucide/svelte';
+  import {
+    Columns3,
+    Rows3,
+    Search,
+    Archive,
+    Plus,
+    MoreHorizontal,
+    AlignVerticalSpaceAround,
+    AlignHorizontalSpaceAround,
+    ZoomIn,
+    FolderSearch,
+    Pencil,
+    Repeat,
+    Download,
+    Diamond,
+    TriangleAlert,
+  } from '@lucide/svelte';
   import type { BoardModel } from '$lib/state/boards.svelte';
   import { apply, newLaneId } from '$lib/state/boards.svelte';
   import { ui, boardZoom, setBoardZoom } from '$lib/state/ui.svelte';
@@ -136,7 +152,9 @@
     newLaneName = '';
     const id = await newLaneId(board.id);
     await apply(board.id, { op: 'createLane', id, name, index: boardUi.newLane?.index ?? null }, t('ops.createLane'));
-    requestAnimationFrame(() => scroller?.scrollTo({ left: scroller.scrollWidth, top: orientation === 'rows' ? scroller.scrollHeight : 0, behavior: 'smooth' }));
+    requestAnimationFrame(() =>
+      scroller?.scrollTo({ left: scroller.scrollWidth, top: orientation === 'rows' ? scroller.scrollHeight : 0, behavior: 'smooth' }),
+    );
   }
 
   function moreMenu(e: MouseEvent) {
@@ -172,15 +190,30 @@
         {/if}
       {/if}
       {#if board.header.warnings.length}
-        <span class="chip warn" use:tip={board.header.warnings.join('\n')}><TriangleAlert size={12} /> {t('board.recovered', { count: board.header.warnings.length })}</span>
+        <span class="chip warn" use:tip={board.header.warnings.join('\n')}
+          ><TriangleAlert size={12} /> {t('board.recovered', { count: board.header.warnings.length })}</span
+        >
       {/if}
     </div>
     <div class="tools">
-      {#if zoom !== 1}<button class="chip" onclick={() => setBoardZoom(board.id, 1)} use:tip={t('commands.view.zoomReset')}>{Math.round(zoom * 100)}%</button>{/if}
-      <button class="icon-btn" class:active={filterState.open} onclick={() => runCommand('board.filter')} use:tip={{ text: t('commands.board.filter'), command: 'board.filter' }}><Search size={16} /></button>
-      <button class="icon-btn" class:active={ui.showArchived} onclick={() => runCommand('board.toggleArchived')} use:tip={{ text: t('commands.board.toggleArchived'), command: 'board.toggleArchived' }}><Archive size={16} /></button>
+      {#if zoom !== 1}<button class="chip" onclick={() => setBoardZoom(board.id, 1)} use:tip={t('commands.view.zoomReset')}>{Math.round(zoom * 100)}%</button
+        >{/if}
+      <button
+        class="icon-btn"
+        class:active={filterState.open}
+        onclick={() => runCommand('board.filter')}
+        use:tip={{ text: t('commands.board.filter'), command: 'board.filter' }}><Search size={16} /></button
+      >
+      <button
+        class="icon-btn"
+        class:active={ui.showArchived}
+        onclick={() => runCommand('board.toggleArchived')}
+        use:tip={{ text: t('commands.board.toggleArchived'), command: 'board.toggleArchived' }}><Archive size={16} /></button
+      >
       <button class="icon-btn" onclick={toggleSpacing} use:tip={{ text: t(view.spacing === 'fixedMain' ? 'board.spacingMain' : 'board.spacingCross') }}>
-        {#if (view.spacing === 'fixedMain') === (orientation === 'columns')}<AlignVerticalSpaceAround size={16} />{:else}<AlignHorizontalSpaceAround size={16} />{/if}
+        {#if (view.spacing === 'fixedMain') === (orientation === 'columns')}<AlignVerticalSpaceAround size={16} />{:else}<AlignHorizontalSpaceAround
+            size={16}
+          />{/if}
       </button>
       <Segmented
         size="sm"
@@ -197,16 +230,7 @@
   {#if filterState.open}
     <FilterBar boardId={board.id} count={matchCount} />
   {/if}
-  <div
-    class="scroll"
-    bind:this={scroller}
-    data-board-scroll
-    data-autoscroll
-    tabindex="-1"
-    role="region"
-    onpointerdown={onBackgroundPointerDown}
-    use:pinch
-  >
+  <div class="scroll" bind:this={scroller} data-board-scroll data-autoscroll tabindex="-1" role="region" onpointerdown={onBackgroundPointerDown} use:pinch>
     <div class="lanes {orientation} {view.spacing}" style:zoom={zoom === 1 ? undefined : zoom}>
       {#each lanes as lane, i (lane.id)}
         <Lane boardId={board.id} {lane} index={i} {orientation} spacing={view.spacing} />
@@ -229,8 +253,13 @@
             />
           </div>
         {:else}
-          <button class="add-lane {orientation}" onclick={() => (boardUi.newLane = { boardId: board.id, index: null })} use:tip={{ text: t('lanes.new'), command: 'lane.new' }}>
-            <Plus size={16} /> {#if !lanes.length}{t('lanes.new')}{/if}
+          <button
+            class="add-lane {orientation}"
+            onclick={() => (boardUi.newLane = { boardId: board.id, index: null })}
+            use:tip={{ text: t('lanes.new'), command: 'lane.new' }}
+          >
+            <Plus size={16} />
+            {#if !lanes.length}{t('lanes.new')}{/if}
           </button>
         {/if}
       {/if}

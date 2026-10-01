@@ -117,7 +117,14 @@
     <div class="toolbar">
       <label class="field filter">
         <Search size={14} strokeWidth={1.8} />
-        <input bind:this={input} bind:value={filter} placeholder={t('filesHome.filter')} aria-label={t('filesHome.filter')} onkeydown={onFilterKey} spellcheck="false" />
+        <input
+          bind:this={input}
+          bind:value={filter}
+          placeholder={t('filesHome.filter')}
+          aria-label={t('filesHome.filter')}
+          onkeydown={onFilterKey}
+          spellcheck="false"
+        />
       </label>
       <Segmented
         size="sm"
@@ -171,7 +178,9 @@
             }}
             onkeydown={() => {}}
           >
-            <span class="dic">{#if d.subdocs}<Folder size={15} strokeWidth={1.8} />{:else}<FileText size={15} strokeWidth={1.8} />{/if}</span>
+            <span class="dic"
+              >{#if d.subdocs}<Folder size={15} strokeWidth={1.8} />{:else}<FileText size={15} strokeWidth={1.8} />{/if}</span
+            >
             <span class="main">
               <span class="name">{d.title}</span>
               {#if d.path.length}

@@ -78,7 +78,13 @@ export function toggleLinePrefix(kind: 'bullet' | 'ordered' | 'task' | 'quote'):
   return (view) => {
     const lines = selectedLines(view).map((n) => view.state.doc.line(n).text);
     const has = (t: string) =>
-      kind === 'bullet' ? /^\s*[-*+]\s+(?!\[[ xX]\])/.test(t) : kind === 'ordered' ? /^\s*\d+[.)]\s+/.test(t) : kind === 'task' ? /^\s*[-*+]\s+\[[ xX]\]/.test(t) : /^\s*>/.test(t);
+      kind === 'bullet'
+        ? /^\s*[-*+]\s+(?!\[[ xX]\])/.test(t)
+        : kind === 'ordered'
+          ? /^\s*\d+[.)]\s+/.test(t)
+          : kind === 'task'
+            ? /^\s*[-*+]\s+\[[ xX]\]/.test(t)
+            : /^\s*>/.test(t);
     const allHave = lines.every(has);
     return mapLines(view, (text, i) => {
       const indent = /^\s*/.exec(text)![0];
@@ -91,12 +97,16 @@ export function toggleLinePrefix(kind: 'bullet' | 'ordered' | 'task' | 'quote'):
 }
 
 export const toggleTaskDone: Cmd = (view) =>
-  mapLines(view, (text) => {
-    const m = /^(\s*[-*+]\s+\[)([ xX])(\].*)$/.exec(text);
-    if (m) return m[1] + (m[2] === ' ' ? 'x' : ' ') + m[3];
-    const indent = /^\s*/.exec(text)![0];
-    return `${indent}- [ ] ${text.replace(LIST_PREFIX, '')}`;
-  }, 'input.toggle');
+  mapLines(
+    view,
+    (text) => {
+      const m = /^(\s*[-*+]\s+\[)([ xX])(\].*)$/.exec(text);
+      if (m) return m[1] + (m[2] === ' ' ? 'x' : ' ') + m[3];
+      const indent = /^\s*/.exec(text)![0];
+      return `${indent}- [ ] ${text.replace(LIST_PREFIX, '')}`;
+    },
+    'input.toggle',
+  );
 
 export function insertText(text: string, cursorOffset?: number): Cmd {
   return (view) => {
@@ -153,7 +163,11 @@ function tableAt(view: EditorView): { from: number; to: number; first: number; l
 }
 
 function splitRow(line: string): string[] {
-  return line.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((c) => c.trim());
+  return line
+    .trim()
+    .replace(/^\||\|$/g, '')
+    .split(/(?<!\\)\|/)
+    .map((c) => c.trim());
 }
 
 export const formatTable: Cmd = (view) => {
@@ -165,18 +179,19 @@ export const formatTable: Cmd = (view) => {
   const cols = Math.max(...rows.map((r) => r.length));
   const width = Array.from({ length: cols }, (_, c) => Math.max(3, ...rows.map((r, i) => (i === 1 ? 3 : (r[c] ?? '').length))));
   const text = rows
-    .map((r, i) =>
-      '| ' +
-      Array.from({ length: cols }, (_, c) => {
-        const v = r[c] ?? '';
-        if (i === 1) {
-          const left = v.startsWith(':');
-          const right = v.endsWith(':');
-          return (left ? ':' : '-') + '-'.repeat(width[c] - 2) + (right ? ':' : '-');
-        }
-        return v.padEnd(width[c]);
-      }).join(' | ') +
-      ' |',
+    .map(
+      (r, i) =>
+        '| ' +
+        Array.from({ length: cols }, (_, c) => {
+          const v = r[c] ?? '';
+          if (i === 1) {
+            const left = v.startsWith(':');
+            const right = v.endsWith(':');
+            return (left ? ':' : '-') + '-'.repeat(width[c] - 2) + (right ? ':' : '-');
+          }
+          return v.padEnd(width[c]);
+        }).join(' | ') +
+        ' |',
     )
     .join('\n');
   view.dispatch({ changes: { from: tb.from, to: tb.to, insert: text }, userEvent: 'input.format' });
@@ -250,8 +265,10 @@ function replaceSelectedLines(view: EditorView, fn: (lines: string[]) => string[
   return true;
 }
 
-export const sortLinesAsc: Cmd = (v) => replaceSelectedLines(v, (l) => [...l].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })));
-export const sortLinesDesc: Cmd = (v) => replaceSelectedLines(v, (l) => [...l].sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' })));
+export const sortLinesAsc: Cmd = (v) =>
+  replaceSelectedLines(v, (l) => [...l].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })));
+export const sortLinesDesc: Cmd = (v) =>
+  replaceSelectedLines(v, (l) => [...l].sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' })));
 export const dedupeLines: Cmd = (v) => replaceSelectedLines(v, (l) => l.filter((x, i) => x.trim() === '' || l.indexOf(x) === i));
 export const trimTrailing: Cmd = (v) => replaceSelectedLines(v, (l) => l.map((x) => x.replace(/[ \t]+$/, '')));
 export const joinLines: Cmd = (view) => {
@@ -260,7 +277,11 @@ export const joinLines: Cmd = (view) => {
   const a = doc.lineAt(r.from);
   const b = r.empty ? (a.number < doc.lines ? doc.line(a.number + 1) : a) : doc.lineAt(r.to);
   if (a.number === b.number) return false;
-  const text = view.state.sliceDoc(a.from, b.to).split('\n').map((x, i) => (i ? x.trim() : x.trimEnd())).join(' ');
+  const text = view.state
+    .sliceDoc(a.from, b.to)
+    .split('\n')
+    .map((x, i) => (i ? x.trim() : x.trimEnd()))
+    .join(' ');
   view.dispatch({ changes: { from: a.from, to: b.to, insert: text }, userEvent: 'input' });
   return true;
 };

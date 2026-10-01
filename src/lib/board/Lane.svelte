@@ -1,5 +1,17 @@
 <script lang="ts">
-  import { Plus, MoreHorizontal, ChevronsLeftRight, ChevronsRight, Palette, Pencil, Gauge, Archive, ArchiveRestore, Trash2, MoveHorizontal } from '@lucide/svelte';
+  import {
+    Plus,
+    MoreHorizontal,
+    ChevronsLeftRight,
+    ChevronsRight,
+    Palette,
+    Pencil,
+    Gauge,
+    Archive,
+    ArchiveRestore,
+    Trash2,
+    MoveHorizontal,
+  } from '@lucide/svelte';
   import type { LaneDto } from '$lib/backend/types';
   import { boards, apply } from '$lib/state/boards.svelte';
   import { openMenu, openMenuAt } from '$lib/state/menu.svelte';
@@ -16,7 +28,13 @@
   import { boardUi, listKey } from './boardUi.svelte';
   import { startDrag } from './dnd.svelte';
 
-  let { boardId, lane, index, orientation, spacing }: { boardId: string; lane: LaneDto; index: number; orientation: 'columns' | 'rows'; spacing: 'fixedMain' | 'fixedCross' } = $props();
+  let {
+    boardId,
+    lane,
+    index,
+    orientation,
+    spacing,
+  }: { boardId: string; lane: LaneDto; index: number; orientation: 'columns' | 'rows'; spacing: 'fixedMain' | 'fixedCross' } = $props();
 
   const model = $derived(boards.get(boardId));
   const readOnly = $derived(!!model?.header.readOnly);
@@ -78,11 +96,25 @@
       ...(lane.color ? [{ label: t('lanes.clearColor'), run: () => void patch({ color: '' }, t('lanes.color')), disabled: readOnly }] : []),
       { label: t('lanes.wipLimit'), icon: Gauge, run: setWip, disabled: readOnly },
       ...(lane.width ? [{ label: t('lanes.resetWidth'), icon: MoveHorizontal, run: () => void patch({ width: 0 }, t('lanes.resetWidth')) }] : []),
-      { label: lane.collapsed ? t('lanes.expand') : t('lanes.collapse'), icon: ChevronsLeftRight, run: () => void patch({ collapsed: !lane.collapsed }, t('lanes.collapse')) },
+      {
+        label: lane.collapsed ? t('lanes.expand') : t('lanes.collapse'),
+        icon: ChevronsLeftRight,
+        run: () => void patch({ collapsed: !lane.collapsed }, t('lanes.collapse')),
+      },
       { separator: true },
       lane.archived
-        ? { label: t('lanes.unarchive'), icon: ArchiveRestore, run: () => void apply(boardId, { op: 'setArchived', nodes: [], lanes: [[lane.id, false]] }, t('ops.unarchive')), disabled: readOnly }
-        : { label: t('lanes.archive'), icon: Archive, run: () => void apply(boardId, { op: 'setArchived', nodes: [], lanes: [[lane.id, true]] }, t('ops.archive')), disabled: readOnly },
+        ? {
+            label: t('lanes.unarchive'),
+            icon: ArchiveRestore,
+            run: () => void apply(boardId, { op: 'setArchived', nodes: [], lanes: [[lane.id, false]] }, t('ops.unarchive')),
+            disabled: readOnly,
+          }
+        : {
+            label: t('lanes.archive'),
+            icon: Archive,
+            run: () => void apply(boardId, { op: 'setArchived', nodes: [], lanes: [[lane.id, true]] }, t('ops.archive')),
+            disabled: readOnly,
+          },
       { label: t('lanes.delete'), icon: Trash2, danger: true, run: removeLane, disabled: readOnly },
     ];
     if (e.type === 'contextmenu') openMenu(e, items);
@@ -138,16 +170,32 @@
     <span class="dot" class:has={!!lane.color}></span>
     {#if renaming}
       <!-- svelte-ignore a11y_autofocus -->
-      <input class="rename" bind:value={name} autofocus onblur={commitRename} onkeydown={(e) => { e.stopPropagation(); if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') boardUi.renamingLane = null; }} />
+      <input
+        class="rename"
+        bind:value={name}
+        autofocus
+        onblur={commitRename}
+        onkeydown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') commitRename();
+          if (e.key === 'Escape') boardUi.renamingLane = null;
+        }}
+      />
     {:else}
       <h2 class="name">{lane.name}</h2>
     {/if}
-    <span class="count" class:over={overWip} use:tip={lane.wip ? t('lanes.wipTip', { count, wip: lane.wip }) : null}>{lane.wip ? `${count}/${lane.wip}` : count}</span>
+    <span class="count" class:over={overWip} use:tip={lane.wip ? t('lanes.wipTip', { count, wip: lane.wip }) : null}
+      >{lane.wip ? `${count}/${lane.wip}` : count}</span
+    >
     <span class="grow"></span>
     {#if !lane.collapsed && !readOnly}
       <button class="icon-btn sm act" onclick={() => addCard(true)} use:tip={t('lanes.addCard')}><Plus size={15} /></button>
     {/if}
-    <button class="icon-btn sm act" onclick={() => patch({ collapsed: !lane.collapsed }, t('lanes.collapse'))} use:tip={lane.collapsed ? t('lanes.expand') : t('lanes.collapse')}>
+    <button
+      class="icon-btn sm act"
+      onclick={() => patch({ collapsed: !lane.collapsed }, t('lanes.collapse'))}
+      use:tip={lane.collapsed ? t('lanes.expand') : t('lanes.collapse')}
+    >
       <ChevronsRight size={14} style="transform: rotate({lane.collapsed ? 0 : 180}deg)" />
     </button>
     <button class="icon-btn sm act" onclick={menu} use:tip={t('common.more')}><MoreHorizontal size={15} /></button>

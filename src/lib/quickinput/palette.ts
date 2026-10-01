@@ -45,12 +45,16 @@ function commandItems(q: string): QuickItem<Action>[] {
       } as QuickItem<Action> & { _id: string };
     });
   if (!q) {
-    const rec = recent
-      .map((id) => list.find((x) => (x as { _id: string })._id === id))
-      .filter(Boolean) as QuickItem<Action>[];
+    const rec = recent.map((id) => list.find((x) => (x as { _id: string })._id === id)).filter(Boolean) as QuickItem<Action>[];
     const rest = list.filter((x) => !recent.includes((x as { _id: string })._id)).sort((a, b) => a.label.localeCompare(b.label));
     return [
-      ...(rec.length ? [{ kind: 'separator', label: t('palette.recent') } as QuickItem<Action>, ...rec, { kind: 'separator', label: t('palette.allCommands') } as QuickItem<Action>] : []),
+      ...(rec.length
+        ? [
+            { kind: 'separator', label: t('palette.recent') } as QuickItem<Action>,
+            ...rec,
+            { kind: 'separator', label: t('palette.allCommands') } as QuickItem<Action>,
+          ]
+        : []),
       ...rest,
     ];
   }
@@ -118,7 +122,16 @@ async function openItems(q: string): Promise<QuickItem<Action>[]> {
     const recent = uiGet<{ boardId: string; cardId: string }[]>('recentCards', []).slice(0, 8);
     const rec: QuickItem<Action>[] = recent.flatMap((r) => {
       const n = boards.get(r.boardId)?.node(r.cardId);
-      return n ? [{ label: n.title || t('common.untitled'), description: boards.get(r.boardId)?.header.name, icon: Clock, value: () => void openCard(r.boardId, r.cardId) }] : [];
+      return n
+        ? [
+            {
+              label: n.title || t('common.untitled'),
+              description: boards.get(r.boardId)?.header.name,
+              icon: Clock,
+              value: () => void openCard(r.boardId, r.cardId),
+            },
+          ]
+        : [];
     });
     return [
       ...(rec.length ? [{ kind: 'separator', label: t('palette.recent') } as QuickItem<Action>, ...rec] : []),

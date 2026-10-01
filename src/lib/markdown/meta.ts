@@ -97,7 +97,10 @@ export function setFooterFields(content: string, fields: [string, string][]): st
   const lines = content.replace(/\r\n/g, '\n').split('\n');
   const cur = parseFooter(lines);
   const end = cur.startLine ?? lines.length;
-  let body = lines.slice(0, end).join('\n').replace(/[\n ]+$/, '');
+  let body = lines
+    .slice(0, end)
+    .join('\n')
+    .replace(/[\n ]+$/, '');
   const nonEmpty = fields.filter(([, v]) => v.trim() !== '');
   if (!nonEmpty.length) return body + '\n';
   body += '\n\n---\n';
@@ -301,7 +304,11 @@ export function parseMeta(content: string): ParsedMeta {
       const rows: string[][] = [];
       let j = i;
       while (j < bodyLines.length && /^\s*\|.*\|\s*$/.test(bodyLines[j])) {
-        const cells = bodyLines[j].trim().slice(1, -1).split('|').map((c) => stripInline(c.trim()));
+        const cells = bodyLines[j]
+          .trim()
+          .slice(1, -1)
+          .split('|')
+          .map((c) => stripInline(c.trim()));
         if (!cells.every((c) => /^:?-{2,}:?$/.test(c))) rows.push(cells);
         j++;
       }

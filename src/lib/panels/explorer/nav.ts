@@ -62,11 +62,7 @@ export function typeahead(rows: Row[], fromKey: string, buffer: string): string 
 }
 
 function fold(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
 /**

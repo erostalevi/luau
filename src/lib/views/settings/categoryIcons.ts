@@ -1,5 +1,21 @@
 import type { Component } from 'svelte';
-import { Settings2, Palette, LayoutGrid, PenLine, Tag, Files, FolderSearch, Search, History, Sparkles, Plug, Keyboard, Upload, Wrench, Puzzle } from '@lucide/svelte';
+import {
+  Settings2,
+  Palette,
+  LayoutGrid,
+  PenLine,
+  Tag,
+  Files,
+  FolderSearch,
+  Search,
+  History,
+  Sparkles,
+  Plug,
+  Keyboard,
+  Upload,
+  Wrench,
+  Puzzle,
+} from '@lucide/svelte';
 
 const ICONS: Record<string, Component<any>> = {
   general: Settings2,

@@ -51,7 +51,9 @@ export const appCommands: Command[] = [
     category: 'help',
     icon: Bug,
     run: async () => {
-      const dest = await pickSavePath(t('commands.app.exportDiagnostics'), `luau-diagnostics-${new Date().toISOString().slice(0, 10)}.zip`, [{ name: 'Zip', extensions: ['zip'] }]);
+      const dest = await pickSavePath(t('commands.app.exportDiagnostics'), `luau-diagnostics-${new Date().toISOString().slice(0, 10)}.zip`, [
+        { name: 'Zip', extensions: ['zip'] },
+      ]);
       if (!dest) return;
       await rpc('logs.export', { dest });
       toast.success(t('toasts.exported'), { action: { label: t('common.reveal'), run: () => reveal(dest) } });
@@ -75,7 +77,12 @@ export const appCommands: Command[] = [
           if (!args?.silent) toast.success(t('updates.upToDate'));
           return;
         }
-        const ok = await confirm({ title: t('updates.available', { version: update.version }), message: update.body ?? '', confirmLabel: t('updates.install'), cancelFocused: false });
+        const ok = await confirm({
+          title: t('updates.available', { version: update.version }),
+          message: update.body ?? '',
+          confirmLabel: t('updates.install'),
+          cancelFocused: false,
+        });
         if (!ok) return;
         toast.info(t('updates.downloading'));
         await update.downloadAndInstall();
@@ -100,7 +107,10 @@ export const appCommands: Command[] = [
       ];
       const v = await pickOne(items, {
         title: t('commands.app.pickTheme'),
-        activeIndex: Math.max(0, items.findIndex((i) => i.value === cur)),
+        activeIndex: Math.max(
+          0,
+          items.findIndex((i) => i.value === cur),
+        ),
         onActive: (it) => it?.value && settings.set('appearance.theme', it.value),
       });
       settings.set('appearance.theme', typeof v === 'string' ? v : cur);
@@ -223,8 +233,18 @@ export const appCommands: Command[] = [
     icon: Keyboard,
     run: () => toggleSetting('board.singleKeyShortcuts', 'toasts.singleKeysOn', 'toasts.singleKeysOff'),
   },
-  { id: 'app.toggleConfirmPush', title: 'commands.app.toggleConfirmPush', category: 'integrations', run: () => toggleSetting('integrations.confirmPush', 'toasts.confirmPushOn', 'toasts.confirmPushOff') },
-  { id: 'app.toggleConfirmPull', title: 'commands.app.toggleConfirmPull', category: 'integrations', run: () => toggleSetting('integrations.confirmPull', 'toasts.confirmPullOn', 'toasts.confirmPullOff') },
+  {
+    id: 'app.toggleConfirmPush',
+    title: 'commands.app.toggleConfirmPush',
+    category: 'integrations',
+    run: () => toggleSetting('integrations.confirmPush', 'toasts.confirmPushOn', 'toasts.confirmPushOff'),
+  },
+  {
+    id: 'app.toggleConfirmPull',
+    title: 'commands.app.toggleConfirmPull',
+    category: 'integrations',
+    run: () => toggleSetting('integrations.confirmPull', 'toasts.confirmPullOn', 'toasts.confirmPullOff'),
+  },
   {
     id: 'app.toggleHiddenBoards',
     title: 'commands.app.toggleHiddenBoards',

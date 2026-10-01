@@ -55,7 +55,9 @@
     }
     openMenuAt(
       anchor,
-      list.length ? list.map((tr) => ({ label: tr.name === tr.to ? tr.to : `${tr.name} → ${tr.to}`, run: () => void transitionCard(boardId, id, tr) })) : [{ label: t('integrations.noTransitions'), disabled: true }],
+      list.length
+        ? list.map((tr) => ({ label: tr.name === tr.to ? tr.to : `${tr.name} → ${tr.to}`, run: () => void transitionCard(boardId, id, tr) }))
+        : [{ label: t('integrations.noTransitions'), disabled: true }],
     );
   }
 
@@ -86,7 +88,8 @@
       </button>
       {#if remote.status}
         <button class="chip status {remote.statusCategory ?? 'todo'}" onclick={pickTransition} use:tip={t('commands.remote.transition')}>
-          {remote.status} <ChevronDown size={11} />
+          {remote.status}
+          <ChevronDown size={11} />
         </button>
       {/if}
       {#if remote.assignee}<span class="who">{remote.assignee.name}</span>{:else}<span class="who muted">{t('integrations.unassigned')}</span>{/if}
@@ -127,7 +130,9 @@
         {#if comments && !comments.length}<p class="muted small">{t('integrations.noComments')}</p>{/if}
         {#each comments ?? [] as c (c.id)}
           <article class="comment">
-            <header><strong>{c.author?.name ?? '—'}</strong>{#if c.created}<span class="muted small">{relTime(c.created)}</span>{/if}</header>
+            <header>
+              <strong>{c.author?.name ?? '—'}</strong>{#if c.created}<span class="muted small">{relTime(c.created)}</span>{/if}
+            </header>
             <!-- Raw HTML is disabled in the renderer, so remote text cannot inject markup. -->
             <!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown-it with html:false; links are validated -->
             <div class="md">{@html renderMarkdown(c.bodyMd, MD_OPTS)}</div>

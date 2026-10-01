@@ -140,7 +140,12 @@
     const items: MenuItem[] = [
       { label: t('history.actions.compare'), disabled: !hasVersions(e), run: () => open(e) },
       { label: t('history.actions.openCard'), disabled: !card, run: () => card && void openCard(e.board, card) },
-      { label: t('history.actions.showCard'), icon: History, disabled: !card, run: () => card && showCardHistory(e.board, card, onBoard?.title ?? describe(e)) },
+      {
+        label: t('history.actions.showCard'),
+        icon: History,
+        disabled: !card,
+        run: () => card && showCardHistory(e.board, card, onBoard?.title ?? describe(e)),
+      },
     ];
     if (e.kind === 'trash') items.push({ separator: true }, { label: t('history.actions.goToTrash'), run: () => showHistoryView('trash', e.board) });
     openMenu(ev, items);
@@ -167,11 +172,21 @@
   <button class="icon-btn" class:active={filtered} onclick={filterMenu} use:tip={t('history.filters')} aria-label={t('history.filters')}>
     <SlidersHorizontal size={15} strokeWidth={1.8} />
   </button>
-  <button class="icon-btn" onclick={() => hist.refresh++} use:tip={{ text: t('history.refresh'), command: 'history.refresh' }} aria-label={t('history.refresh')}>
+  <button
+    class="icon-btn"
+    onclick={() => hist.refresh++}
+    use:tip={{ text: t('history.refresh'), command: 'history.refresh' }}
+    aria-label={t('history.refresh')}
+  >
     <RefreshCw size={15} strokeWidth={1.8} class={loading ? 'spin' : ''} />
   </button>
   {#if summarizeCmd}
-    <button class="icon-btn" onclick={() => void runCommand(summarizeCmd)} use:tip={{ text: t('history.summarize'), command: summarizeCmd }} aria-label={t('history.summarize')}>
+    <button
+      class="icon-btn"
+      onclick={() => void runCommand(summarizeCmd)}
+      use:tip={{ text: t('history.summarize'), command: summarizeCmd }}
+      aria-label={t('history.summarize')}
+    >
       <Sparkles size={15} strokeWidth={1.8} />
     </button>
   {/if}
@@ -220,7 +235,9 @@
             <span>{time(e.ts)}</span>
             {#if showBoard && boardName(e.board)}<span class="dot">·</span><span class="ellipsis">{boardName(e.board)}</span>{/if}
             {#if src !== 'you'}<span class="chip src s-{src === 'external' ? 'external' : 'remote'}">{sourceLabel(src)}</span>{/if}
-            {#if chars !== null}<span class="delta" class:neg={chars < 0}>{chars > 0 ? t('history.chars.add', { count: chars }) : t('history.chars.del', { count: -chars })}</span>{/if}
+            {#if chars !== null}<span class="delta" class:neg={chars < 0}
+                >{chars > 0 ? t('history.chars.add', { count: chars }) : t('history.chars.del', { count: -chars })}</span
+              >{/if}
           </span>
         </span>
       </button>

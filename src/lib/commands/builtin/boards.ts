@@ -25,7 +25,11 @@ export async function openFolderAsBoard() {
     } catch (e) {
       // A copy of a board that is already open (same id): offer a new id.
       if (!String((e as Error).message ?? '').includes('duplicate_board_id')) throw e;
-      const ok = await confirm({ title: t('boards.duplicateTitle'), message: t('boards.duplicateMessage', { name: baseName(path) }), confirmLabel: t('commands.board.makeCopyUnique') });
+      const ok = await confirm({
+        title: t('boards.duplicateTitle'),
+        message: t('boards.duplicateMessage', { name: baseName(path) }),
+        confirmLabel: t('commands.board.makeCopyUnique'),
+      });
       if (!ok) return;
       await rpc('board.reassignId', { path });
       const snap = await rpc<BoardSnapshot>('board.open', { path });

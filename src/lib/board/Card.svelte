@@ -27,7 +27,19 @@
   const collapsed = $derived(!!boardUi.collapsed[id]);
   const renaming = $derived(boardUi.renamingCard === id);
   const filter = getContext<() => CompiledFilter>('boardFilter');
-  const dim = $derived(!!filter && node ? !filter().empty && !filter().test(node, remote) && !(node.isGroup && model?.descendants(id).some((d) => { const dn = model.nodes.get(d); return dn && filter().test(dn, model.remote.get(d)); })) : false);
+  const dim = $derived(
+    !!filter && node
+      ? !filter().empty &&
+          !filter().test(node, remote) &&
+          !(
+            node.isGroup &&
+            model?.descendants(id).some((d) => {
+              const dn = model.nodes.get(d);
+              return dn && filter().test(dn, model.remote.get(d));
+            })
+          )
+      : false,
+  );
   const copyOnly = $derived(!!model?.header.readOnly && model?.header.readOnly.startsWith('mirror'));
   const today = new Date().toISOString().slice(0, 10);
   const due = $derived(node ? (node.footer.due ?? node.dates[0] ?? null) : null);
@@ -141,7 +153,17 @@
         >
         {#if renaming}
           <!-- svelte-ignore a11y_autofocus -->
-          <input class="rename" bind:value={renameValue} autofocus onblur={commitRename} onkeydown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') boardUi.renamingCard = null; e.stopPropagation(); }} />
+          <input
+            class="rename"
+            bind:value={renameValue}
+            autofocus
+            onblur={commitRename}
+            onkeydown={(e) => {
+              if (e.key === 'Enter') commitRename();
+              if (e.key === 'Escape') boardUi.renamingCard = null;
+              e.stopPropagation();
+            }}
+          />
         {:else}
           <h3 class="gtitle">{node.title || t('common.untitled')}</h3>
         {/if}
@@ -174,7 +196,17 @@
       <div class="head">
         {#if renaming}
           <!-- svelte-ignore a11y_autofocus -->
-          <input class="rename" bind:value={renameValue} autofocus onblur={commitRename} onkeydown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') boardUi.renamingCard = null; e.stopPropagation(); }} />
+          <input
+            class="rename"
+            bind:value={renameValue}
+            autofocus
+            onblur={commitRename}
+            onkeydown={(e) => {
+              if (e.key === 'Enter') commitRename();
+              if (e.key === 'Escape') boardUi.renamingCard = null;
+              e.stopPropagation();
+            }}
+          />
         {:else}
           <h3 class="title" class:untitled={!node.title}>{node.title || t('common.untitled')}</h3>
         {/if}
@@ -183,7 +215,12 @@
         {/if}
       </div>
       <CardFace {node} {boardId} />
-      {@const hasFooter = (showTags && (node.tags.length || node.footer.labels.length)) || (showInd && (due || node.footer.priority || node.mentions.length || node.attachments.length || node.links.length || node.tasks.total || node.archived)) || faceProviders.length || remote}
+      {@const hasFooter =
+        (showTags && (node.tags.length || node.footer.labels.length)) ||
+        (showInd &&
+          (due || node.footer.priority || node.mentions.length || node.attachments.length || node.links.length || node.tasks.total || node.archived)) ||
+        faceProviders.length ||
+        remote}
       {#if hasFooter}
         <footer class="foot">
           {#if showTags}
@@ -195,13 +232,17 @@
             <span class="ind">
               {#if node.archived}<span class="i" title={t('cards.archived')}><Archive size={12} /></span>{/if}
               {#if node.footer.priority && node.footer.priority !== 'none'}
-                <span class="i" style:color={priorityColor[node.footer.priority]} title={t(`priority.${node.footer.priority}`)}><Flag size={12} fill="currentColor" /></span>
+                <span class="i" style:color={priorityColor[node.footer.priority]} title={t(`priority.${node.footer.priority}`)}
+                  ><Flag size={12} fill="currentColor" /></span
+                >
               {/if}
               {#if due}
                 <span class="i due" class:overdue title={t('cards.due')}><CalendarDays size={12} /> {fmtDate(due)}</span>
               {/if}
               {#if node.tasks.total}
-                <span class="i" class:done={node.tasks.done === node.tasks.total} title={t('cards.tasks')}><CircleCheck size={12} /> {node.tasks.done}/{node.tasks.total}</span>
+                <span class="i" class:done={node.tasks.done === node.tasks.total} title={t('cards.tasks')}
+                  ><CircleCheck size={12} /> {node.tasks.done}/{node.tasks.total}</span
+                >
               {/if}
               {#if node.attachments.length}<span class="i" title={t('cards.attachments')}><Paperclip size={12} /> {node.attachments.length}</span>{/if}
               {#if node.links.length}<span class="i" title={t('cards.links')}><Link2 size={12} /> {node.links.length}</span>{/if}
@@ -223,7 +264,9 @@
     padding: 12px 14px;
     border-radius: var(--r-md);
     background: var(--bg-card);
-    box-shadow: var(--shadow-1), 0 0 0 1px var(--line);
+    box-shadow:
+      var(--shadow-1),
+      0 0 0 1px var(--line);
     color: var(--ink);
     transition:
       box-shadow var(--dur-fast) var(--ease),
@@ -234,7 +277,9 @@
     overflow: hidden;
   }
   .card:hover {
-    box-shadow: var(--shadow-2), 0 0 0 1px var(--line-strong);
+    box-shadow:
+      var(--shadow-2),
+      0 0 0 1px var(--line-strong);
   }
   .card.selected {
     box-shadow:
@@ -255,7 +300,9 @@
   }
   @keyframes flash {
     0% {
-      box-shadow: 0 0 0 3px var(--primary-ring), var(--shadow-2);
+      box-shadow:
+        0 0 0 3px var(--primary-ring),
+        var(--shadow-2);
       transform: scale(1.015);
     }
   }

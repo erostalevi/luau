@@ -46,7 +46,13 @@
   let status = $state<AiStatus | null>(null);
 
   const boardsList = $derived(registry.data.boards.filter((b) => !b.missing && !b.hidden));
-  const boardsLabel = $derived(selected.length === 0 ? t('summaries.allBoards') : selected.length === 1 ? (boardsList.find((b) => b.id === selected[0])?.name ?? '1') : t('summaries.nBoards', { n: selected.length }));
+  const boardsLabel = $derived(
+    selected.length === 0
+      ? t('summaries.allBoards')
+      : selected.length === 1
+        ? (boardsList.find((b) => b.id === selected[0])?.name ?? '1')
+        : t('summaries.nBoards', { n: selected.length }),
+  );
   const range = $derived(resolveRange(preset, new Date(), { from: customFrom, to: customTo }));
   const html = $derived(shownMarkdown ? renderMarkdown(shownMarkdown, { titleOf: (id) => resolveTitle(id), fileUrl: (r) => r }) : '');
   const statusText = $derived.by(() => {
@@ -78,7 +84,10 @@
 
   onMount(() => {
     void refreshPast();
-    void ai.status().then((s) => (status = s)).catch(() => (status = null));
+    void ai
+      .status()
+      .then((s) => (status = s))
+      .catch(() => (status = null));
     offs.push(
       onAiEvent<{ requestId: string; text: string }>('summary.chunk', (e) => {
         if (running && e.requestId === rid) stream += e.text;
@@ -239,7 +248,12 @@
   {/if}
 
   {#if view === 'schedules'}
-    <SchedulesEditor onran={(id) => { void refreshPast(); if (id) void openSaved(id); }} />
+    <SchedulesEditor
+      onran={(id) => {
+        void refreshPast();
+        if (id) void openSaved(id);
+      }}
+    />
   {:else}
     <div class="layout">
       <section class="form card-surface" aria-label={t('summaries.title')}>
@@ -247,7 +261,9 @@
           <span class="section-title">{t('summaries.period')}</span>
           <div class="presets" role="radiogroup" aria-label={t('summaries.period')}>
             {#each RANGE_PRESETS as p (p)}
-              <button class="chip preset" class:on={preset === p} role="radio" aria-checked={preset === p} onclick={() => (preset = p)}>{t(`summaries.presets.${p}`)}</button>
+              <button class="chip preset" class:on={preset === p} role="radio" aria-checked={preset === p} onclick={() => (preset = p)}
+                >{t(`summaries.presets.${p}`)}</button
+              >
             {/each}
           </div>
           {#if preset === 'custom'}
@@ -270,7 +286,9 @@
             <div class="board-chips">
               <button class="chip" class:on={selected.length === 0} onclick={() => (selected = [])}>{t('summaries.allBoards')}</button>
               {#each boardsList as b (b.id)}
-                <button class="chip" class:on={selected.includes(b.id)} aria-pressed={selected.includes(b.id)} onclick={() => toggleBoard(b.id)}>{b.name}</button>
+                <button class="chip" class:on={selected.includes(b.id)} aria-pressed={selected.includes(b.id)} onclick={() => toggleBoard(b.id)}
+                  >{b.name}</button
+                >
               {/each}
             </div>
           {/if}
@@ -278,18 +296,46 @@
 
         <div class="group">
           <label class="section-title" for="sum-detail">{t('summaries.detail')} · <span class="muted">{t(`summaries.detailLevels.${detail}`)}</span></label>
-          <input id="sum-detail" class="slider" type="range" min="1" max="5" step="1" bind:value={detail} aria-valuetext={t(`summaries.detailLevels.${detail}`)} />
+          <input
+            id="sum-detail"
+            class="slider"
+            type="range"
+            min="1"
+            max="5"
+            step="1"
+            bind:value={detail}
+            aria-valuetext={t(`summaries.detailLevels.${detail}`)}
+          />
         </div>
 
         <div class="group">
           <label class="section-title" for="sum-prompt">{t('summaries.prompt')}</label>
-          <textarea id="sum-prompt" class="field prompt" rows="3" maxlength="4000" placeholder={t('summaries.promptPlaceholder')} bind:value={prompt}
-            onkeydown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void generate(); } }}></textarea>
+          <textarea
+            id="sum-prompt"
+            class="field prompt"
+            rows="3"
+            maxlength="4000"
+            placeholder={t('summaries.promptPlaceholder')}
+            bind:value={prompt}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                void generate();
+              }
+            }}></textarea>
         </div>
 
         <div class="group row-inline">
           <span class="section-title">{t('summaries.engine')}</span>
-          <Segmented size="sm" bind:value={engine} options={[{ value: 'auto', label: t('summaries.engines.auto') }, { value: 'ai', label: t('summaries.engines.ai') }, { value: 'basic', label: t('summaries.engines.basic') }]} />
+          <Segmented
+            size="sm"
+            bind:value={engine}
+            options={[
+              { value: 'auto', label: t('summaries.engines.auto') },
+              { value: 'ai', label: t('summaries.engines.ai') },
+              { value: 'basic', label: t('summaries.engines.basic') },
+            ]}
+          />
         </div>
         <div class="group row-inline">
           <span class="toggle-label">{t('summaries.includeRemote')}</span>
@@ -322,11 +368,23 @@
               <Bot size={14} strokeWidth={1.8} />
               {result?.engine === 'ai' && result.model ? t('summaries.writtenBy', { model: result.model }) : result ? t('summaries.basicEngine') : ''}
               {#if result}
-                · {t('summaries.totals', { completed: result.facts.totals.completed, started: result.facts.totals.started, created: result.facts.totals.created, edited: result.facts.totals.edited })}
+                · {t('summaries.totals', {
+                  completed: result.facts.totals.completed,
+                  started: result.facts.totals.started,
+                  created: result.facts.totals.created,
+                  edited: result.facts.totals.edited,
+                })}
               {/if}
             </span>
             <div class="out-actions">
-              <button class="btn sm soft" onclick={() => copyAs('md')} oncontextmenu={(e) => { e.preventDefault(); copyMenu(e); }}><Copy size={14} strokeWidth={1.8} /> {t('summaries.copy')}</button>
+              <button
+                class="btn sm soft"
+                onclick={() => copyAs('md')}
+                oncontextmenu={(e) => {
+                  e.preventDefault();
+                  copyMenu(e);
+                }}><Copy size={14} strokeWidth={1.8} /> {t('summaries.copy')}</button
+              >
               <button class="icon-btn sm" aria-label={t('summaries.copy')} onclick={copyMenu}><ChevronDown size={14} strokeWidth={1.8} /></button>
               <button class="btn sm ghost" onclick={exportMd}><FileDown size={14} strokeWidth={1.8} /> {t('summaries.exportMd')}</button>
             </div>
@@ -354,7 +412,9 @@
                   <span class="past-title">{s.title}</span>
                   <span class="past-meta">{fmt(s.created)}{s.scheduleId ? ` · ${t('summaries.scheduled')}` : ''}</span>
                 </button>
-                <button class="icon-btn sm" aria-label={t('summaries.deleteSaved')} onclick={() => deleteSaved(s.id)}><Trash2 size={14} strokeWidth={1.8} /></button>
+                <button class="icon-btn sm" aria-label={t('summaries.deleteSaved')} onclick={() => deleteSaved(s.id)}
+                  ><Trash2 size={14} strokeWidth={1.8} /></button
+                >
               </li>
             {/each}
           </ul>

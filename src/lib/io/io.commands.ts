@@ -1,6 +1,23 @@
 // Import / export, board templates, schema upgrade and settings bundles (SPEC §15, §16).
 
-import { Download, Upload, FileDown, FolderInput, LayoutTemplate, ArrowUpCircle, FileCode2, FileText, FileArchive, Printer, Braces, Package, Copy, FolderOpen, Replace, Wrench } from '@lucide/svelte';
+import {
+  Download,
+  Upload,
+  FileDown,
+  FolderInput,
+  LayoutTemplate,
+  ArrowUpCircle,
+  FileCode2,
+  FileText,
+  FileArchive,
+  Printer,
+  Braces,
+  Package,
+  Copy,
+  FolderOpen,
+  Replace,
+  Wrench,
+} from '@lucide/svelte';
 import type { Component } from 'svelte';
 import type { Command } from '$lib/commands/registry.svelte';
 import { rpc, isTauri } from '$lib/backend/rpc';
@@ -85,7 +102,10 @@ async function runExport(target: ExportTarget, boardId: string, title: string, c
     if (!dest) return;
     const includeHistory = fmt === 'zip' ? settings.get<boolean>('export.includeHistory') === true : false;
     const r = await rpc<ExportResult>('io.export', { board: boardId, card: cardId ?? null, format: fmt, dest, includeHistory });
-    toast.success(t('io.export.done', { size: formatBytes(r.bytes) }), isTauri ? { action: { label: t('common.reveal'), run: () => reveal(r.path) } } : undefined);
+    toast.success(
+      t('io.export.done', { size: formatBytes(r.bytes) }),
+      isTauri ? { action: { label: t('common.reveal'), run: () => reveal(r.path) } } : undefined,
+    );
   } catch (e) {
     toast.error(t('io.export.failed', { message: errMessage(e) }));
   }
@@ -140,7 +160,11 @@ async function importFlow(args?: { path?: string }) {
   const targets = registry.data.boards.filter((b) => !b.mirror && !b.missing && !b.loose);
   const summary = t('io.import.summary', { name: info.name, cards: info.notes, lanes: info.lanes });
   const res = await steps<[ImportMode, string]>([
-    () => pickOne(importModes(info, targets.length > 0).map((m) => modeItem(m, info)), { title: summary, step: 1, totalSteps: 2 }),
+    () =>
+      pickOne(
+        importModes(info, targets.length > 0).map((m) => modeItem(m, info)),
+        { title: summary, step: 1, totalSteps: 2 },
+      ),
     async ([mode]) => {
       if (mode === 'inPlace') return '';
       if (mode === 'overwrite') {
@@ -151,7 +175,13 @@ async function importFlow(args?: { path?: string }) {
       }
       const parent = await pickFolder(t('io.import.pickLocation'));
       if (!parent) return BACK;
-      const name = await inputBox({ title: t('boards.name'), value: info.name, step: 2, totalSteps: 2, validate: (v) => (v.trim() && !/[\\/]/.test(v) ? null : t('validation.required')) });
+      const name = await inputBox({
+        title: t('boards.name'),
+        value: info.name,
+        step: 2,
+        totalSteps: 2,
+        validate: (v) => (v.trim() && !/[\\/]/.test(v) ? null : t('validation.required')),
+      });
       if (typeof name !== 'string') return name;
       return JSON.stringify({ dest: joinPath(parent, name.trim()), name: name.trim() });
     },
@@ -194,7 +224,15 @@ async function newFromTemplate() {
         { title: t('io.tpl.pick'), step: 1, totalSteps: 3 },
       ),
     async () => (await pickFolder(t('boards.pickLocation'))) ?? BACK,
-    ([id]) => inputBox({ title: t('boards.name'), value: t(`io.tpl.${id}.name`), step: 3, totalSteps: 3, prompt: t('boards.namePrompt'), validate: (v) => (v.trim() && !/[\\/]/.test(v) ? null : t('validation.required')) }),
+    ([id]) =>
+      inputBox({
+        title: t('boards.name'),
+        value: t(`io.tpl.${id}.name`),
+        step: 3,
+        totalSteps: 3,
+        prompt: t('boards.namePrompt'),
+        validate: (v) => (v.trim() && !/[\\/]/.test(v) ? null : t('validation.required')),
+      }),
   ]);
   if (!res) return;
   const [id, folder, name] = res;
@@ -219,7 +257,13 @@ async function upgradeSchema() {
   const b = tabBoard();
   if (!b) return toast.info(t('io.noBoard'));
   if (!isNewerSchema(b.header.readOnly)) return toast.info(t('io.upgrade.current'));
-  const ok = await confirm({ title: t('board.upgradeTitle'), message: `${t('board.upgradeMessage')}\n\n${t('io.upgrade.backupHint')}`, confirmLabel: t('board.upgradeConfirm'), danger: true, cancelFocused: true });
+  const ok = await confirm({
+    title: t('board.upgradeTitle'),
+    message: `${t('board.upgradeMessage')}\n\n${t('io.upgrade.backupHint')}`,
+    confirmLabel: t('board.upgradeConfirm'),
+    danger: true,
+    cancelFocused: true,
+  });
   if (!ok) return;
   try {
     const r = await rpc<{ report: { from: number; to: number; files: number }; snapshot: BoardSnapshot }>('board.upgrade', { board: b.id });
@@ -250,7 +294,9 @@ async function repairBoard() {
 // ── Settings bundle ─────────────────────────────────────────────────────────
 
 async function exportSettings() {
-  const dest = isTauri ? await pickSavePath(t('commands.io.exportSettings'), 'luau-settings.json', [{ name: 'JSON', extensions: ['json'] }]) : 'luau-settings.json';
+  const dest = isTauri
+    ? await pickSavePath(t('commands.io.exportSettings'), 'luau-settings.json', [{ name: 'JSON', extensions: ['json'] }])
+    : 'luau-settings.json';
   if (!dest) return;
   try {
     const bundle = buildSettingsBundle(settings.all(), $state.snapshot(kb.user), { order: registry.data.order, mirrorOrder: registry.data.mirrorOrder });
@@ -262,7 +308,17 @@ async function exportSettings() {
 }
 
 /** Mirrors `PROTECTED_KEYS` in crates/luau-core/src/io/settings.rs. */
-const PROTECTED_SETTINGS = ['editor.python', 'ai.endpoint', 'ai.provider', 'discovery.roots', 'integrations.allowPush', 'integrations.allowPull', 'integrations.confirmPush', 'integrations.confirmPull', 'integrations.allowInsecure'];
+const PROTECTED_SETTINGS = [
+  'editor.python',
+  'ai.endpoint',
+  'ai.provider',
+  'discovery.roots',
+  'integrations.allowPush',
+  'integrations.allowPull',
+  'integrations.confirmPush',
+  'integrations.confirmPull',
+  'integrations.allowInsecure',
+];
 
 async function importSettings() {
   const files = isTauri ? await pickFile(t('commands.io.importSettings'), [{ name: 'JSON', extensions: ['json'] }]) : ['luau-settings.json'];

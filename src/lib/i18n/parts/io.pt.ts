@@ -54,7 +54,8 @@ export default {
     },
     repair: {
       title: 'Reparar este quadro',
-      message: 'O arquivo de configurações (board.json) está danificado, então o quadro abriu somente para leitura. Reparar o reconstrói a partir das listas e cartões no disco; uma cópia do arquivo danificado fica em .luau/cache/recovered.',
+      message:
+        'O arquivo de configurações (board.json) está danificado, então o quadro abriu somente para leitura. Reparar o reconstrói a partir das listas e cartões no disco; uma cópia do arquivo danificado fica em .luau/cache/recovered.',
       confirm: 'Reparar',
       done: 'Quadro reparado',
       failed: 'Não foi possível reparar o quadro: {message}',

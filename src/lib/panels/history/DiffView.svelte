@@ -116,8 +116,20 @@
       <span class="sub">{fmtDateTime(e.ts)} · {relTime(e.ts)}</span>
     </div>
     {#if req.siblings.length > 1}
-      <button class="icon-btn sm" disabled={!newer} onclick={() => newer && openDiff(newer, req.siblings)} use:tip={t('history.diff.next')} aria-label={t('history.diff.next')}><ChevronUp size={15} /></button>
-      <button class="icon-btn sm" disabled={!older} onclick={() => older && openDiff(older, req.siblings)} use:tip={t('history.diff.prev')} aria-label={t('history.diff.prev')}><ChevronDown size={15} /></button>
+      <button
+        class="icon-btn sm"
+        disabled={!newer}
+        onclick={() => newer && openDiff(newer, req.siblings)}
+        use:tip={t('history.diff.next')}
+        aria-label={t('history.diff.next')}><ChevronUp size={15} /></button
+      >
+      <button
+        class="icon-btn sm"
+        disabled={!older}
+        onclick={() => older && openDiff(older, req.siblings)}
+        use:tip={t('history.diff.prev')}
+        aria-label={t('history.diff.prev')}><ChevronDown size={15} /></button
+      >
     {/if}
   </header>
 
@@ -153,7 +165,11 @@
     {:else}
       <div class="stats">
         <span class="add">+{stats.added}</span><span class="del">−{stats.removed}</span>
-        <span class="legend">{mode === 'change' ? `${t('history.diff.before')} → ${t('history.diff.after')}` : `${t('history.diff.version', { date: fmtDate(e.ts) })} → ${t('history.diff.current')}`}</span>
+        <span class="legend"
+          >{mode === 'change'
+            ? `${t('history.diff.before')} → ${t('history.diff.after')}`
+            : `${t('history.diff.version', { date: fmtDate(e.ts) })} → ${t('history.diff.current')}`}</span
+        >
       </div>
       {#if layout === 'inline'}
         <div class="code">

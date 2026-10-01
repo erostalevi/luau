@@ -29,7 +29,8 @@ function htmlToMarkdown(): Promise<(html: string) => string> {
 
 export function fileMarkdown(name: string, file: string, mime: string): string {
   const safe = encodeURI(file);
-  if (IMG.test(mime) || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(name) || /\.pdf$/i.test(name) || /^(video|audio)\//.test(mime)) return `![${name.replace(/[[\]|]/g, '')}](${safe})`;
+  if (IMG.test(mime) || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(name) || /\.pdf$/i.test(name) || /^(video|audio)\//.test(mime))
+    return `![${name.replace(/[[\]|]/g, '')}](${safe})`;
   return `[${name.replace(/[[\]]/g, '')}](${safe})`;
 }
 
@@ -69,13 +70,20 @@ export function pasteAndDrop(opts: PasteOptions): Extension {
       // Plain text inside code blocks, and for copies from code editors /
       // terminals (only <pre>/monospace markup): turndown would escape * _ #
       // and drop indentation.
-      const codey = isInCode(view) || /^\s*(<meta[^>]*>\s*)?<(pre|code)\b/i.test(html.replace(/<!--[\s\S]*?-->/g, '')) || /font-family:\s*[^;"]*(mono|menlo|consolas|courier)/i.test(html);
+      const codey =
+        isInCode(view) ||
+        /^\s*(<meta[^>]*>\s*)?<(pre|code)\b/i.test(html.replace(/<!--[\s\S]*?-->/g, '')) ||
+        /font-family:\s*[^;"]*(mono|menlo|consolas|courier)/i.test(html);
       if (html && opts.richPaste() && !html.includes('data-luau-plain') && !codey) {
         e.preventDefault();
         void htmlToMarkdown().then((conv) => {
           const md = conv(html).trim();
           const s = view.state.selection.main;
-          view.dispatch({ changes: { from: s.from, to: s.to, insert: md || text }, selection: { anchor: s.from + (md || text).length }, userEvent: 'input.paste' });
+          view.dispatch({
+            changes: { from: s.from, to: s.to, insert: md || text },
+            selection: { anchor: s.from + (md || text).length },
+            userEvent: 'input.paste',
+          });
         });
         return true;
       }
@@ -100,7 +108,11 @@ export function pasteAndDrop(opts: PasteOptions): Extension {
 }
 
 function isInCode(view: EditorView) {
-  for (let n: ReturnType<ReturnType<typeof syntaxTree>['resolveInner']> | null = syntaxTree(view.state).resolveInner(view.state.selection.main.head, -1); n; n = n.parent)
+  for (
+    let n: ReturnType<ReturnType<typeof syntaxTree>['resolveInner']> | null = syntaxTree(view.state).resolveInner(view.state.selection.main.head, -1);
+    n;
+    n = n.parent
+  )
     if (/FencedCode|CodeBlock|InlineCode|CodeText/.test(n.name)) return true;
   return false;
 }

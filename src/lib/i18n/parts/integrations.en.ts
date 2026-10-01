@@ -92,7 +92,8 @@ export default {
       patPrompt: 'Personal Access Token (Profile → Personal Access Tokens)',
       tokenRequired: 'The token is required.',
       httpTitle: 'Use plain HTTP?',
-      httpWarning: 'This site is not using HTTPS. Your token and issue content will travel unencrypted and can be read by anyone on the network. Only continue on a trusted internal network.',
+      httpWarning:
+        'This site is not using HTTPS. Your token and issue content will travel unencrypted and can be read by anyone on the network. Only continue on a trusted internal network.',
       httpConfirm: 'Use insecure HTTP',
       mtlsTitle: 'Client certificate (mTLS)',
       noClientCert: 'No client certificate',

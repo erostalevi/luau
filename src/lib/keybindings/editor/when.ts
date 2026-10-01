@@ -107,7 +107,5 @@ export function validateWhen(expr: string): WhenError | null {
 export function whenKeys(expr: string): string[] {
   const toks = tokenize(expr);
   if (!Array.isArray(toks)) return [];
-  return toks
-    .map((t) => t.v)
-    .filter((v) => /^[A-Za-z_][\w.\-:/]*$/.test(v) && v !== 'true' && v !== 'false');
+  return toks.map((t) => t.v).filter((v) => /^[A-Za-z_][\w.\-:/]*$/.test(v) && v !== 'true' && v !== 'false');
 }

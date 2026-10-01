@@ -49,7 +49,8 @@
     if (e.key !== 'Escape' || !visible) return;
     // Let autocomplete / vim / search panels consume Escape first.
     const t = e.target as HTMLElement;
-    if (t.closest('.cm-editor') && (document.querySelector('.cm-tooltip-autocomplete') || document.querySelector('.cm-panel') || t.closest('.cm-vim-insert'))) return;
+    if (t.closest('.cm-editor') && (document.querySelector('.cm-tooltip-autocomplete') || document.querySelector('.cm-panel') || t.closest('.cm-vim-insert')))
+      return;
     if (e.defaultPrevented || document.querySelector('.menu, .qi, [data-overlay]')) return;
     e.preventDefault();
     closeEditor();

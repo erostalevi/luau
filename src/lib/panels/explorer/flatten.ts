@@ -68,7 +68,12 @@ export function flatten(inp: FlattenInput): Row[] {
   const { expanded, showArchived, untitled } = inp;
 
   const visibleIds = (m: TreeBoard, ids: string[]) =>
-    showArchived ? ids.filter((id) => m.nodes.get(id)) : ids.filter((id) => { const n = m.nodes.get(id); return n && !n.archived; });
+    showArchived
+      ? ids.filter((id) => m.nodes.get(id))
+      : ids.filter((id) => {
+          const n = m.nodes.get(id);
+          return n && !n.archived;
+        });
 
   const pushCards = (boardId: string, m: TreeBoard, parent: Parent, ids: string[], depth: number, parentKey: string) => {
     const list = visibleIds(m, ids);
@@ -103,7 +108,19 @@ export function flatten(inp: FlattenInput): Row[] {
     if (!sec.show) continue;
     const sKey = sectionKey(sec.id);
     const sOpen = !expanded.has(sectionCollapsedKey(sec.id));
-    rows.push({ key: sKey, type: 'section', depth: 0, parentKey: null, boardId: '', id: sec.id, label: sec.label, expandable: true, expanded: sOpen, section: sec.id, count: sec.boards.length });
+    rows.push({
+      key: sKey,
+      type: 'section',
+      depth: 0,
+      parentKey: null,
+      boardId: '',
+      id: sec.id,
+      label: sec.label,
+      expandable: true,
+      expanded: sOpen,
+      section: sec.id,
+      count: sec.boards.length,
+    });
     if (!sOpen) continue;
     for (const e of sec.boards) {
       const bKey = boardKey(e.id);
@@ -128,20 +145,43 @@ export function flatten(inp: FlattenInput): Row[] {
         count: m ? countCards(m, showArchived) : undefined,
       });
       for (const path of e.duplicates ?? []) {
-        rows.push({ key: `h:${e.id}:${path}`, type: 'hint', depth: 2, parentKey: bKey, boardId: e.id, id: e.id, label: path, expandable: false, expanded: false, path });
+        rows.push({
+          key: `h:${e.id}:${path}`,
+          type: 'hint',
+          depth: 2,
+          parentKey: bKey,
+          boardId: e.id,
+          id: e.id,
+          label: path,
+          expandable: false,
+          expanded: false,
+          path,
+        });
       }
       if (!open) continue;
       if (!m) {
         const err = inp.errors.has(e.id);
-        rows.push({ key: `x:${e.id}`, type: err ? 'error' : 'loading', depth: 2, parentKey: bKey, boardId: e.id, id: e.id, label: '', expandable: false, expanded: false });
+        rows.push({
+          key: `x:${e.id}`,
+          type: err ? 'error' : 'loading',
+          depth: 2,
+          parentKey: bKey,
+          boardId: e.id,
+          id: e.id,
+          label: '',
+          expandable: false,
+          expanded: false,
+        });
         continue;
       }
       if (m.kind === 'files') {
-        if (!visibleIds(m, m.rootOrder).length) rows.push({ key: `x:${e.id}`, type: 'empty', depth: 2, parentKey: bKey, boardId: e.id, id: e.id, label: '', expandable: false, expanded: false });
+        if (!visibleIds(m, m.rootOrder).length)
+          rows.push({ key: `x:${e.id}`, type: 'empty', depth: 2, parentKey: bKey, boardId: e.id, id: e.id, label: '', expandable: false, expanded: false });
         pushCards(e.id, m, { kind: 'root' }, m.rootOrder, 2, bKey);
         continue;
       }
-      if (!lanes.length) rows.push({ key: `x:${e.id}`, type: 'empty', depth: 2, parentKey: bKey, boardId: e.id, id: e.id, label: '', expandable: false, expanded: false });
+      if (!lanes.length)
+        rows.push({ key: `x:${e.id}`, type: 'empty', depth: 2, parentKey: bKey, boardId: e.id, id: e.id, label: '', expandable: false, expanded: false });
       for (const l of lanes) {
         const lKey = laneKey(e.id, l.id);
         const kids = visibleIds(m, l.order);

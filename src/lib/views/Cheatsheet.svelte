@@ -9,8 +9,33 @@
 
   const groups: { id: string; commands: string[] }[] = [
     { id: 'navigation', commands: ['palette.commands', 'palette.quickOpen', 'nav.down', 'nav.right', 'card.open', 'board.filter', 'panel.search'] },
-    { id: 'cards', commands: ['card.new', 'lane.new', 'card.moveUp', 'card.moveRight', 'card.indent', 'card.outdent', 'card.archive', 'card.delete', 'edit.undo', 'edit.redo'] },
-    { id: 'editor', commands: ['editor.bold', 'editor.italic', 'editor.insertLink', 'editor.insertCardLink', 'editor.toggleChecklist', 'editor.togglePreview', 'editor.pastePlain'] },
+    {
+      id: 'cards',
+      commands: [
+        'card.new',
+        'lane.new',
+        'card.moveUp',
+        'card.moveRight',
+        'card.indent',
+        'card.outdent',
+        'card.archive',
+        'card.delete',
+        'edit.undo',
+        'edit.redo',
+      ],
+    },
+    {
+      id: 'editor',
+      commands: [
+        'editor.bold',
+        'editor.italic',
+        'editor.insertLink',
+        'editor.insertCardLink',
+        'editor.toggleChecklist',
+        'editor.togglePreview',
+        'editor.pastePlain',
+      ],
+    },
     { id: 'windows', commands: ['board.openPicker', 'tab.close', 'tab.reopen', 'tab.next', 'view.splitRight', 'window.new', 'view.zoomIn'] },
     { id: 'panels', commands: ['panel.toggle', 'panel.explorer', 'panel.history', 'panel.integrations', 'app.openSettings', 'app.openKeybindings'] },
   ];

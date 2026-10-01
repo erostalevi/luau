@@ -54,7 +54,8 @@ export default {
     },
     repair: {
       title: 'Reparar este tablero',
-      message: 'Su archivo de ajustes (board.json) está dañado, así que el tablero se abrió en solo lectura. Reparar lo reconstruye a partir de las listas y tarjetas en el disco; una copia del archivo dañado queda en .luau/cache/recovered.',
+      message:
+        'Su archivo de ajustes (board.json) está dañado, así que el tablero se abrió en solo lectura. Reparar lo reconstruye a partir de las listas y tarjetas en el disco; una copia del archivo dañado queda en .luau/cache/recovered.',
       confirm: 'Reparar',
       done: 'Tablero reparado',
       failed: 'No se pudo reparar el tablero: {message}',

@@ -24,12 +24,14 @@
 
   const recentBoards = $derived.by(() => {
     const ids = uiGet<{ id: string }[]>('recentBoards', []).map((r) => r.id);
-    const byRecent = registry.data.boards.filter((b) => !b.hidden && !b.missing).sort((a, b) => {
-      const ia = ids.indexOf(a.id);
-      const ib = ids.indexOf(b.id);
-      if (ia >= 0 || ib >= 0) return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
-      return (b.lastOpened ?? 0) - (a.lastOpened ?? 0);
-    });
+    const byRecent = registry.data.boards
+      .filter((b) => !b.hidden && !b.missing)
+      .sort((a, b) => {
+        const ia = ids.indexOf(a.id);
+        const ib = ids.indexOf(b.id);
+        if (ia >= 0 || ib >= 0) return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+        return (b.lastOpened ?? 0) - (a.lastOpened ?? 0);
+      });
     return byRecent.slice(0, 8);
   });
   const recentCards = $derived(
@@ -108,7 +110,10 @@
         {#each activity as e, i (e.ts + i)}
           <div class="row static">
             <span class="dot" class:ext={e.origin !== 'you'}></span>
-            <span class="grow">{e.label}{#if entryTitle(e)} · <em>{entryTitle(e)}</em>{/if}</span>
+            <span class="grow"
+              >{e.label}{#if entryTitle(e)}
+                · <em>{entryTitle(e)}</em>{/if}</span
+            >
             <span class="muted small">{relTime(e.ts)}</span>
           </div>
         {:else}

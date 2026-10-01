@@ -100,12 +100,19 @@
   function fmt(iso?: string | null) {
     if (!iso) return '';
     const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(i18n.locale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return Number.isNaN(d.getTime())
+      ? iso
+      : d.toLocaleString(i18n.locale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
   function cadenceLabel(s: Schedule) {
     const base = t(`schedules.cadence.${s.cadence.kind}`);
-    const days = s.cadence.kind === 'weekly' ? ' · ' + s.cadence.weekdays.map((d) => t(`schedules.weekdays.${d}`)).join(' ') : s.cadence.kind === 'monthly' ? ` · ${s.cadence.day ?? 1}` : '';
+    const days =
+      s.cadence.kind === 'weekly'
+        ? ' · ' + s.cadence.weekdays.map((d) => t(`schedules.weekdays.${d}`)).join(' ')
+        : s.cadence.kind === 'monthly'
+          ? ` · ${s.cadence.day ?? 1}`
+          : '';
     return `${base}${days} · ${s.cadence.time}`;
   }
 </script>
@@ -146,14 +153,20 @@
       <div class="group">
         <span class="section-title">{t('schedules.when')}</span>
         <div class="line">
-          <Segmented size="sm" bind:value={edit.cadence.kind} options={(['daily', 'weekly', 'monthly'] as CadenceKind[]).map((k) => ({ value: k, label: t(`schedules.cadence.${k}`) }))} />
+          <Segmented
+            size="sm"
+            bind:value={edit.cadence.kind}
+            options={(['daily', 'weekly', 'monthly'] as CadenceKind[]).map((k) => ({ value: k, label: t(`schedules.cadence.${k}`) }))}
+          />
           <span class="muted">{t('schedules.at')}</span>
           <input class="field time" type="time" bind:value={edit.cadence.time} aria-label={t('schedules.at')} />
         </div>
         {#if edit.cadence.kind === 'weekly'}
           <div class="chips">
             {#each WEEKDAYS as d (d)}
-              <button class="chip" class:on={edit.cadence.weekdays.includes(d)} aria-pressed={edit.cadence.weekdays.includes(d)} onclick={() => toggleDay(d)}>{t(`schedules.weekdays.${d}`)}</button>
+              <button class="chip" class:on={edit.cadence.weekdays.includes(d)} aria-pressed={edit.cadence.weekdays.includes(d)} onclick={() => toggleDay(d)}
+                >{t(`schedules.weekdays.${d}`)}</button
+              >
             {/each}
           </div>
         {:else if edit.cadence.kind === 'monthly'}
@@ -180,7 +193,9 @@
         <div class="chips">
           <button class="chip" class:on={edit.boards.length === 0} onclick={() => edit && (edit.boards = [])}>{t('summaries.allBoards')}</button>
           {#each boardsList as b (b.id)}
-            <button class="chip" class:on={edit.boards.includes(b.id)} aria-pressed={edit.boards.includes(b.id)} onclick={() => toggleBoard(b.id)}>{b.name}</button>
+            <button class="chip" class:on={edit.boards.includes(b.id)} aria-pressed={edit.boards.includes(b.id)} onclick={() => toggleBoard(b.id)}
+              >{b.name}</button
+            >
           {/each}
         </div>
       </div>
@@ -198,7 +213,11 @@
       <div class="group two">
         <div>
           <span class="section-title">{t('summaries.engine')}</span>
-          <Segmented size="sm" bind:value={edit.engine} options={(['auto', 'ai', 'basic'] as Engine[]).map((k) => ({ value: k, label: t(`summaries.engines.${k}`) }))} />
+          <Segmented
+            size="sm"
+            bind:value={edit.engine}
+            options={(['auto', 'ai', 'basic'] as Engine[]).map((k) => ({ value: k, label: t(`summaries.engines.${k}`) }))}
+          />
         </div>
         <div>
           <label class="section-title" for="sch-lang">{t('schedules.language')}</label>
@@ -224,7 +243,13 @@
           <Toggle bind:checked={edit.deliver.slack} label={t('schedules.slack')} disabled={!slack && !edit.deliver.slack} />
         </div>
         {#if edit.deliver.slack}
-          <input class="field" maxlength="80" placeholder={t('schedules.slackChannel')} bind:value={edit.deliver.slackChannel} aria-label={t('schedules.slackChannel')} />
+          <input
+            class="field"
+            maxlength="80"
+            placeholder={t('schedules.slackChannel')}
+            bind:value={edit.deliver.slackChannel}
+            aria-label={t('schedules.slackChannel')}
+          />
         {/if}
         {#if !slack}
           <span class="muted">{t('schedules.slackOff')}</span>
@@ -238,7 +263,9 @@
       <div class="actions">
         {#if edit.id}
           <button class="btn ghost danger" onclick={() => edit && remove(edit)}><Trash2 size={14} strokeWidth={1.8} /> {t('schedules.delete')}</button>
-          <button class="btn soft" disabled={running === edit.id} onclick={() => edit && runNow(edit)}><Play size={14} strokeWidth={1.8} /> {t('schedules.runNow')}</button>
+          <button class="btn soft" disabled={running === edit.id} onclick={() => edit && runNow(edit)}
+            ><Play size={14} strokeWidth={1.8} /> {t('schedules.runNow')}</button
+          >
         {/if}
         <button class="btn primary" disabled={busy || !edit.name.trim()} onclick={save}>{t('schedules.save')}</button>
       </div>

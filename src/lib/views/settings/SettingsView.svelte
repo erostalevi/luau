@@ -131,7 +131,12 @@
         <Keyboard size={14} strokeWidth={1.8} />{t('tabs.keybindings')}
       </button>
       {#if getCommand('app.openSettingsJson')}
-        <button class="icon-btn" aria-label={t('commands.app.openSettingsJson')} use:tip={t('commands.app.openSettingsJson')} onclick={run('app.openSettingsJson')}>
+        <button
+          class="icon-btn"
+          aria-label={t('commands.app.openSettingsJson')}
+          use:tip={t('commands.app.openSettingsJson')}
+          onclick={run('app.openSettingsJson')}
+        >
           <FileJson size={16} strokeWidth={1.8} />
         </button>
       {/if}
@@ -163,9 +168,13 @@
       />
       {#if filtering}
         <span class="count">{t('prefs.settings.found', { count: results.length })}</span>
-        <button class="icon-btn sm" aria-label={t('prefs.clear')} use:tip={t('prefs.clear')} onclick={() => ((query = ''), input?.focus())}><X size={14} /></button>
+        <button class="icon-btn sm" aria-label={t('prefs.clear')} use:tip={t('prefs.clear')} onclick={() => ((query = ''), input?.focus())}
+          ><X size={14} /></button
+        >
       {/if}
-      <button class="icon-btn sm" aria-label={t('prefs.settings.filters')} use:tip={t('prefs.settings.filters')} onclick={filterMenu}><ListFilter size={15} strokeWidth={1.8} /></button>
+      <button class="icon-btn sm" aria-label={t('prefs.settings.filters')} use:tip={t('prefs.settings.filters')} onclick={filterMenu}
+        ><ListFilter size={15} strokeWidth={1.8} /></button
+      >
     </div>
   </header>
 

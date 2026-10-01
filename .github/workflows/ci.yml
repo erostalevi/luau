@@ -37,6 +37,8 @@ jobs:
 
       - name: Tauri npm/crate versions in step
         run: pnpm check:tauri
+      - name: Lint (ESLint + Prettier)
+        run: pnpm lint
       - name: Frontend type-check
         run: pnpm check
       - name: Frontend tests

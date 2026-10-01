@@ -55,7 +55,9 @@
       {/if}
       <span class="spacer"></span>
       <button class="btn cancel" onclick={() => closeDialog(d.id, false)}>{d.cancelLabel ?? t('common.cancel')}</button>
-      <button class="btn confirm {d.danger ? 'danger' : 'primary'}" onclick={() => closeDialog(d.id, true, !!dontAsk[d.id])}>{d.confirmLabel ?? t('common.confirm')}</button>
+      <button class="btn confirm {d.danger ? 'danger' : 'primary'}" onclick={() => closeDialog(d.id, true, !!dontAsk[d.id])}
+        >{d.confirmLabel ?? t('common.confirm')}</button
+      >
     </div>
   </div>
 {/each}

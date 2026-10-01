@@ -41,7 +41,8 @@ export function trackFocus() {
     const isInput = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) && !inEditor;
     ctx.editorFocus = inEditor;
     ctx.inputFocus = isInput || inEditor;
-    ctx.buttonFocus = !!el && !el.closest('[data-card]') && (el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'SELECT' || el.getAttribute('role') === 'button');
+    ctx.buttonFocus =
+      !!el && !el.closest('[data-card]') && (el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'SELECT' || el.getAttribute('role') === 'button');
   };
   document.addEventListener('focusin', update);
   document.addEventListener('focusout', () => setTimeout(update, 0));

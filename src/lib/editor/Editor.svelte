@@ -29,7 +29,14 @@
     readOnly = false,
     fullWidth = false,
     onconflict,
-  }: { boardId: string; cardId: string; autofocus?: boolean; readOnly?: boolean; fullWidth?: boolean; onconflict?: (c: { mine: string; theirs: string } | null) => void } = $props();
+  }: {
+    boardId: string;
+    cardId: string;
+    autofocus?: boolean;
+    readOnly?: boolean;
+    fullWidth?: boolean;
+    onconflict?: (c: { mine: string; theirs: string } | null) => void;
+  } = $props();
 
   let host: HTMLDivElement | undefined = $state();
   let view: View | null = null;
@@ -227,7 +234,13 @@
         return p;
       },
       tagStyle,
-      formatDate: (iso) => fmtDate(iso, iso.length > 10 ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' } : { month: 'short', day: 'numeric', year: iso.slice(0, 4) === String(new Date().getFullYear()) ? undefined : 'numeric' }),
+      formatDate: (iso) =>
+        fmtDate(
+          iso,
+          iso.length > 10
+            ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+            : { month: 'short', day: 'numeric', year: iso.slice(0, 4) === String(new Date().getFullYear()) ? undefined : 'numeric' },
+        ),
       editFooter: () => {
         if (!view) return;
         const doc = view.state.doc.toString();
@@ -451,7 +464,6 @@
       });
     }
   });
-
 </script>
 
 <div class="luau-editor" class:full-width={fullWidth || settings.get<boolean>('editor.fullWidth')} bind:this={host}>

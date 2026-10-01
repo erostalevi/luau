@@ -4,20 +4,7 @@
 import { parseMeta } from '$lib/markdown/meta';
 import type { Transport } from './rpc';
 import { RpcError } from './rpc';
-import type {
-  BoardDelta,
-  BoardEntry,
-  BoardKind,
-  BoardSnapshot,
-  CoreEvent,
-  JournalEntry,
-  LaneDto,
-  NodeDto,
-  Op,
-  Parent,
-  Registry,
-  SearchHit,
-} from './types';
+import type { BoardDelta, BoardEntry, BoardKind, BoardSnapshot, CoreEvent, JournalEntry, LaneDto, NodeDto, Op, Parent, Registry, SearchHit } from './types';
 
 interface MockNode {
   id: string;
@@ -96,7 +83,15 @@ function snapshot(b: MockBoard): BoardSnapshot {
 }
 
 function serialize(b: MockBoard): string {
-  return JSON.stringify({ lanes: b.lanes, rootOrder: b.rootOrder, nodes: [...b.nodes.values()], name: b.name, kind: b.kind, view: b.view, tagColors: b.tagColors });
+  return JSON.stringify({
+    lanes: b.lanes,
+    rootOrder: b.rootOrder,
+    nodes: [...b.nodes.values()],
+    name: b.name,
+    kind: b.kind,
+    view: b.view,
+    tagColors: b.tagColors,
+  });
 }
 
 function restore(b: MockBoard, s: string) {
@@ -222,7 +217,16 @@ function applyOp(b: MockBoard, op: Op) {
       }
       break;
     case 'createLane':
-      b.lanes.splice(op.index ?? b.lanes.length, 0, { id: op.id, name: op.name, order: [], color: null, width: null, wip: null, collapsed: false, archived: false });
+      b.lanes.splice(op.index ?? b.lanes.length, 0, {
+        id: op.id,
+        name: op.name,
+        order: [],
+        color: null,
+        width: null,
+        wip: null,
+        collapsed: false,
+        archived: false,
+      });
       break;
     case 'updateLane': {
       const l = b.lanes.find((x) => x.id === op.id);
@@ -265,13 +269,33 @@ function seed(): MockBoard[] {
   const now = Date.now();
   const k = ['kbacklg', 'kprogrs', 'kreview', 'kdone00'];
   const cards: [string, number, string, string | null][] = [
-    ['cwelcom', 0, '# Welcome to Luau\n\nEvery card is a plain Markdown file on disk. Drag cards around, drop one *onto* another to group them, and press ⌘⇧P for commands.\n\n#guide\n', null],
+    [
+      'cwelcom',
+      0,
+      '# Welcome to Luau\n\nEvery card is a plain Markdown file on disk. Drag cards around, drop one *onto* another to group them, and press ⌘⇧P for commands.\n\n#guide\n',
+      null,
+    ],
     ['conbrd1', 0, '# Onboarding flow\n\nA calm first-run experience. #design #q4\n', null],
     ['conbsub', 0, '# Welcome screen copy\n\n- [x] Draft tone of voice\n- [ ] Review with @ana\n- [ ] Translate to es / pt\n', 'conbrd1'],
     ['conbsu2', 0, '# Pick keybinding preset\n\nLet people choose VS Code, Vim or Trello style on first launch.\n', 'conbrd1'],
-    ['csearch', 1, '# Fast search everywhere\n\nSubstring + case-sensitive search across all boards with a small query language.\n\n| Filter | Example |\n|---|---|\n| tag | tag:backend |\n| due | due:<2026-10-10 |\n| board | board:"Roadmap" |\n\n#backend #search\n', null],
-    ['cdragdr', 1, '# Buttery drag and drop\n\n- [x] Pointer-based engine\n- [x] Nest by dropping onto a card\n- [ ] Lasso selection with ⌘-drag\n- [ ] Auto-scroll edges\n\n---\npriority: high\ndue: 2026-10-08\nassignees: @eros\n', null],
-    ['chistry', 2, '# History & daily summaries\n\nSee what changed yesterday, restore any version, and get a Monday digest in Slack. #history\n\n---\npriority: medium\nlabels: ai\n', null],
+    [
+      'csearch',
+      1,
+      '# Fast search everywhere\n\nSubstring + case-sensitive search across all boards with a small query language.\n\n| Filter | Example |\n|---|---|\n| tag | tag:backend |\n| due | due:<2026-10-10 |\n| board | board:"Roadmap" |\n\n#backend #search\n',
+      null,
+    ],
+    [
+      'cdragdr',
+      1,
+      '# Buttery drag and drop\n\n- [x] Pointer-based engine\n- [x] Nest by dropping onto a card\n- [ ] Lasso selection with ⌘-drag\n- [ ] Auto-scroll edges\n\n---\npriority: high\ndue: 2026-10-08\nassignees: @eros\n',
+      null,
+    ],
+    [
+      'chistry',
+      2,
+      '# History & daily summaries\n\nSee what changed yesterday, restore any version, and get a Monday digest in Slack. #history\n\n---\npriority: medium\nlabels: ai\n',
+      null,
+    ],
     ['cjiraxx', 2, '# Jira mirror boards\n\nMirror a Jira board locally; copy issues into your own boards with live status. #integrations\n', null],
     ['cshippd', 3, '# Markdown cards on disk\n\nCards are `c123abc.md` files; groups are folders with an `index.md`. See [[cwelcom]].\n\n#core\n', null],
     ['cthemes', 3, '# Pastel themes\n\nIndigo + pale green, with Liquid Glass translucency on macOS. #design\n', null],
@@ -312,7 +336,15 @@ function seed(): MockBoard[] {
   ];
   const rootOrder: string[] = [];
   for (const [id, content, parent] of docs) {
-    notesNodes.set(id, { id, parent: parent ? { kind: 'card', id: parent } : { kind: 'root' }, children: [], content, archived: false, cover: null, mtime: now });
+    notesNodes.set(id, {
+      id,
+      parent: parent ? { kind: 'card', id: parent } : { kind: 'root' },
+      children: [],
+      content,
+      archived: false,
+      cover: null,
+      mtime: now,
+    });
     if (parent) notesNodes.get(parent)!.children.push(id);
     else rootOrder.push(id);
   }
@@ -363,7 +395,11 @@ export function createMockTransport(): Transport {
     }
   };
   // Registry overrides (pin/hide/section/order) persisted like the real core's registry.
-  type RegOverlay = { entries: Record<string, { pinned?: boolean; hidden?: boolean; section?: string | null; removed?: boolean }>; order: string[]; mirrorOrder: string[] };
+  type RegOverlay = {
+    entries: Record<string, { pinned?: boolean; hidden?: boolean; section?: string | null; removed?: boolean }>;
+    order: string[];
+    mirrorOrder: string[];
+  };
   const regOverlay = (): RegOverlay => ls('registry', { entries: {}, order: [], mirrorOrder: [] }) as RegOverlay;
   const registry = (): Registry => {
     const o = regOverlay();
@@ -419,7 +455,17 @@ export function createMockTransport(): Transport {
   const coalesceKeys = new Map<string, string>();
 
   const methods: Record<string, (p: Record<string, any>) => unknown> = {
-    'app.info': () => ({ name: 'Luau', version: '0.1.0-web', platform: 'web', arch: 'wasm', dataDir: '', configDir: '', logsDir: '', window: 'main', home: '~' }),
+    'app.info': () => ({
+      name: 'Luau',
+      version: '0.1.0-web',
+      platform: 'web',
+      arch: 'wasm',
+      dataDir: '',
+      configDir: '',
+      logsDir: '',
+      window: 'main',
+      home: '~',
+    }),
     'settings.get': () => ls('settings', {}),
     'settings.set': (p) => (lsSet('settings', p.value), true),
     'keybindings.get': () => ls('keybindings', []),
@@ -437,7 +483,21 @@ export function createMockTransport(): Transport {
     },
     'board.create': (p) => {
       const id = rid('b');
-      const b: MockBoard = { id, name: p.name || 'New board', kind: p.kind ?? 'kanban', root: p.path, view: { orientation: 'columns', spacing: 'fixedMain' }, tagColors: {}, lanes: [], rootOrder: [], nodes: new Map(), version: 1, undo: [], redo: [], journal: [] };
+      const b: MockBoard = {
+        id,
+        name: p.name || 'New board',
+        kind: p.kind ?? 'kanban',
+        root: p.path,
+        view: { orientation: 'columns', spacing: 'fixedMain' },
+        tagColors: {},
+        lanes: [],
+        rootOrder: [],
+        nodes: new Map(),
+        version: 1,
+        undo: [],
+        redo: [],
+        journal: [],
+      };
       for (const name of p.lanes ?? []) b.lanes.push({ id: rid('k'), name, order: [], color: null, width: null, wip: null, collapsed: false, archived: false });
       boards.set(id, b);
       emit({ type: 'registryChanged', registry: registry() });
@@ -513,7 +573,13 @@ export function createMockTransport(): Transport {
       return true;
     },
     'card.read': (p) => board(p.board).nodes.get(p.id)?.content ?? '',
-    'card.write': (p) => methods['board.apply']({ board: p.board, op: { op: 'writeCard', id: p.id, content: p.content }, label: 'Edit', coalesce: p.session ? `edit:${p.id}:${p.session}` : null }),
+    'card.write': (p) =>
+      methods['board.apply']({
+        board: p.board,
+        op: { op: 'writeCard', id: p.id, content: p.content },
+        label: 'Edit',
+        coalesce: p.session ? `edit:${p.id}:${p.session}` : null,
+      }),
     'attachment.add': (p) => ({ file: `${p.card}.mock-${p.name}`, display: p.name, kind: 'image', size: 0 }),
     'attachment.cleanup': () => 0,
     'trash.list': () => [],
@@ -521,7 +587,10 @@ export function createMockTransport(): Transport {
     'history.query': (p) => board(p.board).journal.slice(0, p.filter?.limit ?? 200),
     'history.blob': () => '',
     'search.query': (p) => {
-      const q = String(p.q ?? '').replace(/\b(in|tag|is|board|lane):\S+/g, '').trim().toLowerCase();
+      const q = String(p.q ?? '')
+        .replace(/\b(in|tag|is|board|lane):\S+/g, '')
+        .trim()
+        .toLowerCase();
       const hits: SearchHit[] = [];
       for (const b of boards.values())
         for (const n of b.nodes.values()) {
@@ -529,14 +598,29 @@ export function createMockTransport(): Transport {
           if (!q || text.includes(q)) {
             const m = parseMeta(n.content);
             const i = text.indexOf(q);
-            hits.push({ board: b.id, boardName: b.name, id: n.id, title: m.title, snippet: n.content.slice(Math.max(0, i - 30), i + 90).replace(/\n/g, ' '), laneName: b.lanes.find((l) => l.order.includes(n.id))?.name ?? null, tags: m.tags, kind: b.kind === 'files' ? 'doc' : 'card', isGroup: n.children.length > 0, archived: n.archived, mtime: n.mtime, remoteKey: null, status: null });
+            hits.push({
+              board: b.id,
+              boardName: b.name,
+              id: n.id,
+              title: m.title,
+              snippet: n.content.slice(Math.max(0, i - 30), i + 90).replace(/\n/g, ' '),
+              laneName: b.lanes.find((l) => l.order.includes(n.id))?.name ?? null,
+              tags: m.tags,
+              kind: b.kind === 'files' ? 'doc' : 'card',
+              isGroup: n.children.length > 0,
+              archived: n.archived,
+              mtime: n.mtime,
+              remoteKey: null,
+              status: null,
+            });
           }
         }
       return hits.slice(0, 100);
     },
     'search.tags': () => {
       const counts = new Map<string, number>();
-      for (const b of boards.values()) for (const n of b.nodes.values()) for (const t of parseMeta(n.content).tags) counts.set(t.toLowerCase(), (counts.get(t.toLowerCase()) ?? 0) + 1);
+      for (const b of boards.values())
+        for (const n of b.nodes.values()) for (const t of parseMeta(n.content).tags) counts.set(t.toLowerCase(), (counts.get(t.toLowerCase()) ?? 0) + 1);
       return [...counts.entries()].sort((a, c) => c[1] - a[1]);
     },
     'search.people': () => ['ana', 'eros', 'luis'],

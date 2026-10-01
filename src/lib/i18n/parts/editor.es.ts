@@ -57,7 +57,15 @@ export default {
     properties: 'Propiedades (prioridad, vencimiento…)',
   },
   callouts: { note: 'Nota', tip: 'Consejo', info: 'Información', warning: 'Advertencia', danger: 'Peligro', question: 'Pregunta' },
-  properties: { priority: 'Prioridad', due: 'Vencimiento', start: 'Inicio', assignees: 'Responsables', labels: 'Rótulos', estimate: 'Estimación', status: 'Estado' },
+  properties: {
+    priority: 'Prioridad',
+    due: 'Vencimiento',
+    start: 'Inicio',
+    assignees: 'Responsables',
+    labels: 'Rótulos',
+    estimate: 'Estimación',
+    status: 'Estado',
+  },
   commands: {
     categories: { code: 'Código' },
     editor: {

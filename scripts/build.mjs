@@ -46,7 +46,9 @@ function buildableHere(id) {
 }
 
 function run(cmd, cmdArgs, env = {}) {
-  const pre = Object.entries(env).map(([k, v]) => `${k}=${v} `).join('');
+  const pre = Object.entries(env)
+    .map(([k, v]) => `${k}=${v} `)
+    .join('');
   console.log(`\n$ ${pre}${cmd} ${cmdArgs.join(' ')}`);
   if (dry) return 0;
   const r = spawnSync(cmd, cmdArgs, { stdio: 'inherit', shell: process.platform === 'win32', env: { ...process.env, ...env } });

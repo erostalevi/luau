@@ -144,7 +144,8 @@ function build(state: EditorState): DecorationSet {
         case 'Highlight': {
           if (!touches(from, to)) {
             for (let c = node.firstChild; c; c = c.nextSibling)
-              if (c.name === 'EmphasisMark' || c.name === 'StrikethroughMark' || c.name === 'CodeMark' || c.name === 'HighlightMark') out.push(hide.range(c.from, c.to));
+              if (c.name === 'EmphasisMark' || c.name === 'StrikethroughMark' || c.name === 'CodeMark' || c.name === 'HighlightMark')
+                out.push(hide.range(c.from, c.to));
           }
           if (name === 'Highlight') out.push(Decoration.mark({ class: 'cm-highlight' }).range(from, to));
           return;
@@ -219,7 +220,12 @@ function build(state: EditorState): DecorationSet {
             return false;
           }
           const title = ctx?.titleOf(id) ?? id;
-          out.push(Decoration.replace({ widget: new CardLinkWidget(id, heading?.trim() || null, alias?.trim() || null, title, ctx?.isMissing(id) ?? false) }).range(from, to));
+          out.push(
+            Decoration.replace({ widget: new CardLinkWidget(id, heading?.trim() || null, alias?.trim() || null, title, ctx?.isMissing(id) ?? false) }).range(
+              from,
+              to,
+            ),
+          );
           return false;
         }
         case 'Tag': {
@@ -250,7 +256,10 @@ function build(state: EditorState): DecorationSet {
             for (let l = a.number; l <= b.number; l++) out.push(lineDeco('cm-mathblock-raw').range(doc.line(l).from));
             return false;
           }
-          const tex = state.sliceDoc(from, to).replace(/^\s*\$\$|\$\$\s*$/g, '').trim();
+          const tex = state
+            .sliceDoc(from, to)
+            .replace(/^\s*\$\$|\$\$\s*$/g, '')
+            .trim();
           out.push(Decoration.replace({ widget: new MathWidget(tex, true), block: true }).range(a.from, b.to));
           return false;
         }

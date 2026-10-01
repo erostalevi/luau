@@ -1,7 +1,17 @@
 // Assembles the CodeMirror extension set for Luau editors.
 
 import { EditorState, Compartment, type Extension } from '@codemirror/state';
-import { EditorView, keymap, placeholder as cmPlaceholder, drawSelection, dropCursor, highlightSpecialChars, rectangularSelection, crosshairCursor, lineNumbers } from '@codemirror/view';
+import {
+  EditorView,
+  keymap,
+  placeholder as cmPlaceholder,
+  drawSelection,
+  dropCursor,
+  highlightSpecialChars,
+  rectangularSelection,
+  crosshairCursor,
+  lineNumbers,
+} from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown, markdownLanguage, markdownKeymap } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
@@ -146,12 +156,16 @@ export async function applyVim(view: EditorView, on: boolean) {
   view.dispatch({ effects: compartments.vim.reconfigure(await vimExt(on)) });
 }
 
-export function reconfigure(view: EditorView, patch: Partial<Pick<SetupOptions, 'livePreview' | 'spellcheck' | 'lineNumbers' | 'readOnly' | 'autoPair' | 'tabSize'>>) {
+export function reconfigure(
+  view: EditorView,
+  patch: Partial<Pick<SetupOptions, 'livePreview' | 'spellcheck' | 'lineNumbers' | 'readOnly' | 'autoPair' | 'tabSize'>>,
+) {
   const effects = [];
   if (patch.livePreview !== undefined) effects.push(compartments.preview.reconfigure(livePreviewEnabled.of(patch.livePreview)));
   if (patch.spellcheck !== undefined) effects.push(compartments.spell.reconfigure(spellAttrs(patch.spellcheck)));
   if (patch.lineNumbers !== undefined) effects.push(compartments.lines.reconfigure(patch.lineNumbers ? lineNumbers() : []));
-  if (patch.readOnly !== undefined) effects.push(compartments.readOnly.reconfigure([EditorState.readOnly.of(patch.readOnly), EditorView.editable.of(!patch.readOnly)]));
+  if (patch.readOnly !== undefined)
+    effects.push(compartments.readOnly.reconfigure([EditorState.readOnly.of(patch.readOnly), EditorView.editable.of(!patch.readOnly)]));
   if (patch.autoPair !== undefined) effects.push(compartments.autoPair.reconfigure(patch.autoPair ? closeBrackets() : []));
   if (patch.tabSize !== undefined) effects.push(compartments.tabSize.reconfigure(EditorState.tabSize.of(patch.tabSize)));
   if (effects.length) view.dispatch({ effects });

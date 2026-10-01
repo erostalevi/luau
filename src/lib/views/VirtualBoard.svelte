@@ -18,7 +18,16 @@
   import { t, fmtDate } from '$lib/i18n/index.svelte';
   import { parse, highlightTerms } from '$lib/panels/search/query';
   import { effectiveCase, effectiveText } from '$lib/panels/search/sync';
-  import { runSearch, groupByBoard, groupByLane, groupByTag, highlightSegments, snippetSegments, search, type GroupBy } from '$lib/panels/search/searchState.svelte';
+  import {
+    runSearch,
+    groupByBoard,
+    groupByLane,
+    groupByTag,
+    highlightSegments,
+    snippetSegments,
+    search,
+    type GroupBy,
+  } from '$lib/panels/search/searchState.svelte';
   import { openHit, hitMenu, focusSearch, setSavedGroupBy, saveCurrent } from '$lib/panels/search/searchActions';
 
   let { tab }: { tab: Tab } = $props();
@@ -36,7 +45,9 @@
   const caseDefault = $derived(settings.get<boolean>('search.caseSensitive'));
   const terms = $derived(highlightTerms(parse(q)));
   const caseOn = $derived(effectiveCase(q, caseDefault));
-  const groups = $derived(groupBy === 'board' ? groupByBoard(hits) : groupBy === 'tag' ? groupByTag(hits, t('vboard.noTag')) : groupByLane(hits, t('searchPanel.noLane')));
+  const groups = $derived(
+    groupBy === 'board' ? groupByBoard(hits) : groupBy === 'tag' ? groupByTag(hits, t('vboard.noTag')) : groupByLane(hits, t('searchPanel.noLane')),
+  );
   const boardsVersion = $derived([...boards.values()].reduce((n, b) => n + b.version, 0));
 
   let seq = 0;
@@ -95,7 +106,12 @@
 
   function onpointerdown(e: PointerEvent, h: SearchHit) {
     if (e.button !== 0 || !boards.get(h.board)) return;
-    startDrag(e, { kind: 'cards', boardId: h.board, ids: [h.id], copyOnly: isMirror(h), label: h.title }, e.currentTarget as HTMLElement, scroller ? [scroller] : []);
+    startDrag(
+      e,
+      { kind: 'cards', boardId: h.board, ids: [h.id], copyOnly: isMirror(h), label: h.title },
+      e.currentTarget as HTMLElement,
+      scroller ? [scroller] : [],
+    );
   }
 
   async function oncontextmenu(e: MouseEvent, h: SearchHit) {
@@ -112,7 +128,10 @@
     if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
     e.preventDefault();
     if (!cur) {
-      lanes.map(cardsOf).find((c) => c.length)?.[0]?.focus();
+      lanes
+        .map(cardsOf)
+        .find((c) => c.length)?.[0]
+        ?.focus();
       return;
     }
     const lane = cur.closest<HTMLElement>('[data-vlane]')!;
@@ -166,10 +185,14 @@
         value={groupBy}
         onchange={setGroupBy}
       />
-      <button class="icon-btn" aria-label={t('vboard.refresh')} use:tip={t('vboard.refresh')} onclick={() => void run(effectiveText(q, caseDefault))}><RefreshCw size={15} /></button>
+      <button class="icon-btn" aria-label={t('vboard.refresh')} use:tip={t('vboard.refresh')} onclick={() => void run(effectiveText(q, caseDefault))}
+        ><RefreshCw size={15} /></button
+      >
       <button class="icon-btn" aria-label={t('vboard.editQuery')} use:tip={t('vboard.editQuery')} onclick={() => focusSearch(q)}><Pencil size={15} /></button>
       {#if !savedId}
-        <button class="icon-btn" aria-label={t('commands.search.saveCurrent')} use:tip={t('commands.search.saveCurrent')} onclick={() => void save()}><BookmarkPlus size={16} /></button>
+        <button class="icon-btn" aria-label={t('commands.search.saveCurrent')} use:tip={t('commands.search.saveCurrent')} onclick={() => void save()}
+          ><BookmarkPlus size={16} /></button
+        >
       {/if}
     </div>
   </header>
@@ -215,18 +238,31 @@
                   }}
                 >
                   <span class="ct">
-                    {#if isMirror(h)}<Diamond size={11} strokeWidth={2} class="muted" />{:else if h.kind === 'doc'}<FileText size={12} strokeWidth={1.8} class="muted" />{/if}
+                    {#if isMirror(h)}<Diamond size={11} strokeWidth={2} class="muted" />{:else if h.kind === 'doc'}<FileText
+                        size={12}
+                        strokeWidth={1.8}
+                        class="muted"
+                      />{/if}
                     {#if h.archived}<Archive size={11} strokeWidth={2} class="muted" />{/if}
-                    <span>{#each title as s, i (i)}{#if s.hit}<mark>{s.text}</mark>{:else}{s.text}{/if}{/each}</span>
+                    <span
+                      >{#each title as s, i (i)}{#if s.hit}<mark>{s.text}</mark>{:else}{s.text}{/if}{/each}</span
+                    >
                   </span>
                   {#if h.snippet.trim() && h.snippet.trim() !== h.title}
-                    <span class="cs">{#each snip as s, i (i)}{#if s.hit}<mark>{s.text}</mark>{:else}{s.text}{/if}{/each}</span>
+                    <span class="cs"
+                      >{#each snip as s, i (i)}{#if s.hit}<mark>{s.text}</mark>{:else}{s.text}{/if}{/each}</span
+                    >
                   {/if}
                   {#if h.tags.length}
-                    <span class="ctags">{#each h.tags.slice(0, 4) as tag (tag)}<TagChip {tag} />{/each}</span>
+                    <span class="ctags"
+                      >{#each h.tags.slice(0, 4) as tag (tag)}<TagChip {tag} />{/each}</span
+                    >
                   {/if}
                   <span class="cm">
-                    {#if groupBy !== 'board'}<span class="where">{h.boardName}{#if h.laneName && groupBy !== 'lane'} · {h.laneName}{/if}</span>{:else if h.laneName}<span class="where">{h.laneName}</span>{/if}
+                    {#if groupBy !== 'board'}<span class="where"
+                        >{h.boardName}{#if h.laneName && groupBy !== 'lane'}
+                          · {h.laneName}{/if}</span
+                      >{:else if h.laneName}<span class="where">{h.laneName}</span>{/if}
                     {#if h.remoteKey}<span class="key">{h.remoteKey}</span>{/if}
                     {#if n?.footer.priority}<span class="prio"><Flag size={10} strokeWidth={2} />{t(`priority.${n.footer.priority}`)}</span>{/if}
                     {#if due}<span class="due" class:overdue={due < today}><CalendarDays size={10} strokeWidth={2} />{fmtDate(due)}</span>{/if}

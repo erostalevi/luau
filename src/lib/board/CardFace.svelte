@@ -46,10 +46,16 @@
 {:else if face.kind === 'table' && showPreview}
   <div class="table-wrap">
     <table>
-      <thead><tr>{#each face.header as h, i (i)}<th>{h}</th>{/each}</tr></thead>
+      <thead
+        ><tr
+          >{#each face.header as h, i (i)}<th>{h}</th>{/each}</tr
+        ></thead
+      >
       <tbody>
         {#each face.rows.slice(0, Math.min(max, 4)) as row, r (r)}
-          <tr>{#each row as c, i (i)}<td>{c}</td>{/each}</tr>
+          <tr
+            >{#each row as c, i (i)}<td>{c}</td>{/each}</tr
+          >
         {/each}
       </tbody>
     </table>
@@ -112,7 +118,9 @@
     transform: scale(0.85);
   }
   .box.on {
-    background: var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 10px no-repeat;
+    background: var(--primary)
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+      center / 10px no-repeat;
     box-shadow: none;
   }
   .bullet {

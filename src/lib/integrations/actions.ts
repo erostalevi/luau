@@ -102,7 +102,14 @@ export async function connectJira(): Promise<Account | null> {
       }),
     (res) =>
       res[0] === 'jiraCloud'
-        ? inputBox({ title: t('integrations.connect.jiraTitle'), prompt: t('integrations.connect.emailPrompt'), placeholder: 'you@company.com', step: 3, totalSteps: total, validate: (v) => (/^\S+@\S+\.\S+$/.test(v.trim()) ? null : t('integrations.connect.emailInvalid')) })
+        ? inputBox({
+            title: t('integrations.connect.jiraTitle'),
+            prompt: t('integrations.connect.emailPrompt'),
+            placeholder: 'you@company.com',
+            step: 3,
+            totalSteps: total,
+            validate: (v) => (/^\S+@\S+\.\S+$/.test(v.trim()) ? null : t('integrations.connect.emailInvalid')),
+          })
         : Promise.resolve('-'),
     (res) =>
       inputBox({
@@ -118,7 +125,13 @@ export async function connectJira(): Promise<Account | null> {
   const [provider, site, email, token] = r;
   let insecure = false;
   if (provider === 'jiraServer' && site.trim().toLowerCase().startsWith('http://')) {
-    insecure = await confirm({ title: t('integrations.connect.httpTitle'), message: t('integrations.connect.httpWarning'), confirmLabel: t('integrations.connect.httpConfirm'), danger: true, cancelFocused: true });
+    insecure = await confirm({
+      title: t('integrations.connect.httpTitle'),
+      message: t('integrations.connect.httpWarning'),
+      confirmLabel: t('integrations.connect.httpConfirm'),
+      danger: true,
+      cancelFocused: true,
+    });
     if (!insecure) return null;
   }
   let clientCertPath: string | null = null;
@@ -141,8 +154,23 @@ export async function connectJira(): Promise<Account | null> {
 
 export async function connectTrello(): Promise<Account | null> {
   const r = await steps<[string, string]>([
-    () => inputBox({ title: t('integrations.connect.trelloTitle'), prompt: t('integrations.connect.trelloKeyPrompt'), step: 1, totalSteps: 2, validate: (v) => (/^[a-f0-9]{20,64}$/i.test(v.trim()) ? null : t('integrations.connect.keyInvalid')) }),
-    () => inputBox({ title: t('integrations.connect.trelloTitle'), prompt: t('integrations.connect.trelloTokenPrompt'), password: true, step: 2, totalSteps: 2, validate: (v) => (v.trim() ? null : t('integrations.connect.tokenRequired')) }),
+    () =>
+      inputBox({
+        title: t('integrations.connect.trelloTitle'),
+        prompt: t('integrations.connect.trelloKeyPrompt'),
+        step: 1,
+        totalSteps: 2,
+        validate: (v) => (/^[a-f0-9]{20,64}$/i.test(v.trim()) ? null : t('integrations.connect.keyInvalid')),
+      }),
+    () =>
+      inputBox({
+        title: t('integrations.connect.trelloTitle'),
+        prompt: t('integrations.connect.trelloTokenPrompt'),
+        password: true,
+        step: 2,
+        totalSteps: 2,
+        validate: (v) => (v.trim() ? null : t('integrations.connect.tokenRequired')),
+      }),
   ]);
   if (!r) return null;
   return finishConnect({ provider: 'trello', user: r[0].trim(), token: r[1] });
@@ -161,7 +189,13 @@ export async function connectSlack(): Promise<Account | null> {
 }
 
 export async function removeAccount(a: Account) {
-  const ok = await confirm({ title: t('integrations.removeTitle', { name: a.label }), message: t('integrations.removeMessage'), confirmLabel: t('integrations.remove'), danger: true, cancelFocused: true });
+  const ok = await confirm({
+    title: t('integrations.removeTitle', { name: a.label }),
+    message: t('integrations.removeMessage'),
+    confirmLabel: t('integrations.remove'),
+    danger: true,
+    cancelFocused: true,
+  });
   if (!ok) return;
   await busy(t('integrations.remove'), () => rpc('integrations.remove', { account: a.id }));
   await loadAccounts();
@@ -175,7 +209,11 @@ export async function search(more = false) {
   integ.searching = true;
   integ.error = '';
   try {
-    const page = await rpc<{ issues: RemoteIssue[]; next: string | null }>('remote.search', { account: a.id, query: integ.query, next: more ? integ.next : null });
+    const page = await rpc<{ issues: RemoteIssue[]; next: string | null }>('remote.search', {
+      account: a.id,
+      query: integ.query,
+      next: more ? integ.next : null,
+    });
     integ.results = more ? [...integ.results, ...page.issues] : page.issues;
     integ.next = page.next;
   } catch (e) {
@@ -199,7 +237,9 @@ export async function saveQuery() {
 export async function removeQuery(name: string) {
   const a = accountById(integ.account);
   if (!a) return;
-  await busy(t('integrations.saveQuery'), () => rpc('integrations.update', { account: a.id, patch: { savedQueries: a.savedQueries.filter((q) => q.name !== name) } }));
+  await busy(t('integrations.saveQuery'), () =>
+    rpc('integrations.update', { account: a.id, patch: { savedQueries: a.savedQueries.filter((q) => q.name !== name) } }),
+  );
   await loadAccounts();
 }
 
@@ -232,7 +272,8 @@ export async function copyFromMirror(from: string, ids: string[], to: string, pa
     toast.success(t('integrations.copied', { count: out.length }));
   } catch (e) {
     const m = e instanceof RpcError ? /already_linked:(c[a-z0-9]{6})/.exec(e.message) : null;
-    if (m) toast.warn(t('integrations.alreadyOnBoard', { key: '' }), { action: { label: t('integrations.jumpToExisting'), run: () => void openCard(to, m[1]) } });
+    if (m)
+      toast.warn(t('integrations.alreadyOnBoard', { key: '' }), { action: { label: t('integrations.jumpToExisting'), run: () => void openCard(to, m[1]) } });
     else toast.error(errorText(e));
   }
 }
@@ -267,7 +308,10 @@ export async function transitionCard(boardId: string, id: string, tr: Transition
   const remote = boards.get(boardId)?.remote.get(id);
   if (!remote) return;
   if ((await runGated({ kind: 'transition', board: boardId, card: id, id: tr.id, to: tr.to })) !== null) {
-    toast.success(t('integrations.transitioned', { key: remote.key, status: tr.to }), remote.status ? { action: { label: t('integrations.revert'), run: () => void revertTransition(boardId, id, remote.status!) } } : undefined);
+    toast.success(
+      t('integrations.transitioned', { key: remote.key, status: tr.to }),
+      remote.status ? { action: { label: t('integrations.revert'), run: () => void revertTransition(boardId, id, remote.status!) } } : undefined,
+    );
   }
 }
 
@@ -310,13 +354,18 @@ export async function assign(at?: CardRef) {
     },
   });
   if (!u || u === BACK) return;
-  if ((await runGated({ kind: 'assign', board: r.boardId, card: r.id, user: u.id ? u : null })) !== null) toast.success(t('integrations.assigned', { key: r.remote.key }));
+  if ((await runGated({ kind: 'assign', board: r.boardId, card: r.id, user: u.id ? u : null })) !== null)
+    toast.success(t('integrations.assigned', { key: r.remote.key }));
 }
 
 export async function comment(at?: CardRef) {
   const r = needRemote(at);
   if (!r) return;
-  const body = await inputBox({ title: t('integrations.commentTitle', { key: r.remote.key }), prompt: t('integrations.commentPrompt'), validate: (v) => (v.trim() ? null : t('integrations.commentRequired')) });
+  const body = await inputBox({
+    title: t('integrations.commentTitle', { key: r.remote.key }),
+    prompt: t('integrations.commentPrompt'),
+    validate: (v) => (v.trim() ? null : t('integrations.commentRequired')),
+  });
   if (typeof body !== 'string' || !body.trim()) return;
   if ((await runGated({ kind: 'comment', board: r.boardId, card: r.id, body })) !== null) toast.success(t('integrations.commented', { key: r.remote.key }));
 }
@@ -412,7 +461,11 @@ export async function mirrorBoard(accountId?: string, preset?: MirrorSource, pre
     const how = choices.length > 1 ? await pickOne(choices, { title: t('commands.integrations.mirrorBoard') }) : 'board';
     if (!how || how === BACK) return;
     if (how === 'query') {
-      const q = await inputBox({ title: t('integrations.mirror.fromQuery'), value: integ.query || a.defaultQuery || '', validate: (v) => (v.trim() ? null : t('integrations.mirror.queryRequired')) });
+      const q = await inputBox({
+        title: t('integrations.mirror.fromQuery'),
+        value: integ.query || a.defaultQuery || '',
+        validate: (v) => (v.trim() ? null : t('integrations.mirror.queryRequired')),
+      });
       if (typeof q !== 'string') return;
       source = { kind: 'query', query: q };
     } else {
@@ -428,10 +481,18 @@ export async function mirrorBoard(accountId?: string, preset?: MirrorSource, pre
     }
   }
   if (integ.mirrors.some((m) => m.account === a.id && JSON.stringify(m.source) === JSON.stringify(source))) {
-    const ok = await confirm({ title: t('integrations.mirror.duplicateTitle'), message: t('integrations.mirror.duplicate'), confirmLabel: t('integrations.mirror.createAnyway') });
+    const ok = await confirm({
+      title: t('integrations.mirror.duplicateTitle'),
+      message: t('integrations.mirror.duplicate'),
+      confirmLabel: t('integrations.mirror.createAnyway'),
+    });
     if (!ok) return;
   }
-  const nm = await inputBox({ title: t('integrations.mirror.nameTitle'), value: name, validate: (v) => (v.trim() ? null : t('integrations.mirror.nameRequired')) });
+  const nm = await inputBox({
+    title: t('integrations.mirror.nameTitle'),
+    value: name,
+    validate: (v) => (v.trim() ? null : t('integrations.mirror.nameRequired')),
+  });
   if (typeof nm !== 'string') return;
   const id = await busy(t('commands.integrations.mirrorBoard'), () => rpc<string>('remote.mirror.create', { account: a.id, source, name: nm, watch: true }));
   if (!id) return;
@@ -447,7 +508,13 @@ export async function setWatch(id: string, watch: boolean) {
 }
 
 export async function removeMirror(id: string, name: string) {
-  const ok = await confirm({ title: t('integrations.mirror.removeTitle', { name }), message: t('integrations.mirror.removeMessage'), confirmLabel: t('integrations.remove'), danger: true, cancelFocused: true });
+  const ok = await confirm({
+    title: t('integrations.mirror.removeTitle', { name }),
+    message: t('integrations.mirror.removeMessage'),
+    confirmLabel: t('integrations.remove'),
+    danger: true,
+    cancelFocused: true,
+  });
   if (!ok) return;
   await busy(t('integrations.remove'), () => rpc('remote.mirror.remove', { board: id }));
   await loadMirrors();
@@ -465,11 +532,24 @@ export async function postToSlack() {
   const node = c?.board.node(c.id);
   const draft = node ? (remote ? `${node.title} — ${remote.url}` : node.title) : '';
   const r = await steps<[IdName, string]>([
-    () => pickOne<IdName>(channels.map((ch) => ({ label: `#${ch.name}`, description: ch.detail ? t('integrations.slack.private') : undefined, value: ch })), { title: t('integrations.slack.pickChannel'), step: 1, totalSteps: 2 }),
-    () => inputBox({ title: t('commands.slack.post'), prompt: t('integrations.slack.messagePrompt'), value: draft, step: 2, totalSteps: 2, validate: (v) => (v.trim() ? null : t('integrations.slack.messageRequired')) }),
+    () =>
+      pickOne<IdName>(
+        channels.map((ch) => ({ label: `#${ch.name}`, description: ch.detail ? t('integrations.slack.private') : undefined, value: ch })),
+        { title: t('integrations.slack.pickChannel'), step: 1, totalSteps: 2 },
+      ),
+    () =>
+      inputBox({
+        title: t('commands.slack.post'),
+        prompt: t('integrations.slack.messagePrompt'),
+        value: draft,
+        step: 2,
+        totalSteps: 2,
+        validate: (v) => (v.trim() ? null : t('integrations.slack.messageRequired')),
+      }),
   ]);
   if (!r) return;
-  if ((await runGated({ kind: 'slackPost', account: a.id, channel: r[0].id, channelName: r[0].name, text: r[1] })) !== null) toast.success(t('integrations.slack.posted', { channel: r[0].name }));
+  if ((await runGated({ kind: 'slackPost', account: a.id, channel: r[0].id, channelName: r[0].name, text: r[1] })) !== null)
+    toast.success(t('integrations.slack.posted', { channel: r[0].name }));
 }
 
 // --- toggles -----------------------------------------------------------------------------
@@ -489,7 +569,12 @@ export async function remoteActions() {
     { label: t('commands.remote.assign'), value: 'remote.assign' },
     { label: t('commands.remote.comment'), value: 'remote.comment' },
     { label: t('commands.remote.pull'), value: 'remote.pull' },
-    ...(r.remote.mirror ? [] : [{ label: t('commands.remote.push'), value: 'remote.push' }, { label: t('commands.remote.unlink'), value: 'remote.unlink' }]),
+    ...(r.remote.mirror
+      ? []
+      : [
+          { label: t('commands.remote.push'), value: 'remote.push' },
+          { label: t('commands.remote.unlink'), value: 'remote.unlink' },
+        ]),
     { label: t('commands.remote.openInBrowser'), value: 'remote.openInBrowser' },
   ];
   const v = await quickPick(items, { title: `${r.remote.key}` });

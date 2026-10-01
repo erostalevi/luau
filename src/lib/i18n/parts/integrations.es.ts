@@ -92,7 +92,8 @@ export default {
       patPrompt: 'Token de acceso personal (Perfil → Tokens de acceso personal)',
       tokenRequired: 'El token es obligatorio.',
       httpTitle: '¿Usar HTTP sin cifrar?',
-      httpWarning: 'Este sitio no usa HTTPS. Tu token y el contenido de las incidencias viajarán sin cifrar y cualquiera en la red podrá leerlos. Continúa solo en una red interna de confianza.',
+      httpWarning:
+        'Este sitio no usa HTTPS. Tu token y el contenido de las incidencias viajarán sin cifrar y cualquiera en la red podrá leerlos. Continúa solo en una red interna de confianza.',
       httpConfirm: 'Usar HTTP inseguro',
       mtlsTitle: 'Certificado de cliente (mTLS)',
       noClientCert: 'Sin certificado de cliente',
@@ -211,7 +212,10 @@ export default {
   settings: {
     keys: {
       'integrations.allowPush': { label: 'Permitir enviar a servicios', desc: 'Si está desactivado, nunca se envía nada a Jira, Trello ni Slack.' },
-      'integrations.allowPull': { label: 'Permitir traer de servicios', desc: 'Si está desactivado, los espejos y las tarjetas vinculadas no se actualizan desde los servicios.' },
+      'integrations.allowPull': {
+        label: 'Permitir traer de servicios',
+        desc: 'Si está desactivado, los espejos y las tarjetas vinculadas no se actualizan desde los servicios.',
+      },
     },
   },
 };

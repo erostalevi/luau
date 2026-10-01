@@ -46,8 +46,26 @@ async function customRange(text: string, set: Setter, key: 'due' | 'updated') {
   const cur = getRange(parse(text), key);
   const valid = (s: string) => (s === '' || (/^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s))) ? null : t('validation.date'));
   const r = await steps<[string, string]>([
-    () => inputBox({ title: t(`searchPanel.filters.${key}`), prompt: t('searchPanel.rangeFrom'), placeholder: 'YYYY-MM-DD', value: cur.from ?? '', validate: valid, step: 1, totalSteps: 2 }),
-    () => inputBox({ title: t(`searchPanel.filters.${key}`), prompt: t('searchPanel.rangeTo'), placeholder: 'YYYY-MM-DD', value: cur.to ?? '', validate: valid, step: 2, totalSteps: 2 }),
+    () =>
+      inputBox({
+        title: t(`searchPanel.filters.${key}`),
+        prompt: t('searchPanel.rangeFrom'),
+        placeholder: 'YYYY-MM-DD',
+        value: cur.from ?? '',
+        validate: valid,
+        step: 1,
+        totalSteps: 2,
+      }),
+    () =>
+      inputBox({
+        title: t(`searchPanel.filters.${key}`),
+        prompt: t('searchPanel.rangeTo'),
+        placeholder: 'YYYY-MM-DD',
+        value: cur.to ?? '',
+        validate: valid,
+        step: 2,
+        totalSteps: 2,
+      }),
   ]);
   if (!r) return;
   const [from, to] = r;
@@ -86,7 +104,14 @@ export async function filterMenu(kind: FilterKind, text: string, set: Setter): P
   switch (kind) {
     case 'board': {
       const list = registry.data.boards.filter((b) => !b.missing).sort((a, b) => a.name.localeCompare(b.name));
-      return list.length ? toggler(text, set, 'board', list.map((b) => b.name)) : [{ label: t('searchPanel.nothing'), disabled: true }];
+      return list.length
+        ? toggler(
+            text,
+            set,
+            'board',
+            list.map((b) => b.name),
+          )
+        : [{ label: t('searchPanel.nothing'), disabled: true }];
     }
     case 'lane': {
       const names = laneNames();
@@ -105,7 +130,10 @@ export async function filterMenu(kind: FilterKind, text: string, set: Setter): P
     case 'tag': {
       const tags = await rpc<[string, number][]>('search.tags', { boards: [] }).catch(() => [] as [string, number][]);
       const top = tags.slice(0, 40).map(([tag]) => tag);
-      for (const v of parse(text).filters.filter((f) => f.key === 'tag' && !f.negate).map((f) => f.value)) if (!top.includes(v.toLowerCase())) top.push(v);
+      for (const v of parse(text)
+        .filters.filter((f) => f.key === 'tag' && !f.negate)
+        .map((f) => f.value))
+        if (!top.includes(v.toLowerCase())) top.push(v);
       return top.length ? toggler(text, set, 'tag', top, (v) => `#${v}`) : [{ label: t('searchPanel.noTags'), disabled: true }];
     }
     case 'mention': {

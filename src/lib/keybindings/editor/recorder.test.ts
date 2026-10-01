@@ -50,11 +50,14 @@ describe('ChordRecorder', () => {
 });
 
 describe('keybinding table filter', () => {
-  const rows = buildRows(['card.rename'], [
-    { key: 'ctrl+b', command: 'panel.toggle', source: 'default' },
-    { key: 'n', command: 'card.new', when: 'config.board.singleKeyShortcuts', source: 'default' },
-    { key: 'ctrl+alt+x', command: 'card.archive', source: 'user' },
-  ]);
+  const rows = buildRows(
+    ['card.rename'],
+    [
+      { key: 'ctrl+b', command: 'panel.toggle', source: 'default' },
+      { key: 'n', command: 'card.new', when: 'config.board.singleKeyShortcuts', source: 'default' },
+      { key: 'ctrl+alt+x', command: 'card.archive', source: 'user' },
+    ],
+  );
   const text = (r: { command: string }) => ({ title: r.command === 'panel.toggle' ? 'Toggle sidebar' : r.command, category: 'View' });
 
   it('parses filters', () => {

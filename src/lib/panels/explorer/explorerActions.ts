@@ -191,7 +191,11 @@ export async function newLaneIn(row: Row) {
   if (isReadOnly(row.boardId)) return;
   const m = boards.get(row.boardId) ?? (await openBoard({ id: row.boardId }));
   if (m.kind !== 'kanban') return;
-  const name = await inputBox({ title: t('commands.lane.new'), placeholder: t('explorer.lanePlaceholder'), validate: (v) => (v.trim() ? null : t('validation.required')) });
+  const name = await inputBox({
+    title: t('commands.lane.new'),
+    placeholder: t('explorer.lanePlaceholder'),
+    validate: (v) => (v.trim() ? null : t('validation.required')),
+  });
   if (typeof name !== 'string') return;
   const id = await newLaneId(m.id);
   const r = await apply(m.id, { op: 'createLane', id, name: name.trim(), index: null }, t('ops.createLane'));

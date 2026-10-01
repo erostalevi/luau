@@ -35,12 +35,12 @@
       if (item.kind === 'separator') return;
       const m = fuzzy(q, item.label);
       const d = !m && pickOpts?.matchOnDescription && item.description ? fuzzy(q, item.description) : null;
-      if (m || d || item.alwaysShow) out.push({ item, index, pos: m?.positions ?? [], descPos: d?.positions ?? [], score: m?.score ?? (d ? d.score - 50 : -999) });
+      if (m || d || item.alwaysShow)
+        out.push({ item, index, pos: m?.positions ?? [], descPos: d?.positions ?? [], score: m?.score ?? (d ? d.score - 50 : -999) });
     });
     out.sort((a, b) => b.score - a.score);
     const custom = pickOpts?.allowCustom?.(q);
-    if (custom && !out.some((r) => r.item.label.toLowerCase() === q.toLowerCase()))
-      out.push({ item: custom, index: -1, pos: [], descPos: [], score: -1000 });
+    if (custom && !out.some((r) => r.item.label.toLowerCase() === q.toLowerCase())) out.push({ item: custom, index: -1, pos: [], descPos: [], score: -1000 });
     return out;
   });
 

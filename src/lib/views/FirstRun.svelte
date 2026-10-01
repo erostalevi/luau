@@ -34,8 +34,20 @@
 
 {#if ui.firstRun}
   <div class="scrim" transition:fade={{ duration: 200 }}></div>
-  <div class="fr card-surface" data-overlay role="dialog" aria-modal="true" aria-label={t('firstRun.welcome')} tabindex="-1" use:trapFocus={{ initial: 'footer .btn.primary' }} onkeydown={(e) => e.key === 'Escape' && (e.preventDefault(), finish())} transition:fly={{ y: 16, duration: 260 }}>
-    <div class="dots">{#each Array(steps) as _, i (i)}<span class:on={i === step}></span>{/each}</div>
+  <div
+    class="fr card-surface"
+    data-overlay
+    role="dialog"
+    aria-modal="true"
+    aria-label={t('firstRun.welcome')}
+    tabindex="-1"
+    use:trapFocus={{ initial: 'footer .btn.primary' }}
+    onkeydown={(e) => e.key === 'Escape' && (e.preventDefault(), finish())}
+    transition:fly={{ y: 16, duration: 260 }}
+  >
+    <div class="dots">
+      {#each Array(steps) as _, i (i)}<span class:on={i === step}></span>{/each}
+    </div>
     {#key step}
       <div class="body" in:fly={{ x: 24, duration: 220 }}>
         {#if step === 0}
@@ -63,7 +75,12 @@
           <p class="small muted">{t('colors.primary')}</p>
           <div class="sw">
             {#each DEFAULT_SWATCHES.slice(0, 12) as c (c)}
-              <button style:background={c} class:on={settings.get('appearance.primaryColor') === c} aria-label={c} onclick={() => settings.set('appearance.primaryColor', c)}></button>
+              <button
+                style:background={c}
+                class:on={settings.get('appearance.primaryColor') === c}
+                aria-label={c}
+                onclick={() => settings.set('appearance.primaryColor', c)}
+              ></button>
             {/each}
           </div>
         {:else if step === 2}
@@ -90,10 +107,14 @@
           <h2>{t('firstRun.boards')}</h2>
           <p>{t('firstRun.boardsText')}</p>
           <div class="roots">
-            {#each roots as r (r)}<span class="chip">{r} <button class="icon-btn sm" onclick={() => (roots = roots.filter((x) => x !== r))}>×</button></span>{/each}
+            {#each roots as r (r)}<span class="chip">{r} <button class="icon-btn sm" onclick={() => (roots = roots.filter((x) => x !== r))}>×</button></span
+              >{/each}
             <button class="btn sm" onclick={addRoot}>{t('firstRun.addFolder')}</button>
           </div>
-          <label class="opt"><Toggle checked={settings.get<boolean>('app.runInBackground')} onchange={(v) => settings.set('app.runInBackground', v)} /> {t('settings.keys.app.runInBackground.label')}</label>
+          <label class="opt"
+            ><Toggle checked={settings.get<boolean>('app.runInBackground')} onchange={(v) => settings.set('app.runInBackground', v)} />
+            {t('settings.keys.app.runInBackground.label')}</label
+          >
         {/if}
       </div>
     {/key}

@@ -31,7 +31,12 @@ describe('fuzzy', () => {
     expect(a.score).toBeGreaterThan(b.score);
     expect(fuzzy('xyz', 'New card')).toBeNull();
     const segs = highlightSegments('New card', fuzzy('nc', 'New card')!.positions);
-    expect(segs.filter((s) => s.hit).map((s) => s.text).join('')).toBe('Nc');
+    expect(
+      segs
+        .filter((s) => s.hit)
+        .map((s) => s.text)
+        .join(''),
+    ).toBe('Nc');
   });
 });
 

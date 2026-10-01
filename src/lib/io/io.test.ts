@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { exportFileName, exportFormats, importModes, isNewerSchema, isLoose, buildSettingsBundle, isSecretKey, templateSpec, NEW_BOARD_TEMPLATES, formatBytes } from './io';
+import {
+  exportFileName,
+  exportFormats,
+  importModes,
+  isNewerSchema,
+  isLoose,
+  buildSettingsBundle,
+  isSecretKey,
+  templateSpec,
+  NEW_BOARD_TEMPLATES,
+  formatBytes,
+} from './io';
 
 describe('io helpers', () => {
   it('offers formats per target', () => {

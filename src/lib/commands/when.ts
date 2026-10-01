@@ -5,11 +5,7 @@
 
 type Ctx = (key: string) => unknown;
 type Node =
-  | { t: 'lit'; v: unknown }
-  | { t: 'key'; k: string }
-  | { t: 'not'; e: Node }
-  | { t: 'and' | 'or'; a: Node; b: Node }
-  | { t: 'eq' | 'ne'; a: Node; b: Node };
+  { t: 'lit'; v: unknown } | { t: 'key'; k: string } | { t: 'not'; e: Node } | { t: 'and' | 'or'; a: Node; b: Node } | { t: 'eq' | 'ne'; a: Node; b: Node };
 
 function tokenize(s: string): string[] {
   const out: string[] = [];

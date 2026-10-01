@@ -16,7 +16,7 @@
     if (!board) return null;
     let cards = 0;
     let groups = 0;
-    for (const n of board.nodes.values()) (n.isGroup ? groups++ : cards++);
+    for (const n of board.nodes.values()) n.isGroup ? groups++ : cards++;
     return { cards, groups };
   });
 </script>
@@ -33,10 +33,20 @@
   {/if}
   {#if board && counts}
     <span class="item">{t('status.cards', { count: counts.cards })}{counts.groups ? ` · ${t('status.groups', { count: counts.groups })}` : ''}</span>
-    <button class="icon-btn sm" disabled={!board.undo.canUndo} onclick={() => runCommand('edit.undo')} use:tip={{ text: t('common.undo'), command: 'edit.undo', placement: 'top' }}>
+    <button
+      class="icon-btn sm"
+      disabled={!board.undo.canUndo}
+      onclick={() => runCommand('edit.undo')}
+      use:tip={{ text: t('common.undo'), command: 'edit.undo', placement: 'top' }}
+    >
       <Undo2 size={13} />
     </button>
-    <button class="icon-btn sm" disabled={!board.undo.canRedo} onclick={() => runCommand('edit.redo')} use:tip={{ text: t('common.redo'), command: 'edit.redo', placement: 'top' }}>
+    <button
+      class="icon-btn sm"
+      disabled={!board.undo.canRedo}
+      onclick={() => runCommand('edit.redo')}
+      use:tip={{ text: t('common.redo'), command: 'edit.redo', placement: 'top' }}
+    >
       <Redo2 size={13} />
     </button>
   {/if}

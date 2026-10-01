@@ -2,8 +2,8 @@
 // purge by TTL), text versions for edits (diff + restore) and a cross-board query.
 // Wraps the base `board.apply` so the core mock stays untouched.
 
-import type { MockApi } from "../mock";
-import type { JournalEntry, LaneDto, Parent, TrashEntry } from "../types";
+import type { MockApi } from '../mock';
+import type { JournalEntry, LaneDto, Parent, TrashEntry } from '../types';
 
 interface Node {
   id: string;
@@ -29,40 +29,28 @@ interface Stored {
 }
 
 const DAY = 86_400_000;
-const titleOf = (content: string) =>
-  /^#\s+(.+)$/m.exec(content)?.[1]?.trim() ??
-  content.split("\n")[0]?.trim() ??
-  "";
+const titleOf = (content: string) => /^#\s+(.+)$/m.exec(content)?.[1]?.trim() ?? content.split('\n')[0]?.trim() ?? '';
 
-export function register(
-  methods: Record<string, (p: Record<string, any>) => unknown>,
-  api: MockApi,
-) {
+export function register(methods: Record<string, (p: Record<string, any>) => unknown>, api: MockApi) {
   const trash = new Map<string, Stored[]>();
   const blobs = new Map<string, string>();
   let n = 0;
   const hashOf = (text: string) => {
-    const h = (++n).toString(16).padStart(8, "0") + "a0b1c2d3";
+    const h = (++n).toString(16).padStart(8, '0') + 'a0b1c2d3';
     blobs.set(h, text);
     return h;
   };
   const board = (id: string) => api.boards.get(id) as Board;
   const list = (b: Board, p: Parent): string[] =>
-    p.kind === "lane"
-      ? (b.lanes.find((l) => l.id === p.id)?.order ?? [])
-      : p.kind === "card"
-        ? (b.nodes.get(p.id)?.children ?? [])
-        : b.rootOrder;
+    p.kind === 'lane' ? (b.lanes.find((l) => l.id === p.id)?.order ?? []) : p.kind === 'card' ? (b.nodes.get(p.id)?.children ?? []) : b.rootOrder;
   const subtree = (b: Board, id: string): Node[] => {
     const node = b.nodes.get(id);
     return node ? [node, ...node.children.flatMap((c) => subtree(b, c))] : [];
   };
   const clone = (x: Node): Node => ({ ...x, children: [...x.children] });
-  const tid = () => "t" + Math.random().toString(36).slice(2, 8).padEnd(6, "0");
+  const tid = () => 't' + Math.random().toString(36).slice(2, 8).padEnd(6, '0');
   const ttl = () => {
-    const v = Number(
-      (api.ls("settings", {}) as Record<string, unknown>)["trash.ttlDays"],
-    );
+    const v = Number((api.ls('settings', {}) as Record<string, unknown>)['trash.ttlDays']);
     return Number.isFinite(v) && v >= 1 ? v : 7;
   };
   const delta = (b: Board) => {
@@ -78,8 +66,8 @@ export function register(
     };
   };
 
-  const baseApply = methods["board.apply"];
-  methods["board.apply"] = (p) => {
+  const baseApply = methods['board.apply'];
+  methods['board.apply'] = (p) => {
     const b = board(p.board);
     const op = p.op as { op: string; [k: string]: any };
     const now = new Date().toISOString();
@@ -87,7 +75,7 @@ export function register(
     let beforeText: string | null = null;
     let details: Record<string, unknown> | undefined;
 
-    if (b && op.op === "trash") {
+    if (b && op.op === 'trash') {
       for (const id of op.nodes as string[]) {
         const node = b.nodes.get(id);
         if (!node) continue;
@@ -96,7 +84,7 @@ export function register(
         stored.push({
           entry: {
             id: tid(),
-            kind: "node",
+            kind: 'node',
             itemId: id,
             title,
             parent: node.parent,
@@ -116,7 +104,7 @@ export function register(
         stored.push({
           entry: {
             id: tid(),
-            kind: "lane",
+            kind: 'lane',
             itemId: k,
             title: lane.name,
             parent: null,
@@ -132,23 +120,21 @@ export function register(
       }
       details = {
         before: {
-          items: stored
-            .filter((s) => s.entry.kind === "node")
-            .map((s) => ({ id: s.entry.itemId, title: s.entry.title })),
+          items: stored.filter((s) => s.entry.kind === 'node').map((s) => ({ id: s.entry.itemId, title: s.entry.title })),
           lanes: stored.filter((s) => s.lane).map((s) => s.entry.title),
         },
       };
-    } else if (b && op.op === "writeCard") {
+    } else if (b && op.op === 'writeCard') {
       const node = b.nodes.get(op.id);
       beforeText = node?.content ?? null;
-    } else if (b && op.op === "setArchived") {
+    } else if (b && op.op === 'setArchived') {
       const items = (op.nodes as [string, boolean][]).map(([id, a]) => ({
         id,
-        title: titleOf(b.nodes.get(id)?.content ?? ""),
+        title: titleOf(b.nodes.get(id)?.content ?? ''),
         archived: a,
       }));
       const lanes = (op.lanes as [string, boolean][]).map(([id, a]) => ({
-        lane: b.lanes.find((l) => l.id === id)?.name ?? "",
+        lane: b.lanes.find((l) => l.id === id)?.name ?? '',
         archived: a,
       }));
       details = { after: { items, lanes } };
@@ -162,14 +148,12 @@ export function register(
     if (!b) return res;
     const j = b.journal[0];
 
-    if (op.op === "trash" && stored.length) {
+    if (op.op === 'trash' && stored.length) {
       trash.set(b.id, [...stored, ...(trash.get(b.id) ?? [])]);
       res.trashed = stored.map((s) => s.entry.id);
-    } else if (op.op === "restore") {
+    } else if (op.op === 'restore') {
       const all = trash.get(b.id) ?? [];
-      const picked = all.filter((s) =>
-        (op.entries as string[]).includes(s.entry.id),
-      );
+      const picked = all.filter((s) => (op.entries as string[]).includes(s.entry.id));
       for (const s of picked) {
         for (const node of s.nodes) b.nodes.set(node.id, clone(node));
         if (s.lane)
@@ -179,11 +163,7 @@ export function register(
           });
         else if (s.entry.parent) {
           const target = list(b, s.entry.parent);
-          target.splice(
-            Math.min(Math.max(0, s.entry.index), target.length),
-            0,
-            s.entry.itemId,
-          );
+          target.splice(Math.min(Math.max(0, s.entry.index), target.length), 0, s.entry.itemId);
         }
       }
       trash.set(
@@ -199,11 +179,11 @@ export function register(
         },
       };
       b.version++;
-      api.emit({ type: "boardDelta", delta: delta(b) } as never);
-    } else if (op.op === "writeCard" && beforeText !== null) {
-      const after = b.nodes.get(op.id)?.content ?? "";
+      api.emit({ type: 'boardDelta', delta: delta(b) } as never);
+    } else if (op.op === 'writeCard' && beforeText !== null) {
+      const after = b.nodes.get(op.id)?.content ?? '';
       if (j) {
-        j.kind = "edit";
+        j.kind = 'edit';
         j.before = hashOf(beforeText);
         j.after = hashOf(after);
         details = {
@@ -211,43 +191,28 @@ export function register(
           chars: after.length - beforeText.length,
         };
       }
-    } else if (op.op === "createCard") {
+    } else if (op.op === 'createCard') {
       details = {
-        after: { items: [{ id: op.id, title: titleOf(op.content ?? "") }] },
+        after: { items: [{ id: op.id, title: titleOf(op.content ?? '') }] },
       };
     }
     if (j && details) {
       j.details = details;
-      j.ids = [
-        ...new Set([
-          ...(j.ids ?? []),
-          ...(
-            (details.after as any)?.items ??
-            (details.before as any)?.items ??
-            []
-          ).map((i: { id: string }) => i.id),
-        ]),
-      ];
+      j.ids = [...new Set([...(j.ids ?? []), ...((details.after as any)?.items ?? (details.before as any)?.items ?? []).map((i: { id: string }) => i.id)])];
     }
     return res;
   };
 
-  methods["history.blob"] = (p) => {
+  methods['history.blob'] = (p) => {
     const v = blobs.get(String(p.hash));
-    if (v === undefined) throw new Error("blob pruned");
+    if (v === undefined) throw new Error('blob pruned');
     return v;
   };
 
   const query = (b: Board, f: Record<string, any> = {}) =>
-    b.journal.filter(
-      (e) =>
-        (!f.from || e.ts >= f.from) &&
-        (!f.to || e.ts <= f.to) &&
-        (!f.ids?.length || e.ids.some((id) => f.ids.includes(id))),
-    );
-  methods["history.query"] = (p) =>
-    query(board(p.board), p.filter).slice(0, p.filter?.limit ?? 200);
-  methods["history.queryAll"] = (p) => {
+    b.journal.filter((e) => (!f.from || e.ts >= f.from) && (!f.to || e.ts <= f.to) && (!f.ids?.length || e.ids.some((id) => f.ids.includes(id))));
+  methods['history.query'] = (p) => query(board(p.board), p.filter).slice(0, p.filter?.limit ?? 200);
+  methods['history.queryAll'] = (p) => {
     const ids: string[] = p.boards?.length ? p.boards : [...api.boards.keys()];
     return ids
       .flatMap((id) => (api.boards.has(id) ? query(board(id), p.filter) : []))
@@ -255,20 +220,18 @@ export function register(
       .slice(0, p.filter?.limit ?? 200);
   };
 
-  methods["trash.list"] = (p) => (trash.get(p.board) ?? []).map((s) => s.entry);
-  methods["trash.delete"] = (p) => {
+  methods['trash.list'] = (p) => (trash.get(p.board) ?? []).map((s) => s.entry);
+  methods['trash.delete'] = (p) => {
     const ids: string[] = p.ids ?? [];
     const all = trash.get(p.board) ?? [];
     const keep = all.filter((s) => !ids.includes(s.entry.id));
     trash.set(p.board, keep);
     return all.length - keep.length;
   };
-  methods["trash.purge"] = (p) => {
+  methods['trash.purge'] = (p) => {
     const all = trash.get(p.board) ?? [];
     const cutoff = Date.now() - ttl() * DAY;
-    const keep = p.all
-      ? []
-      : all.filter((s) => Date.parse(s.entry.deletedAt) > cutoff);
+    const keep = p.all ? [] : all.filter((s) => Date.parse(s.entry.deletedAt) > cutoff);
     trash.set(p.board, keep);
     return all.length - keep.length;
   };
