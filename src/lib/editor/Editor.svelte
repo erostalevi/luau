@@ -38,6 +38,12 @@
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let dirty = false;
   let lastSaved = '';
+  /** The card the current `view` holds. Saves always target this, never the
+   *  live props: those already point at the next card while switching. */
+  type Target = { boardId: string; cardId: string };
+  let target: Target | null = null;
+  const targets = new WeakMap<View, Target>();
+  const targetOf = (v: View | null) => (v ? (targets.get(v) ?? null) : null);
   let session = Math.random().toString(36).slice(2, 10);
   const outputs = new Map<string, CodeResult>();
   const previews = new Map<string, Promise<{ title: string; description: string; image: string | null; site: string } | null>>();
@@ -55,11 +61,11 @@
     return `# ${content}`;
   }
 
-  async function save(now = false) {
-    if (!view || readOnly) return;
+  async function save(now = false, v: View | null = view, tg: Target | null = targetOf(v)) {
+    if (!v || !tg || readOnly) return;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = null;
-    const content = view.state.doc.toString();
+    const content = v.state.doc.toString();
     if (content === lastSaved) {
       dirty = false;
       return;
@@ -68,8 +74,8 @@
       const toWrite = ensureTitle(content);
       lastSaved = content;
       try {
-        await rpc('card.write', { board: boardId, id: cardId, content: toWrite, session });
-        dirty = view ? view.state.doc.toString() !== lastSaved : false;
+        await rpc('card.write', { board: tg.boardId, id: tg.cardId, content: toWrite, session });
+        dirty = view && view === v ? view.state.doc.toString() !== lastSaved : false;
       } catch (e) {
         dirty = true;
         toast.error(t('editor.saveFailed', { message: (e as Error).message }));
@@ -86,9 +92,9 @@
   }
 
   /** `[[Some Title]]` typed by hand → `[[cardId]]` when exactly one card matches. */
-  async function resolveTitleLinks() {
-    if (!view || readOnly) return;
-    const doc = view.state.doc.toString();
+  async function resolveTitleLinks(v: View | null = view) {
+    if (!v || readOnly) return;
+    const doc = v.state.doc.toString();
     const found = [...doc.matchAll(/(!?)\[\[([^\[\]\n|#]+)((?:#[^\]\n|]*)?(?:\|[^\]\n]*)?)\]\]/g)].filter((m) => !/^c[a-z0-9]{6}$/.test(m[2].trim()));
     if (!found.length) return;
     const changes: { from: number; to: number; insert: string }[] = [];
@@ -98,13 +104,15 @@
       const exact = hits.filter((h) => h.title.trim().toLowerCase() === title.toLowerCase());
       if (exact.length === 1) changes.push({ from: m.index!, to: m.index! + m[0].length, insert: `${m[1]}[[${exact[0].id}${m[3] ?? ''}]]` });
     }
-    if (changes.length && view && view.state.doc.toString() === doc) view.dispatch({ changes, userEvent: 'input.resolveLinks' });
+    if (changes.length && v.state.doc.toString() === doc) v.dispatch({ changes, userEvent: 'input.resolveLinks' });
   }
 
-  async function flushAndSeal() {
-    await resolveTitleLinks();
-    await save(true);
-    await rpc('board.seal', { board: boardId, card: cardId }).catch(() => {});
+  /** Save and close the edit session of the card `v` holds (defaults: current). */
+  async function flushAndSeal(v: View | null = view, tg: Target | null = targetOf(v)) {
+    if (!v || !tg) return;
+    await resolveTitleLinks(v);
+    await save(true, v, tg);
+    await rpc('board.seal', { board: tg.boardId, card: tg.cardId }).catch(() => {});
     session = Math.random().toString(36).slice(2, 10);
   }
 
@@ -268,18 +276,20 @@
       onChange: () => scheduleSave(),
       onFocus: (focused, v) => {
         if (focused) {
-          setActiveEditor({ view: v, boardId, cardId });
+          const tg = targetOf(v);
+          if (tg) setActiveEditor({ view: v, boardId: tg.boardId, cardId: tg.cardId });
           cmdCtx.editorFocus = true;
         } else {
           cmdCtx.editorFocus = false;
-          void save();
+          void save(false, v);
         }
       },
       onSelection: (has) => (cmdCtx.editorHasSelection = has),
     });
     view = new EditorView({ state, parent: host! });
+    if (target) targets.set(view, target);
     if (settings.get<boolean>('editor.vim')) await setup.applyVim(view, true);
-    setActiveEditor({ view, boardId, cardId });
+    if (target) setActiveEditor({ view, boardId: target.boardId, cardId: target.cardId });
     if (autofocus) {
       requestAnimationFrame(() => {
         if (!view) return;
@@ -295,10 +305,12 @@
   async function load() {
     const key = `${boardId}/${cardId}`;
     if (key === loadedFor) return;
-    if (view && loadedFor) await flushAndSeal();
+    if (view) await flushAndSeal(view);
     loadedFor = key;
-    const content = await rpc<string>('card.read', { board: boardId, id: cardId }).catch(() => '');
+    const next: Target = { boardId, cardId };
+    const content = await rpc<string>('card.read', { board: next.boardId, id: next.cardId }).catch(() => '');
     if (loadedFor !== key) return;
+    target = next;
     await mountEditor(content);
   }
 
@@ -398,13 +410,15 @@
 
   onDestroy(() => {
     if (view) {
+      // Capture the view and its card: `view` is nulled right away so nothing
+      // else touches it, but the final save still needs its document.
       const v = view;
-      void flushAndSeal().finally(() => {
+      view = null;
+      cmdCtx.editorFocus = false;
+      void flushAndSeal(v).finally(() => {
         clearActiveEditor(v);
         v.destroy();
       });
-      cmdCtx.editorFocus = false;
-      view = null;
     }
   });
 

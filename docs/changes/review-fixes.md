@@ -59,3 +59,17 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   `remove_path` already uses `symlink_metadata`, so links are removed, never followed.
 - Tests: absolute id, `../` id, mismatching id, non-id folder, bad item id and garbage timestamp; the victim
   folder outside the board survives `purge(all=true)`.
+
+## B3 + B4 — Editor lost edits on close and could save into the wrong card (critical)
+
+- File: `src/lib/editor/Editor.svelte`.
+- Causes: (B3) `onDestroy` nulled `view` before the async `flushAndSeal()` reached `save()`, which then bailed out;
+  (B4) `save()` used the live `boardId`/`cardId` props, which already point at the next card while the old
+  document is still in `view`.
+- Fix: every `EditorView` is registered in a `WeakMap<View, Target>` with the card it was loaded for.
+  `save`, `resolveTitleLinks` and `flushAndSeal` take the view explicitly and resolve the card from that map;
+  `onDestroy` captures the view, flushes it, then destroys it. The blur handler and `setActiveEditor` use the
+  view's own target too.
+- Tests (manual, web build): type then Esc immediately → saved (was lost); type in card A then
+  `card.openNext` immediately → text only in card A, editor shows card B. `pnpm check` clean.
+- Recommended: a Playwright e2e test for both flows once e2e tooling exists.
