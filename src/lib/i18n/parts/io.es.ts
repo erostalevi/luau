@@ -69,6 +69,7 @@ export default {
     },
     settings: {
       invalid: 'Este no es un archivo de ajustes válido: {message}',
+      skipped: 'Se mantuvieron {count} ajustes de seguridad tal como están en este equipo',
     },
     tpl: {
       pick: 'Empieza con una plantilla',

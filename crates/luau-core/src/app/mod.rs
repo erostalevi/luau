@@ -351,7 +351,7 @@ impl Core {
             }
         }
         let mut store = BoardStore::open(path)?;
-        let ttl = setting_u64(&self.settings(), "trash.ttlDays", 7) as u32;
+        let ttl = setting_u64(&self.settings(), "trash.ttlDays", 7).clamp(1, 3650) as u32;
         let _ = trash::purge(path, ttl.max(1), false);
         let snap = store.state.snapshot();
         self.register(&store.state);
@@ -383,7 +383,7 @@ impl Core {
             if let Ok(b) = me.board(&bid) {
                 let s = me.settings();
                 if setting_bool(&s, "files.autoCleanup", true) {
-                    let ttl = setting_u64(&s, "files.unlinkedTtlDays", 7);
+                    let ttl = setting_u64(&s, "files.unlinkedTtlDays", 7).clamp(1, 3650);
                     let _ = files::sweep_unlinked(&mut b.lock(), ttl, false);
                 }
             }
@@ -1333,7 +1333,7 @@ impl Core {
 
     /// Remove unreferenced attachments now (`now`) or per the TTL setting.
     pub fn cleanup_unlinked(&self, board: &str, now: bool) -> Result<usize> {
-        let ttl = setting_u64(&self.settings(), "files.unlinkedTtlDays", 7);
+        let ttl = setting_u64(&self.settings(), "files.unlinkedTtlDays", 7).clamp(1, 3650);
         let b = self.board(board)?;
         let mut s = b.lock();
         let (n, ch) = files::sweep_unlinked(&mut s, ttl, now)?;
@@ -1346,7 +1346,7 @@ impl Core {
     }
 
     pub fn trash_purge(&self, board: &str, all: bool) -> Result<usize> {
-        let ttl = setting_u64(&self.settings(), "trash.ttlDays", 7) as u32;
+        let ttl = setting_u64(&self.settings(), "trash.ttlDays", 7).clamp(1, 3650) as u32;
         trash::purge(&self.board_root(board)?, ttl, all)
     }
 

@@ -69,6 +69,7 @@ export default {
     },
     settings: {
       invalid: 'This is not a valid settings file: {message}',
+      skipped: '{count} security-related settings were kept as they are on this computer',
     },
     tpl: {
       pick: 'Start from a template',

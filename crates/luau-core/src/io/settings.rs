@@ -35,6 +35,28 @@ pub struct SettingsBundle {
     pub explorer: Option<Value>,
     #[serde(default)]
     pub templates: Vec<CardTemplate>,
+    /// Keys present in the file that were not imported (security-sensitive).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skipped: Vec<String>,
+}
+
+/// Settings that can run programs, send data elsewhere, widen what the app reads
+/// or weaken confirmations. A bundle from someone else must never change them;
+/// the UI keeps the current local values.
+pub const PROTECTED_KEYS: &[&str] = &[
+    "editor.python",
+    "ai.endpoint",
+    "ai.provider",
+    "discovery.roots",
+    "integrations.allowPush",
+    "integrations.allowPull",
+    "integrations.confirmPush",
+    "integrations.confirmPull",
+    "integrations.allowInsecure",
+];
+
+pub fn is_protected_key(k: &str) -> bool {
+    PROTECTED_KEYS.contains(&k)
 }
 
 fn is_secret_key(k: &str) -> bool {
@@ -88,9 +110,16 @@ pub fn validate(v: Value) -> Result<SettingsBundle> {
     if settings.len() > MAX_KEYS || settings.keys().any(|k| k.is_empty() || k.len() > 200) {
         return Err(Error::invalid("invalid settings keys"));
     }
+    let mut skipped = Vec::new();
     let settings: Map<String, Value> = settings
         .into_iter()
-        .filter(|(k, _)| !is_secret_key(k))
+        .filter(|(k, _)| {
+            let keep = !is_secret_key(k) && !is_protected_key(k);
+            if !keep && is_protected_key(k) {
+                skipped.push(k.clone());
+            }
+            keep
+        })
         .collect();
     let keybindings = match o.remove("keybindings") {
         None | Some(Value::Null) => vec![],
@@ -125,6 +154,7 @@ pub fn validate(v: Value) -> Result<SettingsBundle> {
         keybindings,
         explorer,
         templates,
+        skipped,
     })
 }
 
@@ -179,6 +209,18 @@ mod tests {
         }))
         .unwrap();
         assert_eq!(b.settings.len(), 1, "secret-looking keys are dropped");
+        let p = validate(json!({
+            "format": FORMAT, "version": 1,
+            "settings": {"editor.python": "/tmp/python-evil", "ai.endpoint": "https://x.example", "trash.ttlDays": 0, "theme": "dark"},
+        }))
+        .unwrap();
+        let mut skipped = p.skipped.clone();
+        skipped.sort();
+        assert_eq!(
+            skipped,
+            vec!["ai.endpoint".to_string(), "editor.python".to_string()]
+        );
+        assert!(p.settings.contains_key("theme") && !p.settings.contains_key("editor.python"));
         assert_eq!(b.keybindings.len(), 1);
         // Legacy shape from earlier builds.
         assert!(validate(json!({"luau": 1, "settings": {}})).is_ok());

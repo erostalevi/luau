@@ -69,6 +69,7 @@ export default {
     },
     settings: {
       invalid: 'Este não é um arquivo de configurações válido: {message}',
+      skipped: '{count} configurações de segurança foram mantidas como estão neste computador',
     },
     tpl: {
       pick: 'Comece com um modelo',

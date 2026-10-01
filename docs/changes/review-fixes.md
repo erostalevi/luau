@@ -220,3 +220,15 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
   no longer lets arbitrary code run by naming A. The editor saves before running a cell so the check sees it.
 - Web build: the in-app confirm stays (mock backend).
 - Tests: `trust_is_per_board_only`, updated `schedules_crud_and_trust`.
+
+## D2 — Settings import could change security-sensitive settings; TTLs not clamped (medium)
+
+- Files: `crates/luau-core/src/io/settings.rs` (`PROTECTED_KEYS`, `skipped`, test), `app/mod.rs` (TTL clamps),
+  `src/lib/io/io.commands.ts`, `src/lib/i18n/parts/io.{en,es,pt}.ts`.
+- A shared settings bundle can no longer set `editor.python` (would run that binary), `ai.endpoint`/`ai.provider`
+  (card text sent elsewhere), `discovery.roots`, or the integrations push/pull/confirm/insecure guards. They are
+  dropped by the core validator and reported in `skipped`; the UI keeps this computer's current values for them
+  (instead of resetting to defaults) and shows how many were kept.
+- `trash.ttlDays` and `files.unlinkedTtlDays` are clamped to 1–3650 days in the core, so `0` can no longer mean
+  "purge/sweep everything immediately".
+- Tests: `validates_bundles` extended (protected keys skipped, others imported).

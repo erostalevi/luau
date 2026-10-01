@@ -261,10 +261,13 @@ async function exportSettings() {
   }
 }
 
+/** Mirrors `PROTECTED_KEYS` in crates/luau-core/src/io/settings.rs. */
+const PROTECTED_SETTINGS = ['editor.python', 'ai.endpoint', 'ai.provider', 'discovery.roots', 'integrations.allowPush', 'integrations.allowPull', 'integrations.confirmPush', 'integrations.confirmPull', 'integrations.allowInsecure'];
+
 async function importSettings() {
   const files = isTauri ? await pickFile(t('commands.io.importSettings'), [{ name: 'JSON', extensions: ['json'] }]) : ['luau-settings.json'];
   if (!files?.length) return;
-  let bundle: { settings: Record<string, unknown>; keybindings: any[]; templates: unknown[] };
+  let bundle: { settings: Record<string, unknown>; keybindings: any[]; templates: unknown[]; skipped?: string[] };
   try {
     bundle = await rpc('settings.import', { path: files[0] });
   } catch (e) {
@@ -272,9 +275,13 @@ async function importSettings() {
   }
   const ok = await confirm({ title: t('import.settingsTitle'), message: t('import.settingsMessage'), confirmLabel: t('common.import') });
   if (!ok) return;
-  settings.replaceAll(bundle.settings);
+  // Security-sensitive keys (interpreter path, AI endpoint, discovery roots,
+  // push/pull guards) are never imported: keep this computer's values.
+  const keep = Object.fromEntries(PROTECTED_SETTINGS.map((k) => [k, settings.all()[k]]).filter(([, v]) => v !== undefined));
+  settings.replaceAll({ ...bundle.settings, ...keep });
   await saveUserKeybindings(bundle.keybindings);
   toast.success(t('toasts.settingsImported'));
+  if (bundle.skipped?.length) toast.info(t('io.settings.skipped', { count: bundle.skipped.length }));
 }
 
 export const commands: Command[] = [
