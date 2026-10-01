@@ -165,3 +165,19 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - Follow-up (found while verifying C5): search hits right after opening a board could show the board id instead
   of its name, because the board row in the search DB was only written by the background re-index.
   `open_board` now records the board name synchronously. Full suite run 10× without failures.
+
+## C6 — Keyboard: layouts, AltGr, stuck recording, shortcuts hijacking the editor/buttons (high)
+
+- Files: `src/lib/keybindings/keys.ts` (+ `keys.test.ts`), `src/lib/keybindings/defaults.ts`,
+  `src/lib/commands/context.svelte.ts`, `src/lib/views/settings/KeybindingsView.svelte`.
+- Letters now follow the active layout (`e.key`), so ⌘Z is Z on AZERTY/QWERTZ; non-Latin output (⌥ on macOS,
+  Cyrillic…) falls back to the physical key. Digits/punctuation/named keys still use `e.code`.
+- AltGr (Ctrl+Alt on Windows/Linux) producing a character is never treated as a shortcut (`@ # | { }` on es/de/pl).
+- `kb.recording` is reset when the keybinding editor unmounts, and ending a key edit keeps "record keys" search
+  state instead of always clearing it — shortcuts can no longer stay globally suspended.
+- New context key `buttonFocus` (button/link/select focused outside a card): Enter/Space/Tab/Shift+Tab keep their
+  native meaning instead of opening/peeking/indenting cards.
+- Editor keys no longer hijacked: ⌘[ / ⌘] (indent) and ⌥⇧↑/↓ (copy line) only navigate cards outside the editor;
+  new in-editor alternatives: macOS ⌃- / ⌃⇧-, Windows/Linux Alt+←/→. `mod+shift+l` (orientation) is not active in
+  the editor (select all matches). Emacs preset `alt+x` and `ctrl+x ctrl+f` are disabled while typing (Cut and ≈).
+- Tests: `keys.test.ts` (AZERTY, QWERTZ, ⌥N, Cyrillic, digits, AltGr, real Ctrl+Alt); vitest total passes.

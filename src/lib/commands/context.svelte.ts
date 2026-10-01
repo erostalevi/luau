@@ -7,6 +7,8 @@ export const ctx = $state<Record<string, unknown>>({
   editorFocus: false,
   editorOpen: false,
   inputFocus: false,
+  /** A button/link/select has focus: Enter/Space/Tab must keep their native meaning. */
+  buttonFocus: false,
   paletteOpen: false,
   modalOpen: false,
   explorerFocus: false,
@@ -37,6 +39,7 @@ export function trackFocus() {
     const isInput = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) && !inEditor;
     ctx.editorFocus = inEditor;
     ctx.inputFocus = isInput || inEditor;
+    ctx.buttonFocus = !!el && !el.closest('[data-card]') && (el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'SELECT' || el.getAttribute('role') === 'button');
   };
   document.addEventListener('focusin', update);
   document.addEventListener('focusout', () => setTimeout(update, 0));

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { Search, Keyboard, FileJson, RotateCcw, Plus, Pencil, Trash2, Copy, Filter, Layers } from '@lucide/svelte';
   import { allCommands, commandTitle, commandCategory, getCommand, runCommand } from '$lib/commands/registry.svelte';
   import { effectiveBindings, kb, saveUserKeybindings } from '$lib/keybindings/resolver.svelte';
@@ -15,6 +16,10 @@
   import { tip } from '$lib/components/tooltip';
   import Kbd from '$lib/components/Kbd.svelte';
   import { t } from '$lib/i18n/index.svelte';
+
+  // Leaving the view (tab closed or switched) must never leave every shortcut
+  // suspended.
+  onDestroy(() => (kb.recording = false));
 
   let query = $state('');
   let recordSearch = $state(false);
@@ -55,7 +60,8 @@
 
   function stopEdit() {
     editing = null;
-    kb.recording = false;
+    // Search-by-keys recording may still be on.
+    kb.recording = recordSearch;
   }
 
   async function commitEdit() {

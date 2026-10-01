@@ -1,5 +1,6 @@
 // Key normalization. Bindings are strings like "mod+shift+p" or chords
-// "mod+k mod+s". Keys are recorded by physical code so they work on any layout.
+// "mod+k mod+s". Letters follow the active layout (⌘Z is "z" on AZERTY too);
+// digits, punctuation and named keys use the physical code.
 
 export const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 export const isWindows = typeof navigator !== 'undefined' && /Win/.test(navigator.platform || navigator.userAgent);
@@ -42,7 +43,12 @@ const MODIFIER_CODES = new Set(['ShiftLeft', 'ShiftRight', 'ControlLeft', 'Contr
 export function keyName(e: KeyboardEvent): string | null {
   if (MODIFIER_CODES.has(e.code)) return null;
   if (CODE_MAP[e.code]) return CODE_MAP[e.code];
-  if (/^Key[A-Z]$/.test(e.code)) return e.code.slice(3).toLowerCase();
+  if (/^Key[A-Z]$/.test(e.code)) {
+    // Prefer the character the layout produces (AZERTY/QWERTZ). With ⌥ on macOS
+    // or non-Latin layouts the key is not a Latin letter: use the physical key.
+    const k = e.key?.toLowerCase();
+    return k && /^[a-z]$/.test(k) ? k : e.code.slice(3).toLowerCase();
+  }
   if (/^Digit\d$/.test(e.code)) return e.code.slice(5);
   if (/^Numpad\d$/.test(e.code)) return e.code.slice(6);
   if (/^F\d{1,2}$/.test(e.code)) return e.code.toLowerCase();
@@ -53,6 +59,9 @@ export function keyName(e: KeyboardEvent): string | null {
 
 /** Normalize an event into "ctrl+alt+shift+cmd+key" (fixed modifier order). */
 export function eventToStroke(e: KeyboardEvent): string | null {
+  // AltGr (reported as Ctrl+Alt on Windows/Linux) types characters such as
+  // @ # | { } on many layouts: never treat it as a shortcut.
+  if (e.getModifierState?.('AltGraph') && e.key?.length === 1) return null;
   const k = keyName(e);
   if (!k) return null;
   const parts: string[] = [];
