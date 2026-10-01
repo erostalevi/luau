@@ -145,7 +145,14 @@ export const editorCommands: Command[] = [
     run: withView((m) => m.toggleLinePrefix('task')),
   },
   { id: 'editor.toggleTask', title: 'commands.editor.toggleTask', category: 'editor', icon: ListChecks, when: WHEN, run: withView((m) => m.toggleTaskDone) },
-  { id: 'editor.toggleQuote', title: 'commands.editor.toggleQuote', category: 'editor', icon: Quote, when: WHEN, run: withView((m) => m.toggleLinePrefix('quote')) },
+  {
+    id: 'editor.toggleQuote',
+    title: 'commands.editor.toggleQuote',
+    category: 'editor',
+    icon: Quote,
+    when: WHEN,
+    run: withView((m) => m.toggleLinePrefix('quote')),
+  },
   {
     id: 'editor.insertCallout',
     title: 'commands.editor.insertCallout',
@@ -215,7 +222,14 @@ export const editorCommands: Command[] = [
     },
   },
   { id: 'editor.addTableRow', title: 'commands.editor.addTableRow', category: 'editor', icon: Rows3, when: WHEN, run: withView((m) => m.addTableRow) },
-  { id: 'editor.addTableColumn', title: 'commands.editor.addTableColumn', category: 'editor', icon: Columns3, when: WHEN, run: withView((m) => m.addTableColumn) },
+  {
+    id: 'editor.addTableColumn',
+    title: 'commands.editor.addTableColumn',
+    category: 'editor',
+    icon: Columns3,
+    when: WHEN,
+    run: withView((m) => m.addTableColumn),
+  },
   { id: 'editor.formatTable', title: 'commands.editor.formatTable', category: 'editor', icon: Table, when: WHEN, run: withView((m) => m.formatTable) },
   {
     id: 'editor.insertLink',
@@ -289,8 +303,22 @@ export const editorCommands: Command[] = [
       void import('@codemirror/autocomplete').then((m) => m.startCompletion(e.view));
     },
   },
-  { id: 'editor.insertDivider', title: 'commands.editor.insertDivider', category: 'editor', icon: Minus, when: WHEN, run: withView((m) => m.insertBlock('---')) },
-  { id: 'editor.insertMath', title: 'commands.editor.insertMath', category: 'editor', icon: Sigma, when: WHEN, run: withView((m) => m.insertBlock('$$\n\n$$', 3)) },
+  {
+    id: 'editor.insertDivider',
+    title: 'commands.editor.insertDivider',
+    category: 'editor',
+    icon: Minus,
+    when: WHEN,
+    run: withView((m) => m.insertBlock('---')),
+  },
+  {
+    id: 'editor.insertMath',
+    title: 'commands.editor.insertMath',
+    category: 'editor',
+    icon: Sigma,
+    when: WHEN,
+    run: withView((m) => m.insertBlock('$$\n\n$$', 3)),
+  },
   {
     id: 'editor.insertMermaid',
     title: 'commands.editor.insertMermaid',
