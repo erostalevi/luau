@@ -161,6 +161,8 @@ function helpItems(): QuickItem<Action>[] {
 export async function openPalette(initial = '') {
   const res = await quickPick<Action>([], {
     value: initial,
+    // A mode prefix ('>', '#', '@') must survive the first keystroke: caret after it, nothing selected.
+    selectAll: false,
     placeholder: t('palette.placeholder'),
     selfFiltered: true,
     onValue: async (text) => {

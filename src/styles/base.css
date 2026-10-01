@@ -118,6 +118,8 @@ a {
   font-family: var(--font-mono);
 }
 
+/* WKWebView/WebView2 ignore app-region: in Tauri the window is moved by elements with
+   `data-tauri-drag-region="deep"` (buttons, tabs and other interactive children excluded). */
 .drag-region {
   -webkit-app-region: drag;
   app-region: drag;

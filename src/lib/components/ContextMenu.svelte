@@ -4,21 +4,34 @@
   import { runCommand } from '$lib/commands/registry.svelte';
   import Kbd from './Kbd.svelte';
   import ContextMenu from './ContextMenu.svelte';
+  import { placeMenu, menuIn, menuOut } from './menuPlacement';
 
   let {
     items = null,
     x = 0,
     y = 0,
+    flipX,
     nested = false,
     keyboard = false,
     onclose,
     onback,
-  }: { items?: MenuItem[] | null; x?: number; y?: number; nested?: boolean; keyboard?: boolean; onclose?: () => void; onback?: () => void } = $props();
+  }: {
+    items?: MenuItem[] | null;
+    x?: number;
+    y?: number;
+    flipX?: number;
+    nested?: boolean;
+    keyboard?: boolean;
+    onclose?: () => void;
+    onback?: () => void;
+  } = $props();
 
   let box: HTMLDivElement | undefined = $state();
   let pos = $state({ x: 0, y: 0 });
+  // Hidden until measured and clamped, so the first painted frame is already at the cursor.
+  let placed = $state(false);
   let active = $state(-1);
-  let sub = $state<{ i: number; x: number; y: number; keyboard: boolean } | null>(null);
+  let sub = $state<{ i: number; x: number; y: number; flipX: number; keyboard: boolean } | null>(null);
 
   const list = $derived(items ?? menu.items);
   const visible = $derived(nested ? true : menu.open);
@@ -27,16 +40,17 @@
     void menu.gen;
     const bx = nested ? x : menu.x;
     const by = nested ? y : menu.y;
+    const fx = nested ? flipX : undefined;
     pos = { x: bx, y: by };
+    placed = false;
     active = -1;
     sub = null;
+    // Runs after the DOM update and before the browser paints.
     queueMicrotask(() => {
       if (!box) return;
-      const r = box.getBoundingClientRect();
-      pos = {
-        x: Math.max(6, Math.min(bx, window.innerWidth - r.width - 6)),
-        y: Math.max(6, Math.min(by, window.innerHeight - r.height - 6)),
-      };
+      // offsetWidth/Height ignore the intro's scale transform.
+      pos = placeMenu(bx, by, box.offsetWidth, box.offsetHeight, window.innerWidth, window.innerHeight, fx);
+      placed = true;
       // Submenus opened from the keyboard take focus and select their first item.
       if (!nested || keyboard) box.focus();
       if (nested && keyboard) active = list.findIndex((it) => !it.separator && !it.disabled);
@@ -48,7 +62,7 @@
     if (it.submenu) {
       const el = (ev?.currentTarget as HTMLElement) ?? box?.children[i];
       const r = (el as HTMLElement).getBoundingClientRect();
-      sub = { i, x: r.right - 4, y: r.top - 4, keyboard: !ev };
+      sub = { i, x: r.right - 4, y: r.top - 4, flipX: (box?.getBoundingClientRect().left ?? r.left) + 4, keyboard: !ev };
       return;
     }
     close();
@@ -85,18 +99,23 @@
   }
 </script>
 
+{#if visible && list.length && !nested}
+  <div class="scrim" role="presentation" onpointerdown={close} oncontextmenu={(e) => (e.preventDefault(), close())}></div>
+{/if}
 {#if visible && list.length}
-  {#if !nested}
-    <div class="scrim" role="presentation" onpointerdown={close} oncontextmenu={(e) => (e.preventDefault(), close())}></div>
-  {/if}
   <div
     bind:this={box}
     class="menu card-surface glass"
     class:nested
     role="menu"
     tabindex="-1"
-    style:transform="translate({pos.x}px, {pos.y}px)"
+    style:left="{pos.x}px"
+    style:top="{pos.y}px"
+    style:visibility={placed ? null : 'hidden'}
     onkeydown={onkey}
+    in:menuIn|global
+    out:menuOut|global
+    onoutrostart={(e) => ((e.currentTarget as HTMLElement).inert = true)}
   >
     {#each list as it, i (i)}
       {#if it.separator}
@@ -139,6 +158,7 @@
       items={list[sub.i].submenu}
       x={sub.x}
       y={sub.y}
+      flipX={sub.flipX}
       nested
       keyboard={sub.keyboard}
       onclose={close}
@@ -165,7 +185,7 @@
     max-width: 320px;
     padding: 5px;
     border-radius: var(--r-md);
-    animation: pop-in var(--dur) var(--ease-out);
+    transform-origin: top left;
     outline: none;
   }
   .item {
