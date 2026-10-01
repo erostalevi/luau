@@ -79,3 +79,26 @@ export function groupByLane(hits: SearchHit[], noLane: string): HitGroup[] {
   const list = [...map.values()];
   return [...list.filter((g) => g.key !== '\u0000'), ...list.filter((g) => g.key === '\u0000')];
 }
+
+/** Group hits by tag (a hit appears under each of its tags); untagged last. */
+export function groupByTag(hits: SearchHit[], noTag: string): HitGroup[] {
+  const map = new Map<string, HitGroup>();
+  const none: HitGroup = { key: '\u0000', label: noTag, hits: [] };
+  for (const h of hits) {
+    const tags = [...new Set(h.tags.map((x) => x.trim()).filter(Boolean))];
+    if (!tags.length) none.hits.push(h);
+    for (const tag of tags) {
+      const key = tag.toLowerCase();
+      let g = map.get(key);
+      if (!g) map.set(key, (g = { key, label: `#${tag}`, hits: [] }));
+      if (!g.hits.includes(h)) g.hits.push(h);
+    }
+  }
+  const list = [...map.values()].sort((a, b) => b.hits.length - a.hits.length || a.label.localeCompare(b.label));
+  return none.hits.length ? [...list, none] : list;
+}
+
+/** Flatten groups into the navigable order, skipping collapsed groups. */
+export function navOrder(groups: HitGroup[], collapsed: { has(key: string): boolean }): SearchHit[] {
+  return groups.flatMap((g) => (collapsed.has(g.key) ? [] : g.hits));
+}

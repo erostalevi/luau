@@ -3,8 +3,10 @@
 //
 //   login "exact phrase" -draft tag:backend -tag:wip board:"Project Alpha"
 //   lane:Doing is:open has:image due:<2026-10-10 updated:>=2026-09-01
-//   links:c1a2b3c linkedfrom:c1a2b3c case:yes in:title
+//   links:c1a2b3c linkedfrom:c1a2b3c case:yes in:title @ana
 //
+// `@person` is UI sugar for `mention:person` (serialized back as `@person`;
+// `toText(q, { sugar: false })` produces the backend form).
 // Unknown `key:value` pairs are treated as plain text (like the backend).
 
 export type Cmp = 'eq' | 'lt' | 'le' | 'gt' | 'ge';
@@ -69,6 +71,10 @@ export function parse(input: string): Query {
   for (const tok of tokenize(input)) {
     const negate = tok.startsWith('-') && tok.length > 1;
     const body = negate ? tok.slice(1) : tok;
+    if (/^@[\p{L}\p{N}_.-]+$/u.test(body)) {
+      q.filters.push({ key: 'mention', cmp: 'eq', value: body.slice(1), negate });
+      continue;
+    }
     const colon = body.indexOf(':');
     if (colon >= 0) {
       const k = body.slice(0, colon);
@@ -97,13 +103,18 @@ export function parse(input: string): Query {
 const OPS: Record<Cmp, string> = { eq: '', lt: '<', le: '<=', gt: '>', ge: '>=' };
 
 /** Serialize back to the canonical text form (same as `Query::to_text`). */
-export function toText(q: Query): string {
+export function toText(q: Query, opts: { sugar?: boolean } = {}): string {
+  const sugar = opts.sugar !== false;
   const parts: string[] = [];
   for (const t of q.terms) {
     const v = t.phrase || t.value.includes(' ') ? `"${t.value}"` : t.value;
     parts.push(t.negate ? `-${v}` : v);
   }
   for (const f of q.filters) {
+    if (sugar && f.key === 'mention' && f.cmp === 'eq' && /^[\p{L}\p{N}_.-]+$/u.test(f.value)) {
+      parts.push(`${f.negate ? '-' : ''}@${f.value}`);
+      continue;
+    }
     const v = f.value.includes(' ') ? `"${f.value}"` : f.value;
     parts.push(`${f.negate ? '-' : ''}${f.key}:${OPS[f.cmp]}${v}`);
   }

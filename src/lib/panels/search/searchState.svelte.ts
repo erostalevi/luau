@@ -9,10 +9,14 @@ import { parse, toText, type Query } from './query';
 
 export * from './results';
 
+export type GroupBy = 'board' | 'lane' | 'tag';
+
 export interface SavedSearch {
   id: string;
   name: string;
   q: string;
+  /** Lanes of the virtual board. */
+  groupBy?: GroupBy;
 }
 
 export const search = $state({
@@ -21,6 +25,10 @@ export const search = $state({
   limit: 200,
   saved: [] as SavedSearch[],
   savedLoaded: false,
+  /** Result grouping in the panel. */
+  groupBy: 'board' as Exclude<GroupBy, 'tag'>,
+  /** Last `ui.searchFocus` token handled by the panel. */
+  focusSeen: 0,
 });
 
 export function loadSaved() {
@@ -44,6 +52,11 @@ export function addSaved(name: string, q: string): SavedSearch {
 
 export function renameSaved(id: string, name: string) {
   search.saved = search.saved.map((s) => (s.id === id ? { ...s, name: name.trim() } : s));
+  persistSaved();
+}
+
+export function updateSaved(id: string, patch: Partial<Omit<SavedSearch, 'id'>>) {
+  search.saved = search.saved.map((s) => (s.id === id ? { ...s, ...patch } : s));
   persistSaved();
 }
 
@@ -83,7 +96,7 @@ export function prepare(text: string): { q: string; boards: string[]; parsed: Qu
     boards.push(id);
     return false;
   });
-  return { q: toText({ ...parsed, filters: rest }), boards, parsed };
+  return { q: toText({ ...parsed, filters: rest }, { sugar: false }), boards, parsed };
 }
 
 export function hasContent(text: string): boolean {

@@ -20,6 +20,8 @@ export const explorer = $state({
   renaming: '',
   /** Incremented to ask the tree to scroll `focusKey` into view. */
   revealTick: 0,
+  /** Incremented to move DOM focus into the tree (explorer.focus). */
+  focusTick: 0,
   loaded: false,
 });
 
