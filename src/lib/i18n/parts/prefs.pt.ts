@@ -194,6 +194,10 @@ export default {
       'files.remoteImages': { label: 'Carregar imagens da web', desc: 'Mostra dentro dos cartões imagens hospedadas na internet.' },
       'discovery.roots': { label: 'Procurar quadros em', desc: 'Pastas que o Luau verifica para encontrar seus quadros. Vazio significa sua pasta pessoal.' },
       'discovery.exclude': { label: 'Ignorar pastas chamadas', desc: 'Nomes de pastas que nunca são verificadas.' },
+      'discovery.protectedFolders': {
+        label: 'Procurar também em Mesa, Documentos e Transferências',
+        desc: 'No macOS essas pastas pedem permissão uma vez. Elas são verificadas por último, então os outros quadros aparecem antes.',
+      },
       'discovery.rescanMinutes': { label: 'Procurar novamente a cada', desc: 'Minutos entre verificações em segundo plano (0 = só ao iniciar).' },
       'explorer.showHidden': { label: 'Mostrar quadros ocultos', desc: 'Mostra os quadros que você ocultou do explorador.' },
       'search.caseSensitive': { label: 'Diferenciar maiúsculas por padrão', desc: 'Respeita exatamente maiúsculas e minúsculas.' },

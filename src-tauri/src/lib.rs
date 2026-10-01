@@ -123,12 +123,9 @@ pub fn run() {
                 windows::create(&handle, "main", "")?;
             }
             luau_core::integrations::start_watcher(core.clone());
-            // Discover boards shortly after start (never blocks the UI).
-            let c = core.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_millis(1500));
-                c.rescan();
-            });
+            // Discover boards shortly after start (never blocks the UI), then
+            // on the `discovery.rescanMinutes` schedule.
+            core.start_discovery(std::time::Duration::from_millis(1500));
             Ok(())
         })
         .on_window_event(|window, event| {

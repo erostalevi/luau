@@ -137,6 +137,7 @@ export const CORE_SETTINGS: SettingDef[] = [
   // discovery
   s('discovery.roots', 'paths', [], 'discovery'),
   s('discovery.exclude', 'list', [], 'discovery'),
+  s('discovery.protectedFolders', 'boolean', true, 'discovery'),
   s('discovery.rescanMinutes', 'number', 30, 'discovery', { min: 0, max: 1440, step: 5 }),
   s('explorer.showHidden', 'boolean', false, 'discovery'),
 

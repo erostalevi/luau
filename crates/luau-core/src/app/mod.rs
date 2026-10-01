@@ -1,6 +1,7 @@
 //! Application service: owns open boards, the registry, the search index and
 //! history journaling. Framework-free; the Tauri layer is a thin adapter.
 
+pub mod activity;
 pub mod files;
 pub mod registry;
 mod trash_ops;
@@ -84,13 +85,9 @@ pub enum CoreEvent {
         key: String,
         params: Value,
     },
-    #[serde(rename_all = "camelCase")]
-    Progress {
-        task: String,
-        done: usize,
-        total: usize,
-        label: Option<String>,
-    },
+    /// Background task lifecycle (discovery, indexing). Every `started` is
+    /// followed by exactly one `finished` or `failed` (see `activity::TaskGuard`).
+    Task(activity::TaskEvent),
     /// Generic channel for integrations, summaries, schedulers.
     #[serde(rename_all = "camelCase")]
     Custom { name: String, payload: Value },
@@ -138,6 +135,14 @@ pub struct Core {
     pub(crate) watchers: Mutex<HashMap<String, notify::RecommendedWatcher>>,
     pub(crate) watch_tx: Mutex<Option<std::sync::mpsc::Sender<watch::WatchMsg>>>,
     scanning: std::sync::atomic::AtomicBool,
+    /// A rescan was requested (coalesced: one more pass, never a loop).
+    rescan_wanted: std::sync::atomic::AtomicBool,
+    /// Discovery walker threads still alive (possibly blocked on a prompt).
+    discovery_inflight: crate::discovery::InFlight,
+    /// Last lifecycle event per background task.
+    tasks: activity::TaskBoard,
+    /// When the last discovery pass ended (for `discovery.rescanMinutes`).
+    last_scan: Mutex<Option<Instant>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -194,6 +199,10 @@ impl Core {
             watchers: Mutex::new(HashMap::new()),
             watch_tx: Mutex::new(None),
             scanning: std::sync::atomic::AtomicBool::new(false),
+            rescan_wanted: std::sync::atomic::AtomicBool::new(false),
+            discovery_inflight: Arc::default(),
+            tasks: activity::TaskBoard::default(),
+            last_scan: Mutex::new(None),
         });
         watch::start(&core);
         Ok(core)
@@ -1253,31 +1262,53 @@ impl Core {
     }
 
     /// Index a board that is not open (discovery), without keeping it in memory.
-    pub fn index_closed_board(&self, path: &Path) {
-        let Ok(store) = BoardStore::open(path) else {
-            return;
-        };
+    pub fn index_closed_board(&self, path: &Path) -> Result<()> {
+        self.index_store(&BoardStore::open(path)?)
+    }
+
+    /// Bring the search index up to date with a loaded store (search errors only).
+    fn index_store(&self, store: &BoardStore) -> Result<()> {
         let st = &store.state;
         let kind = if st.manifest.kind == BoardKind::Files {
             "doc"
         } else {
             "card"
         };
-        let _ = self
-            .search
-            .set_board(&st.manifest.id, &st.manifest.name, kind);
+        self.search
+            .set_board(&st.manifest.id, &st.manifest.name, kind)?;
         let existing = self.search.hashes(&st.manifest.id);
         let docs: Vec<_> = search::docs_for_board(st, &|_| None, &|id| store.read_content(id).ok())
             .into_iter()
             .filter(|d| existing.get(&d.id) != Some(&d.hash))
             .collect();
-        let _ = self.search.upsert(&docs);
+        self.search.upsert(&docs)?;
         let keep: HashSet<String> = st.nodes.keys().cloned().collect();
-        let _ = self.search.retain(&st.manifest.id, &keep);
+        self.search.retain(&st.manifest.id, &keep)?;
+        Ok(())
     }
 
     pub fn search(&self, q: &str, opts: &SearchOptions) -> Result<Vec<SearchHit>> {
         self.search.search(q, opts)
+    }
+
+    // --- background task status ---------------------------------------------------
+
+    /// Emitter for `activity::TaskGuard`: records the last event per task and
+    /// forwards it to the UI.
+    pub fn task_emitter(self: &Arc<Self>) -> activity::Emit {
+        let me = Arc::downgrade(self);
+        Arc::new(move |e: activity::TaskEvent| {
+            if let Some(me) = me.upgrade() {
+                me.tasks.record(&e);
+                me.sink.emit(CoreEvent::Task(e));
+            }
+        })
+    }
+
+    /// Last lifecycle event of every background task (for windows that load
+    /// after the events were sent).
+    pub fn task_status(&self) -> Vec<activity::TaskEvent> {
+        self.tasks.snapshot()
     }
 
     // --- discovery ----------------------------------------------------------------
@@ -1299,64 +1330,267 @@ impl Core {
             o.excludes
                 .extend(ex.iter().filter_map(|x| x.as_str()).map(str::to_string));
         }
+        // Privacy-prompted folders (macOS Desktop/Documents/Downloads) are never
+        // touched while the first-run dialog is open, then only when opted in.
+        o.include_protected = setting_bool(&s, "general.firstRunDone", false)
+            && setting_bool(&s, "discovery.protectedFolders", true);
         o
     }
 
+    /// Settings that change what discovery finds.
+    fn discovery_settings(v: &Value) -> [Value; 4] {
+        [
+            "discovery.roots",
+            "discovery.exclude",
+            "discovery.protectedFolders",
+            "general.firstRunDone",
+        ]
+        .map(|k| v.get(k).cloned().unwrap_or(Value::Null))
+    }
+
+    /// Save settings; rescan when a discovery setting changed.
+    pub fn update_settings(self: &Arc<Self>, v: Value) -> Result<()> {
+        let before = Self::discovery_settings(&self.settings());
+        let after = Self::discovery_settings(&v);
+        self.set_settings(v)?;
+        if before != after {
+            self.rescan();
+        }
+        Ok(())
+    }
+
     /// Scan for boards in the background. Updates registry and search index.
+    ///
+    /// Requests made while a scan runs are coalesced into one more pass (so
+    /// settings saved mid-scan are honoured); nothing re-triggers a scan by
+    /// itself. The scanning flag is released by a guard, so a panic cannot
+    /// leave discovery disabled.
     pub fn rescan(self: &Arc<Self>) {
         use std::sync::atomic::Ordering;
+        self.rescan_wanted.store(true, Ordering::SeqCst);
         if self.scanning.swap(true, Ordering::SeqCst) {
             return;
         }
+        struct Scanning(Arc<Core>);
+        impl Drop for Scanning {
+            fn drop(&mut self) {
+                self.0.scanning.store(false, Ordering::SeqCst);
+            }
+        }
         let me = Arc::clone(self);
         std::thread::spawn(move || {
-            let opts = me.discovery_options();
-            me.sink.emit(CoreEvent::Progress {
-                task: "discovery".into(),
-                done: 0,
-                total: 0,
-                label: None,
-            });
-            let t0 = std::time::Instant::now();
-            let found = crate::discovery::scan(&opts, &|| false);
-            tracing::info!(
-                boards = found.len(),
-                roots = opts.roots.len(),
-                ms = t0.elapsed().as_millis() as u64,
-                "discovery finished"
-            );
-            let mut seen = HashSet::new();
-            {
-                let mut reg = me.registry.lock();
-                for f in &found {
-                    reg.upsert(&f.id, &f.path, &f.name, f.kind, false);
-                    seen.insert(f.id.clone());
+            loop {
+                {
+                    let _flag = Scanning(me.clone());
+                    while me.rescan_wanted.swap(false, Ordering::SeqCst) {
+                        me.scan_once();
+                    }
                 }
+                // A request that landed between the last check and releasing
+                // the flag would otherwise be dropped.
+                if !(me.rescan_wanted.load(Ordering::SeqCst)
+                    && !me.scanning.swap(true, Ordering::SeqCst))
+                {
+                    break;
+                }
+            }
+        });
+    }
+
+    fn scan_once(self: &Arc<Self>) {
+        use crate::discovery::{self, Notice, Problem};
+        use activity::{TaskGuard, TaskIssue};
+        let mut g = TaskGuard::start(self.task_emitter(), "discovery", None);
+        let opts = self.discovery_options();
+        let units = discovery::plan(&opts);
+        let t0 = Instant::now();
+        let walker: discovery::Walker = {
+            let excludes = opts.excludes.clone();
+            Arc::new(move |u, seen| discovery::walk_unit(u, &excludes, seen))
+        };
+        // A folder given up on (prompt left open) may still answer later.
+        let late: discovery::Late = {
+            let me = Arc::downgrade(self);
+            Arc::new(move |name, found| {
+                if let Some(me) = me.upgrade() {
+                    tracing::info!(boards = found.len(), "discovery: late folder answered");
+                    me.merge_found(&found, None);
+                    let still_pending = me.clear_late_issue(name);
+                    if !found.is_empty() {
+                        me.index_found(&found);
+                    }
+                    // Protected folders queued behind this one were not
+                    // started; now that its prompt was answered, try them.
+                    // Bounded: each further pass needs another answer.
+                    if still_pending {
+                        me.rescan();
+                    }
+                }
+            })
+        };
+        let report = discovery::run(
+            &units,
+            walker,
+            &discovery::Timing::default(),
+            &self.discovery_inflight,
+            &mut |n| match n {
+                Notice::Progress { seen } => g.progress(seen, None, None),
+                Notice::Waiting { unit, seen } => {
+                    let code = if unit.protected {
+                        "waitingAccess"
+                    } else {
+                        "waitingFolder"
+                    };
+                    g.waiting(seen, TaskIssue::warn(code, Some(unit.display_name())));
+                }
+            },
+            late,
+        );
+        tracing::info!(
+            boards = report.found.len(),
+            roots = opts.roots.len(),
+            units = units.len(),
+            problems = report.problems.len(),
+            unreadable = report.errors,
+            ms = t0.elapsed().as_millis() as u64,
+            "discovery finished"
+        );
+        for p in &report.problems {
+            let code = match p.problem {
+                Problem::Missing => "folderMissing",
+                Problem::Denied => "accessDenied",
+                Problem::AccessPending => "accessPending",
+                Problem::Stalled => "folderStalled",
+                Problem::Failed => "folderFailed",
+            };
+            g.issue(TaskIssue::warn(code, Some(p.name.clone())));
+        }
+        for f in report.found.iter().filter(|f| f.damaged) {
+            g.issue(TaskIssue::error("boardDamaged", Some(f.name.clone())));
+        }
+        let mut unscanned = report.unscanned.clone();
+        unscanned.extend(discovery::excluded_protected(&opts));
+        self.merge_found(&report.found, Some(&unscanned));
+        g.finish();
+        self.index_found(&report.found);
+        *self.last_scan.lock() = Some(Instant::now());
+    }
+
+    /// A folder given up on answered after all: drop its "not scanned" issue
+    /// from the last (closed) discovery result, so the light stops warning.
+    /// While a pass runs, that pass reports fresh issues instead. Returns
+    /// whether other folders are still waiting for access.
+    pub(crate) fn clear_late_issue(self: &Arc<Self>, name: &str) -> bool {
+        let Some(mut last) = self.tasks.last("discovery") else {
+            return false;
+        };
+        if !last.phase.is_closing() {
+            return false;
+        }
+        let before = last.issues.len();
+        last.issues.retain(|i| {
+            !(i.subject.as_deref() == Some(name)
+                && matches!(i.code.as_str(), "accessPending" | "folderStalled"))
+        });
+        let changed = last.issues.len() != before;
+        let still_pending = last.issues.iter().any(|i| i.code == "accessPending");
+        if changed {
+            (self.task_emitter())(last);
+        }
+        changed && still_pending
+    }
+
+    /// Whether `discovery.rescanMinutes` (0 = only at start) has elapsed since
+    /// the last pass ended. Never true before the first pass.
+    pub fn rescan_due(&self) -> bool {
+        let minutes = setting_u64(&self.settings(), "discovery.rescanMinutes", 30);
+        let last = *self.last_scan.lock();
+        minutes > 0
+            && last.is_some_and(|t| t.elapsed() >= std::time::Duration::from_secs(minutes * 60))
+    }
+
+    /// Initial scan shortly after start, then the `discovery.rescanMinutes`
+    /// schedule. Checks once a minute; a pass still running is never doubled.
+    pub fn start_discovery(self: &Arc<Self>, delay: std::time::Duration) {
+        let me = Arc::downgrade(self);
+        std::thread::Builder::new()
+            .name("luau-discovery-schedule".into())
+            .spawn(move || {
+                std::thread::sleep(delay);
+                match me.upgrade() {
+                    Some(c) => c.rescan(),
+                    None => return,
+                }
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(60));
+                    let Some(c) = me.upgrade() else { return };
+                    if c.rescan_due() {
+                        c.rescan();
+                    }
+                }
+            })
+            .ok();
+    }
+
+    /// Record found boards in the registry. With `unscanned` (a full pass),
+    /// entries not seen are marked missing, except below folders that were
+    /// not looked at (they are not touched at all: that could prompt).
+    fn merge_found(&self, found: &[crate::discovery::Found], unscanned: Option<&[PathBuf]>) {
+        {
+            let mut reg = self.registry.lock();
+            let mut seen = HashSet::new();
+            for f in found {
+                reg.upsert(&f.id, &f.path, &f.name, f.kind, false);
+                seen.insert(f.id.clone());
+            }
+            if let Some(unscanned) = unscanned {
                 for e in reg.boards.iter_mut() {
+                    let path = Path::new(&e.path);
                     if !e.mirror
                         && !e.loose
                         && !seen.contains(&e.id)
-                        && !Path::new(&e.path).join(MARKER_DIR).exists()
+                        && !unscanned.iter().any(|u| path.starts_with(u))
+                        && !path.join(MARKER_DIR).exists()
                     {
                         e.missing = true;
                     }
                 }
             }
-            me.save_registry();
-            let total = found.len();
-            for (i, f) in found.iter().enumerate() {
-                if me.board(&f.id).is_err() {
-                    me.index_closed_board(Path::new(&f.path));
+        }
+        self.save_registry();
+    }
+
+    /// Index boards that are not open, as one paired "index" task.
+    fn index_found(self: &Arc<Self>, found: &[crate::discovery::Found]) {
+        use activity::{TaskGuard, TaskIssue};
+        let total = found.len();
+        let mut g = TaskGuard::start(self.task_emitter(), "index", Some(total));
+        let mut index_broken = false;
+        for (i, f) in found.iter().enumerate() {
+            // Open boards are indexed on every change already.
+            if self.board(&f.id).is_err() {
+                match BoardStore::open(Path::new(&f.path)) {
+                    // A board that cannot be read: skipped, the rest goes on.
+                    Err(e) => {
+                        tracing::warn!(board = %f.id, code = e.code(), "board skipped by indexing");
+                        g.issue(TaskIssue::warn("indexSkipped", Some(f.name.clone())));
+                    }
+                    Ok(store) => {
+                        if let Err(e) = self.index_store(&store) {
+                            tracing::warn!(board = %f.id, code = e.code(), "search index write failed");
+                            index_broken = true;
+                        }
+                    }
                 }
-                me.sink.emit(CoreEvent::Progress {
-                    task: "index".into(),
-                    done: i + 1,
-                    total,
-                    label: Some(f.name.clone()),
-                });
             }
-            me.scanning.store(false, Ordering::SeqCst);
-        });
+            g.progress(i + 1, Some(total), Some(f.name.clone()));
+        }
+        if index_broken {
+            // The search index itself is failing: search results are partial.
+            g.fail("indexFailed");
+        } else {
+            g.finish();
+        }
     }
 
     /// Give a duplicated board (copy) a fresh id.

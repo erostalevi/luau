@@ -1,0 +1,43 @@
+export default {
+  status: {
+    title: 'Actividad en segundo plano',
+    light: {
+      idle: 'Todo en calma',
+      active: 'Trabajando',
+      warn: 'Conviene revisar',
+      error: 'Algo salió mal',
+    },
+    explain: {
+      idle: 'No hay nada en marcha en segundo plano ni nada que informar.',
+      active: 'Luau está buscando tableros o actualizando el índice de búsqueda. Puedes seguir trabajando.',
+      warn: 'Algo va lento o se omitió. Tus tableros están a salvo; puede que falten algunos en la lista o en la búsqueda.',
+      error: 'Una tarea falló o un tablero está dañado. Detalles abajo.',
+    },
+    running: 'En marcha',
+    issuesTitle: 'Avisos',
+    noIssues: 'Sin avisos.',
+    tasks: {
+      discovery: 'Buscando tableros…',
+      index: 'Actualizando el índice de búsqueda…',
+      other: 'Trabajando…',
+      waitingAccess: 'Esperando acceso a una carpeta…',
+      waitingFolder: 'Esperando que una carpeta responda…',
+    },
+    issues: {
+      waitingAccess: 'Esperando acceso a «{name}». Puede que macOS esté pidiendo permiso.',
+      waitingFolder: 'Esperando a que «{name}» responda…',
+      accessPending: 'No se revisó «{name}»: aún no se concedió acceso. Responde al aviso de macOS y vuelve a buscar.',
+      accessDenied: 'Sin acceso a «{name}». Permítelo en Ajustes del Sistema → Privacidad y seguridad → Archivos y carpetas.',
+      folderMissing: 'No se encontró la carpeta «{name}».',
+      folderStalled: '«{name}» dejó de responder y se omitió.',
+      folderFailed: 'No se pudo revisar «{name}».',
+      boardDamaged: 'El tablero «{name}» está dañado y se abre en solo lectura. Ábrelo para repararlo.',
+      indexSkipped: 'No se pudo leer el tablero «{name}» para la búsqueda.',
+      indexFailed: 'No se pudo actualizar el índice de búsqueda. Puede que los resultados estén incompletos.',
+      taskCrashed: 'Una tarea en segundo plano se detuvo inesperadamente.',
+      taskFailed: 'Una tarea en segundo plano falló.',
+      integrationOffline: '{name}',
+      unknown: 'Algo requiere atención ({name}).',
+    },
+  },
+};

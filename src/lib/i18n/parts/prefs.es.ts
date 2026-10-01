@@ -193,6 +193,10 @@ export default {
       'files.remoteImages': { label: 'Cargar imágenes de la web', desc: 'Muestra dentro de las tarjetas imágenes alojadas en internet.' },
       'discovery.roots': { label: 'Buscar tableros en', desc: 'Carpetas que Luau revisa para encontrar tus tableros. Vacío significa tu carpeta personal.' },
       'discovery.exclude': { label: 'Omitir carpetas llamadas', desc: 'Nombres de carpetas que nunca se revisan.' },
+      'discovery.protectedFolders': {
+        label: 'Buscar también en Escritorio, Documentos y Descargas',
+        desc: 'En macOS estas carpetas piden permiso una vez. Se revisan al final, así los demás tableros aparecen antes.',
+      },
       'discovery.rescanMinutes': { label: 'Volver a buscar cada', desc: 'Minutos entre búsquedas en segundo plano (0 = solo al iniciar).' },
       'explorer.showHidden': { label: 'Mostrar tableros ocultos', desc: 'Muestra los tableros que ocultaste del explorador.' },
       'search.caseSensitive': { label: 'Distinguir mayúsculas por defecto', desc: 'Respeta exactamente las mayúsculas y minúsculas.' },

@@ -1,0 +1,43 @@
+export default {
+  status: {
+    title: 'Atividade em segundo plano',
+    light: {
+      idle: 'Tudo tranquilo',
+      active: 'Trabalhando',
+      warn: 'Vale a pena conferir',
+      error: 'Algo deu errado',
+    },
+    explain: {
+      idle: 'Nada está em execução em segundo plano e não há nada a relatar.',
+      active: 'O Luau está procurando quadros ou atualizando o índice de busca. Você pode continuar trabalhando.',
+      warn: 'Algo está lento ou foi ignorado. Seus quadros estão seguros; alguns podem faltar na lista ou na busca.',
+      error: 'Uma tarefa falhou ou um quadro está danificado. Detalhes abaixo.',
+    },
+    running: 'Em execução',
+    issuesTitle: 'Avisos',
+    noIssues: 'Nenhum aviso.',
+    tasks: {
+      discovery: 'Procurando quadros…',
+      index: 'Atualizando o índice de busca…',
+      other: 'Trabalhando…',
+      waitingAccess: 'Aguardando acesso a uma pasta…',
+      waitingFolder: 'Aguardando uma pasta responder…',
+    },
+    issues: {
+      waitingAccess: 'Aguardando acesso a “{name}”. O macOS pode estar pedindo permissão.',
+      waitingFolder: 'Aguardando “{name}” responder…',
+      accessPending: '“{name}” não foi verificada: o acesso ainda não foi concedido. Responda ao aviso do macOS e procure novamente.',
+      accessDenied: 'Sem acesso a “{name}”. Permita em Ajustes do Sistema → Privacidade e Segurança → Arquivos e Pastas.',
+      folderMissing: 'A pasta “{name}” não foi encontrada.',
+      folderStalled: '“{name}” parou de responder e foi ignorada.',
+      folderFailed: 'Não foi possível verificar “{name}”.',
+      boardDamaged: 'O quadro “{name}” está danificado e abre somente leitura. Abra-o para reparar.',
+      indexSkipped: 'Não foi possível ler o quadro “{name}” para a busca.',
+      indexFailed: 'Não foi possível atualizar o índice de busca. Os resultados podem estar incompletos.',
+      taskCrashed: 'Uma tarefa em segundo plano parou inesperadamente.',
+      taskFailed: 'Uma tarefa em segundo plano falhou.',
+      integrationOffline: '{name}',
+      unknown: 'Algo precisa de atenção ({name}).',
+    },
+  },
+};

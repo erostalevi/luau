@@ -1,0 +1,43 @@
+export default {
+  status: {
+    title: 'Background activity',
+    light: {
+      idle: 'All quiet',
+      active: 'Working',
+      warn: 'Needs a look',
+      error: 'Something went wrong',
+    },
+    explain: {
+      idle: 'Nothing is running in the background and there is nothing to report.',
+      active: 'Luau is looking for boards or updating the search index. You can keep working.',
+      warn: 'Something is slow or was skipped. Your boards are safe; some may be missing from the list or from search.',
+      error: 'A task failed or a board is damaged. Details below.',
+    },
+    running: 'Running now',
+    issuesTitle: 'Issues',
+    noIssues: 'No issues.',
+    tasks: {
+      discovery: 'Looking for boards…',
+      index: 'Updating the search index…',
+      other: 'Working…',
+      waitingAccess: 'Waiting for folder access…',
+      waitingFolder: 'Waiting for a folder to respond…',
+    },
+    issues: {
+      waitingAccess: 'Waiting for access to “{name}”. macOS may be asking for permission.',
+      waitingFolder: 'Waiting for “{name}” to respond…',
+      accessPending: '“{name}” was not scanned: access was not granted yet. Answer the macOS prompt, then rescan.',
+      accessDenied: 'No access to “{name}”. Allow it in System Settings → Privacy & Security → Files and Folders.',
+      folderMissing: 'The folder “{name}” was not found.',
+      folderStalled: '“{name}” stopped responding and was skipped.',
+      folderFailed: '“{name}” could not be scanned.',
+      boardDamaged: 'The board “{name}” is damaged and opens read-only. Open it to repair.',
+      indexSkipped: 'The board “{name}” could not be read for search.',
+      indexFailed: 'The search index could not be updated. Search results may be incomplete.',
+      taskCrashed: 'A background task stopped unexpectedly.',
+      taskFailed: 'A background task failed.',
+      integrationOffline: '{name}',
+      unknown: 'Something needs attention ({name}).',
+    },
+  },
+};

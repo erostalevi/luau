@@ -7,7 +7,6 @@
   import { PRESET_IDS } from '$lib/keybindings/defaults';
   import { runCommand } from '$lib/commands/registry.svelte';
   import { pickFolder } from '$lib/app/helpers';
-  import { rpc } from '$lib/backend/rpc';
   import Segmented from '$lib/components/Segmented.svelte';
   import Toggle from '$lib/components/Toggle.svelte';
   import { DEFAULT_SWATCHES } from '$lib/components/ColorPicker.svelte';
@@ -22,7 +21,8 @@
     settings.set('general.firstRunDone', true);
     settings.set('discovery.roots', roots);
     ui.firstRun = false;
-    void rpc('discovery.rescan');
+    // Saving these settings starts the scan (the core rescans when discovery
+    // settings change), so it sees the chosen roots and folders.
     if (then) void runCommand(then);
   }
 
@@ -111,6 +111,10 @@
               >{/each}
             <button class="btn sm" onclick={addRoot}>{t('firstRun.addFolder')}</button>
           </div>
+          <label class="opt"
+            ><Toggle checked={settings.get<boolean>('discovery.protectedFolders')} onchange={(v) => settings.set('discovery.protectedFolders', v)} />
+            {t('settings.keys.discovery.protectedFolders.label')}</label
+          >
           <label class="opt"
             ><Toggle checked={settings.get<boolean>('app.runInBackground')} onchange={(v) => settings.set('app.runInBackground', v)} />
             {t('settings.keys.app.runInBackground.label')}</label

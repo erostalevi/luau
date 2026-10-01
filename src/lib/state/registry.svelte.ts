@@ -11,14 +11,17 @@ export const registry = $state<{ data: Registry; scanning: boolean; indexed: { d
 
 export async function loadRegistry() {
   registry.data = await rpc<Registry>('registry.get');
+  // Discovery and indexing can overlap (a late folder is indexed while a new
+  // pass runs): scanning while any of them is open.
+  const open = new Set<string>();
   onCoreEvent((e) => {
     if (e.type === 'registryChanged') registry.data = e.registry;
-    if (e.type === 'progress') {
-      if (e.task === 'discovery') registry.scanning = true;
-      if (e.task === 'index') {
-        registry.indexed = { done: e.done, total: e.total };
-        registry.scanning = e.done < e.total;
-      }
+    // Paired task events: every start ends with `finished` or `failed`.
+    if (e.type === 'task' && (e.task === 'discovery' || e.task === 'index')) {
+      if (e.phase === 'finished' || e.phase === 'failed') open.delete(e.task);
+      else open.add(e.task);
+      registry.scanning = open.size > 0;
+      if (e.task === 'index' && e.done !== null) registry.indexed = { done: e.done, total: e.total ?? registry.indexed.total };
     }
   });
 }
