@@ -104,3 +104,20 @@ Five small UI fixes. Each section lists objective, files, logic, decisions, risk
 
 `pnpm lint`, `pnpm check`, `pnpm test`, `pnpm i18n en|es|pt`, `cargo fmt --all -- --check`,
 `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`.
+
+## Follow-up: the whole top bar drags the window
+
+**Problem (user report, with screenshot):** only the part of the top bar holding the tabs moved the window. The
+empty space to the right of the tabs did not.
+
+**Cause:** `.strip` in `TabStrip.svelte` had `flex-shrink: 0` and no `flex-grow`, so it was only as wide as
+its tabs. Its `.drag-fill` had nothing to grow into, and the rest of `.pane-top` was not a drag region.
+
+**Fix:** `.strip` is now `flex: 1 1 auto; min-width: 0`, so it fills the whole top bar and `.drag-fill` takes
+up all the empty space. Tabs, the **+** button and the window controls still opt out through `.no-drag` and
+Tauri's interactive-element check. When there are many tabs, `.tabs` still scrolls, because its `min-width` is
+0.
+
+**Verified (web build):** the strip is as wide as `.pane-top` (744 / 744 px). Hit tests across the bar:
+points on tabs land on `.no-drag` elements, and the point at the far right lands on `.drag-fill`, inside the
+drag region. Native drag still needs to be tried in the desktop app.

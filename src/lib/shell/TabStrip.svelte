@@ -144,9 +144,11 @@
     display: flex;
     align-items: center;
     height: var(--titlebar-h);
+    /* Fill the whole top bar so every empty spot of it drags the window
+       (tabs and buttons opt out with .no-drag). */
+    flex: 1 1 auto;
     min-width: 0;
     padding-right: 6px;
-    flex-shrink: 0;
   }
   .tabs {
     display: flex;
