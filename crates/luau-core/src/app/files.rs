@@ -98,14 +98,38 @@ pub fn optimize_image(bytes: &[u8]) -> Option<(Vec<u8>, &'static str)> {
     }
 }
 
-/// Resolve a board-relative path for the `luau://` protocol (never inside `.luau/`).
+/// Resolve a board-relative path for the `luau://` protocol. Never inside the
+/// app's `.luau/` folder or `.git/` (at any depth, checked after the same
+/// normalization `safe_join` applies), and never through a symlink that leaves
+/// the board.
 pub fn resolve_board_file(root: &Path, rel: &str) -> Result<PathBuf> {
     let p = safe_join(root, rel)?;
-    let first = Path::new(rel.trim_start_matches("./")).components().next();
-    if first.is_some_and(|c| c.as_os_str() == crate::brand::MARKER_DIR) {
+    let hidden = p
+        .strip_prefix(root)
+        .map_err(|_| Error::invalid("outside board"))?
+        .components()
+        .any(|c| {
+            let s = c.as_os_str();
+            s == crate::brand::MARKER_DIR || s == ".git"
+        });
+    if hidden {
         return Err(Error::invalid("internal path"));
     }
+    if p.exists() {
+        let real = p.canonicalize().map_err(|e| Error::io(&p, e))?;
+        let real_root = root.canonicalize().map_err(|e| Error::io(root, e))?;
+        if !real.starts_with(&real_root) {
+            return Err(Error::invalid("link outside board"));
+        }
+    }
     Ok(p)
+}
+
+/// Thumbnail widths are rounded up to a few buckets so the cache stays bounded
+/// whatever `?w=` the page asks for.
+pub fn thumb_bucket(width: u32) -> u32 {
+    const B: [u32; 9] = [64, 128, 256, 384, 512, 768, 1024, 1536, 2048];
+    B.iter().copied().find(|b| *b >= width).unwrap_or(2048)
 }
 
 pub fn mime_for(path: &Path) -> &'static str {
@@ -150,7 +174,7 @@ pub fn thumbnail(root: &Path, file: &Path, width: u32) -> Option<(Vec<u8>, &'sta
         return None;
     }
     let meta = fs::metadata(file).ok()?;
-    let width = width.clamp(32, 2048);
+    let width = thumb_bucket(width.clamp(32, 2048));
     let key = sha256_hex(
         format!(
             "{}|{}|{}|{width}",
@@ -448,4 +472,39 @@ pub fn git_init(path: &Path) -> bool {
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod protocol_path_tests {
+    use super::*;
+
+    #[test]
+    fn internal_folders_and_escaping_links_are_refused() {
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path().join("b");
+        fs::create_dir_all(root.join(".luau/trash")).unwrap();
+        fs::create_dir_all(root.join("k000001")).unwrap();
+        fs::write(root.join("k000001/c000001.png"), b"x").unwrap();
+        assert!(resolve_board_file(&root, "k000001/c000001.png").is_ok());
+        for bad in [
+            ".luau/board.json",
+            ".luau\\trash\\x",
+            "./.luau/x",
+            "k000001/.git/config",
+            ".git/HEAD",
+            "../b/x",
+        ] {
+            assert!(resolve_board_file(&root, bad).is_err(), "{bad}");
+        }
+        #[cfg(unix)]
+        {
+            let secret = d.path().join("secret.txt");
+            fs::write(&secret, b"s").unwrap();
+            std::os::unix::fs::symlink(&secret, root.join("k000001/link.png")).unwrap();
+            assert!(resolve_board_file(&root, "k000001/link.png").is_err());
+        }
+        assert_eq!(thumb_bucket(33), 64);
+        assert_eq!(thumb_bucket(700), 768);
+        assert_eq!(thumb_bucket(5000), 2048);
+    }
 }

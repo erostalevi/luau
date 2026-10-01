@@ -232,3 +232,18 @@ rename to Luau. Each section lists files, logic, decisions, risks and tests.
 - `trash.ttlDays` and `files.unlinkedTtlDays` are clamped to 1–3650 days in the core, so `0` can no longer mean
   "purge/sweep everything immediately".
 - Tests: `validates_bundles` extended (protected keys skipped, others imported).
+
+## D3 — `luau://` protocol: internal-folder bypass, symlinks, memory/threads, thumbnails, Range (medium)
+
+- Files: `crates/luau-core/src/app/files.rs` (`resolve_board_file`, `thumb_bucket`, tests),
+  `src-tauri/src/protocol.rs` (`parse_range`, bounded bodies, CSP, tests), `src-tauri/src/lib.rs`.
+- Paths are checked **after** normalization: no `.luau` or `.git` component at any depth (`%5C`/`.//` tricks no
+  longer reach trash/history), and an existing path is canonicalized and must stay inside the board (symlinks
+  pointing outside are refused).
+- Responses: files ≤ 32 MiB are served whole; larger ones answer with an 8 MiB `206` chunk so media elements
+  continue with ranges (no whole-file buffering). Range parsing supports `a-b`, `a-` and suffix `-n`, returns
+  `416` with `Content-Range: bytes */len` when unsatisfiable and cannot overflow. Every response carries
+  `Content-Security-Policy: default-src 'none'; … sandbox` and `nosniff` (SVG/HTML from boards are inert).
+- Requests run on Tauri's bounded blocking pool instead of one OS thread each. Thumbnail widths are rounded up to
+  nine buckets (64…2048), so the cache cannot grow with every distinct `?w=`.
+- Tests: `internal_folders_and_escaping_links_are_refused`, `protocol::tests::ranges`.

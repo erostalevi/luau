@@ -8,12 +8,19 @@ use std::sync::Arc;
 use luau_core::app::{Core, files};
 use tauri::http::{Request, Response, StatusCode, header};
 
+/// Largest body served in one response; bigger files are served in ranges.
+const MAX_BODY: u64 = 32 * 1024 * 1024;
+const CHUNK: u64 = 8 * 1024 * 1024;
+/// Board files are data, never active documents (SVG scripts, HTML).
+const CSP: &str = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox";
+
 fn respond(status: StatusCode, mime: &str, body: Vec<u8>) -> Response<Vec<u8>> {
     Response::builder()
         .status(status)
         .header(header::CONTENT_TYPE, mime)
         .header(header::CACHE_CONTROL, "no-cache")
         .header("X-Content-Type-Options", "nosniff")
+        .header(header::CONTENT_SECURITY_POLICY, CSP)
         .body(body)
         .unwrap_or_else(|_| Response::new(Vec::new()))
 }
@@ -58,39 +65,92 @@ pub fn handle(core: &Arc<Core>, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
         return respond(StatusCode::NOT_FOUND, "text/plain", b"not found".to_vec());
     };
     let len = f.metadata().map(|m| m.len()).unwrap_or(0);
-    if let Some(range) = req
+    let range = req
         .headers()
         .get(header::RANGE)
         .and_then(|v| v.to_str().ok())
-        && let Some(spec) = range.strip_prefix("bytes=")
-    {
-        let (s, e) = spec.split_once('-').unwrap_or((spec, ""));
-        let start: u64 = s.parse().unwrap_or(0);
-        let end: u64 = e
-            .parse()
-            .unwrap_or(len.saturating_sub(1))
-            .min(len.saturating_sub(1));
-        let end = end.min(start + 8 * 1024 * 1024); // cap chunk at 8 MiB
-        if start <= end && start < len {
-            let mut buf = vec![0u8; (end - start + 1) as usize];
-            if f.seek(SeekFrom::Start(start)).is_ok() && f.read_exact(&mut buf).is_ok() {
-                return Response::builder()
-                    .status(StatusCode::PARTIAL_CONTENT)
-                    .header(header::CONTENT_TYPE, mime)
-                    .header(header::ACCEPT_RANGES, "bytes")
-                    .header(header::CONTENT_RANGE, format!("bytes {start}-{end}/{len}"))
-                    .header(header::CONTENT_LENGTH, buf.len().to_string())
-                    .body(buf)
-                    .unwrap_or_else(|_| Response::new(Vec::new()));
+        .and_then(|r| r.strip_prefix("bytes="))
+        .map(|spec| parse_range(spec, len));
+    let (start, end) = match range {
+        Some(Some(r)) => r,
+        Some(None) => {
+            let mut r = respond(StatusCode::RANGE_NOT_SATISFIABLE, "text/plain", Vec::new());
+            if let Ok(v) = header::HeaderValue::from_str(&format!("bytes */{len}")) {
+                r.headers_mut().insert(header::CONTENT_RANGE, v);
             }
+            return r;
         }
+        // No Range: whole file when small, otherwise the first chunk as 206
+        // (media elements continue with ranges) — never the whole file in memory.
+        None if len <= MAX_BODY => {
+            let mut body = Vec::with_capacity(len as usize);
+            let _ = f.read_to_end(&mut body);
+            let mut resp = respond(StatusCode::OK, mime, body);
+            resp.headers_mut().insert(
+                header::ACCEPT_RANGES,
+                header::HeaderValue::from_static("bytes"),
+            );
+            return resp;
+        }
+        None => (0, CHUNK - 1),
+    };
+    let end = end
+        .min(start.saturating_add(CHUNK - 1))
+        .min(len.saturating_sub(1));
+    let mut buf = vec![0u8; (end - start + 1) as usize];
+    if f.seek(SeekFrom::Start(start)).is_err() || f.read_exact(&mut buf).is_err() {
+        return respond(StatusCode::INTERNAL_SERVER_ERROR, "text/plain", Vec::new());
     }
-    let mut body = Vec::with_capacity(len as usize);
-    let _ = f.read_to_end(&mut body);
-    let mut resp = respond(StatusCode::OK, mime, body);
-    resp.headers_mut().insert(
+    let mut resp = respond(StatusCode::PARTIAL_CONTENT, mime, buf);
+    let h = resp.headers_mut();
+    h.insert(
         header::ACCEPT_RANGES,
         header::HeaderValue::from_static("bytes"),
     );
+    if let Ok(v) = header::HeaderValue::from_str(&format!("bytes {start}-{end}/{len}")) {
+        h.insert(header::CONTENT_RANGE, v);
+    }
     resp
+}
+
+/// `start-end`, `start-` or suffix `-n`. `None` = not satisfiable (416).
+fn parse_range(spec: &str, len: u64) -> Option<(u64, u64)> {
+    let (s, e) = spec.split(',').next()?.trim().split_once('-')?;
+    if len == 0 {
+        return None;
+    }
+    let (start, end) = if s.is_empty() {
+        let n: u64 = e.parse().ok()?;
+        if n == 0 {
+            return None;
+        }
+        (len.saturating_sub(n), len - 1)
+    } else {
+        let start: u64 = s.parse().ok()?;
+        let end = if e.is_empty() {
+            len - 1
+        } else {
+            e.parse::<u64>().ok()?.min(len - 1)
+        };
+        (start, end)
+    };
+    (start <= end && start < len).then_some((start, end))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_range;
+
+    #[test]
+    fn ranges() {
+        assert_eq!(parse_range("0-99", 1000), Some((0, 99)));
+        assert_eq!(parse_range("900-", 1000), Some((900, 999)));
+        assert_eq!(parse_range("-100", 1000), Some((900, 999)));
+        assert_eq!(parse_range("-5000", 1000), Some((0, 999)));
+        assert_eq!(parse_range("0-5000", 1000), Some((0, 999)));
+        assert_eq!(parse_range("1000-", 1000), None);
+        assert_eq!(parse_range("50-10", 1000), None);
+        assert_eq!(parse_range("x-1", 1000), None);
+        assert_eq!(parse_range("18446744073709551615-", 10), None);
+    }
 }

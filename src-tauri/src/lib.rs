@@ -90,7 +90,8 @@ pub fn run() {
         )
         .register_asynchronous_uri_scheme_protocol("luau", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
-            std::thread::spawn(move || {
+            // Bounded blocking pool instead of one OS thread per request.
+            tauri::async_runtime::spawn_blocking(move || {
                 let core = app.state::<AppState>().core.clone();
                 responder.respond(protocol::handle(&core, &request));
             });
