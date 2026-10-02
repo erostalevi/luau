@@ -37,6 +37,53 @@ pub const MAX_SCHEDULES: usize = 50;
 const PREVIEW_TTL_DAYS: i64 = 7;
 const MAX_CARD_CHARS: usize = 24_000;
 
+/// Localized notification texts for the local setup (the page knows the locale).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SetupTexts {
+    pub done_title: String,
+    pub done_body: String,
+    pub failed_title: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteState {
+    pub provider: String,
+    pub has_key: bool,
+    pub consent: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiTestResult {
+    pub provider: String,
+    pub model: String,
+    pub ms: u64,
+    pub reply: String,
+}
+
+fn remote_provider(name: &str) -> Result<llm::Provider> {
+    let p = llm::Provider::parse(name);
+    if p.is_remote() {
+        Ok(p)
+    } else {
+        Err(Error::invalid("not a remote AI service"))
+    }
+}
+
+/// Keychain account holding a remote service's key.
+fn key_account(p: llm::Provider) -> String {
+    format!("ai:{}", p.as_str())
+}
+
+fn remote_key(p: llm::Provider) -> Option<llm::ApiKey> {
+    crate::integrations::secrets::get(&key_account(p))
+        .ok()
+        .map(|s| llm::ApiKey(s.token))
+        .filter(|k| !k.0.is_empty())
+}
+
 /// Native notification hook (the desktop shell provides it).
 pub type Notifier = Arc<dyn Fn(&str, &str) -> Result<()> + Send + Sync>;
 
@@ -278,7 +325,92 @@ impl Core {
     }
 
     pub fn ai_config(&self) -> AiConfig {
-        AiConfig::from_settings(&self.settings())
+        let mut cfg = AiConfig::from_settings(&self.settings());
+        if cfg.provider.is_remote() {
+            cfg.remote_key = remote_key(cfg.provider);
+            cfg.remote_consent = self.ai_store().has_remote_consent(cfg.provider.as_str());
+        }
+        cfg
+    }
+
+    // --- remote services: keys, consent, connection test ------------------------
+
+    /// Which remote services have a key and the user's consent (never the keys).
+    pub fn ai_remote_state(&self) -> Vec<RemoteState> {
+        let store = self.ai_store();
+        llm::REMOTE_PROVIDERS
+            .iter()
+            .map(|p| RemoteState {
+                provider: p.as_str().into(),
+                has_key: remote_key(*p).is_some(),
+                consent: store.has_remote_consent(p.as_str()),
+            })
+            .collect()
+    }
+
+    /// Store a key in the OS keychain; returns whether it persisted there
+    /// (`false` = kept for this session only).
+    pub fn ai_set_key(&self, provider: &str, key: &str) -> Result<bool> {
+        let p = remote_provider(provider)?;
+        let key = key.trim();
+        if !llm::valid_api_key(key) {
+            return Err(Error::invalid("that doesn't look like an API key"));
+        }
+        super::remote::forget_models(p);
+        crate::integrations::secrets::set(
+            &key_account(p),
+            &crate::integrations::secrets::Secret {
+                user: None,
+                token: key.to_string(),
+            },
+        )
+    }
+
+    pub fn ai_delete_key(&self, provider: &str) -> Result<()> {
+        let p = remote_provider(provider)?;
+        super::remote::forget_models(p);
+        crate::integrations::secrets::delete(&key_account(p));
+        Ok(())
+    }
+
+    /// Record (or withdraw) consent. Granting must come from a native prompt
+    /// in the shell, never straight from the page.
+    pub fn ai_set_consent(&self, provider: &str, granted: bool) -> Result<()> {
+        let p = remote_provider(provider)?;
+        self.ai_store().set_remote_consent(p.as_str(), granted)
+    }
+
+    /// Models a remote account can use.
+    pub async fn ai_remote_models(&self, provider: &str) -> Result<Vec<String>> {
+        let p = remote_provider(provider)?;
+        let key = remote_key(p).ok_or_else(|| Error::invalid("no API key"))?;
+        super::remote::list_models(p, &key).await
+    }
+
+    /// Send a tiny request through the configured source and time it.
+    pub async fn ai_test(&self) -> Result<AiTestResult> {
+        let cfg = self.ai_config();
+        let started = std::time::Instant::now();
+        let r = llm::resolve(&cfg).await?;
+        let messages = [Message {
+            role: "user",
+            content: "Reply with the single word OK.".into(),
+        }];
+        let reply = llm::chat(
+            &r,
+            &messages,
+            0.0,
+            Duration::from_secs(60),
+            Some(16),
+            &mut |_| {},
+        )
+        .await?;
+        Ok(AiTestResult {
+            provider: r.provider.as_str().into(),
+            model: r.model,
+            ms: started.elapsed().as_millis() as u64,
+            reply: strip_think(&reply).chars().take(40).collect(),
+        })
     }
 
     fn emit_custom(&self, name: &str, payload: Value) {
@@ -367,7 +499,19 @@ impl Core {
     }
 
     pub async fn ai_models(&self) -> Result<Vec<llm::ModelInfo>> {
-        let r = llm::status(&self.ai_config()).await;
+        let cfg = self.ai_config();
+        if cfg.provider.is_remote() {
+            let key = cfg.remote_key.ok_or_else(|| Error::invalid("no API key"))?;
+            return Ok(super::remote::list_models(cfg.provider, &key)
+                .await?
+                .into_iter()
+                .map(|name| llm::ModelInfo {
+                    name,
+                    ..Default::default()
+                })
+                .collect());
+        }
+        let r = llm::status(&cfg).await;
         if r.provider == "none" || r.provider == "off" {
             return Err(Error::Other(
                 r.error.unwrap_or_else(|| "local AI unavailable".into()),
@@ -384,6 +528,32 @@ impl Core {
             &llm::parse_endpoint(&r.endpoint)?,
         )
         .await
+    }
+
+    /// "Set up local AI": get Ollama running (downloading and verifying it when
+    /// needed) and pull `model`. Progress: `ai.setup` events; a native
+    /// notification reports the end either way.
+    pub async fn ai_setup_local(
+        &self,
+        req: super::setup::SetupRequest,
+        notifier: Option<&Notifier>,
+        text: &SetupTexts,
+    ) -> Result<super::setup::SetupResult> {
+        let res = super::setup::run(&self.paths.data, &req, &mut |p| {
+            self.emit_custom(
+                super::setup::EV_SETUP,
+                serde_json::to_value(&p).unwrap_or(Value::Null),
+            );
+        })
+        .await;
+        if let Some(n) = notifier {
+            let _ = match &res {
+                Ok(_) => n(&text.done_title, &text.done_body),
+                Err(e) if e.to_string() == "cancelled" => Ok(()),
+                Err(e) => n(&text.failed_title, &e.to_string()),
+            };
+        }
+        res
     }
 
     pub async fn ai_pull_model(&self, name: &str) -> Result<()> {

@@ -64,6 +64,14 @@ function schedule() {
   }, 250);
 }
 
+/** Write pending changes now (for callers that need the core to see them, e.g. AI status). */
+export async function flushSettings() {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  await rpc('settings.set', { value: $state.snapshot(values) });
+}
+
 export async function loadSettings() {
   const v = await rpc<Record<string, unknown> | null>('settings.get');
   if (v && typeof v === 'object') Object.assign(values, v);

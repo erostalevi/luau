@@ -653,7 +653,7 @@ export function createMockTransport(): Transport {
         throw new RpcError('invalid', `mock: ${method} not implemented`);
       }
       await new Promise((r) => setTimeout(r, 0));
-      return structuredClone(fn(params as Record<string, any>)) as T;
+      return structuredClone(await fn(params as Record<string, any>)) as T;
     },
     onEvent(fn) {
       listeners.add(fn);

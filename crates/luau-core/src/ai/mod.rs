@@ -7,7 +7,7 @@
 //!   [`schedule`] (due-time computation), and the
 //!   SSRF address rules in [`web`].
 //! - adapters: [`apple`] (on-device model helper), [`llm`] (Ollama /
-//!   OpenAI-compatible HTTP), [`code`] (python
+//!   OpenAI-compatible HTTP), [`remote`] (Anthropic / OpenAI / Gemini / OpenRouter), [`code`] (python
 //!   subprocess), [`web`] (link previews), [`store`] (app-data JSON files).
 //! - application: [`service`] (`impl Core`) and [`scheduler`] (background thread).
 //!
@@ -21,10 +21,12 @@ pub mod facts;
 pub mod llm;
 pub mod locale;
 pub mod prompt;
+pub mod remote;
 pub mod render;
 pub mod schedule;
 pub mod scheduler;
 pub mod service;
+pub mod setup;
 pub mod stage;
 pub mod store;
 pub mod web;

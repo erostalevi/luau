@@ -86,16 +86,104 @@ export function register(methods: Methods, api: MockApi) {
     return out.join('\n');
   }
 
-  methods['ai.status'] = () => ({
-    provider: 'none',
-    available: false,
-    endpoint: 'http://localhost:11434',
-    model: null,
-    models: [],
-    remote: false,
-    error: 'mock: no local AI in the browser',
-    apple: { status: 'missing', contextSize: 0 },
-  });
+  // Remote services: keys and consent live in localStorage (the app uses the
+  // OS keychain and a native consent prompt).
+  const REMOTE = ['anthropic', 'chatgpt', 'gemini', 'openrouter'];
+  const MODELS: Record<string, string[]> = {
+    anthropic: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5'],
+    chatgpt: ['gpt-5', 'gpt-5-mini'],
+    gemini: ['gemini-2.5-pro', 'gemini-2.5-flash'],
+    openrouter: ['anthropic/claude-opus-5-5', 'openai/gpt-5', 'google/gemini-2.5-pro'],
+  };
+  const keys = () => load<Record<string, boolean>>('ai.keys', {});
+  const consents = () => load<Record<string, boolean>>('ai.consent', {});
+  const cfg = () => load<Record<string, any>>('settings', {});
+  const remoteCheck = (p: unknown) => {
+    if (!REMOTE.includes(String(p))) throw new RpcError('invalid', 'not a remote AI service');
+    return String(p);
+  };
+  function status() {
+    const provider = String(cfg()['ai.provider'] ?? 'auto');
+    if (REMOTE.includes(provider)) {
+      const error = !consents()[provider] ? 'consent needed before card text is sent to this service' : !keys()[provider] ? 'no API key' : undefined;
+      return {
+        provider,
+        available: !error,
+        endpoint: `https://${provider}.example`,
+        model: cfg()['ai.remoteModel'] || MODELS[provider][0],
+        models: [],
+        remote: true,
+        error,
+      };
+    }
+    if (provider === 'off') return { provider: 'off', available: false, endpoint: '', model: null, models: [], remote: false };
+    return {
+      provider: 'none',
+      available: false,
+      endpoint: String(cfg()['ai.endpoint'] || 'http://localhost:11434'),
+      model: null,
+      models: [],
+      remote: false,
+      error: 'mock: no local AI in the browser',
+      apple: { status: 'missing', contextSize: 0 },
+    };
+  }
+  methods['ai.status'] = () => status();
+  methods['ai.remoteState'] = () => REMOTE.map((provider) => ({ provider, hasKey: !!keys()[provider], consent: !!consents()[provider] }));
+  methods['ai.setKey'] = (p) => {
+    const pr = remoteCheck(p.provider);
+    const k = String(p.key ?? '').trim();
+    if (k.length < 16 || /\s/.test(k)) throw new RpcError('invalid', "that doesn't look like an API key");
+    save('ai.keys', { ...keys(), [pr]: true });
+    return { persisted: true };
+  };
+  methods['ai.deleteKey'] = (p) => {
+    const pr = remoteCheck(p.provider);
+    const k = keys();
+    delete k[pr];
+    save('ai.keys', k);
+  };
+  methods['ai.consent'] = (p) => {
+    const pr = remoteCheck(p.provider);
+    if (p.granted !== false && !window.confirm(`${p.service ?? pr}\n\n${p.message ?? ''}`)) throw new RpcError('cancelled', '');
+    save('ai.consent', { ...consents(), [pr]: p.granted !== false });
+  };
+  methods['ai.remoteModels'] = (p) => {
+    const pr = remoteCheck(p.provider);
+    if (!keys()[pr]) throw new RpcError('invalid', 'no API key');
+    return MODELS[pr];
+  };
+  let setupCancelled = false;
+  methods['ai.setupCancel'] = () => {
+    setupCancelled = true;
+  };
+  methods['ai.setupLocal'] = async (p) => {
+    setupCancelled = false;
+    const ev = (payload: Record<string, unknown>) => api.emit({ type: 'custom', name: 'ai.setup', payload } as never);
+    const total = 180 * 1024 ** 2;
+    for (const step of ['check', 'start']) {
+      ev({ step });
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    for (let done = 0; done <= total; done += total / 6) {
+      if (setupCancelled) throw new RpcError('other', 'cancelled');
+      ev({ step: 'download', completed: done, total });
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    for (const step of ['verify', 'install', 'connect']) {
+      ev({ step });
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    if (p.model) ev({ step: 'model', detail: p.model, completed: 1, total: 1 });
+    ev({ step: 'done' });
+    return { endpoint: 'http://localhost:11434', model: p.model ?? null, installed: true };
+  };
+  methods['ai.test'] = async () => {
+    const s = status();
+    if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');
+    await new Promise((r) => setTimeout(r, 400));
+    return { provider: s.provider, model: s.model, ms: 412, reply: 'OK' };
+  };
   // Clipboard → cards: a deterministic stand-in for the local AI (one card per
   // list item, else one card), so the flow can be exercised in `pnpm dev:web`.
   methods['ai.cardsFromText'] = (p) => {
