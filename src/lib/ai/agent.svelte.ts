@@ -10,7 +10,7 @@
 import { rpc } from '$lib/backend/rpc';
 import type { Op, Parent } from '$lib/backend/types';
 import { boards, openBoard, apply, rememberAiRun } from '$lib/state/boards.svelte';
-import { setTitle } from '$lib/markdown/meta';
+import { setTitle, appendToBody } from '$lib/markdown/meta';
 import { withField } from '$lib/editor/propertyMenu';
 import { activeBoard } from '$lib/app/helpers';
 import { t } from '$lib/i18n/index.svelte';
@@ -112,13 +112,7 @@ export function editContent(content: string, acts: PlannedAction[]): string {
   for (const a of acts) {
     if (a.type === 'rename_card') c = setTitle(c, a.title);
     else if (a.type === 'set_property') c = withField(c, a.key, a.key === 'assignees' ? a.value.replace(/(^|,\s*)@?/g, '$1@') : a.value);
-    else if (a.type === 'append_text' || a.type === 'add_tag') {
-      const add = a.type === 'add_tag' ? `#${a.value}` : a.text;
-      // Insert before the property footer, if any.
-      const m = /\n\n---\n(?:[A-Za-z][\w -]{0,31}:.*\n?)+$/.exec(c);
-      const body = m ? c.slice(0, m.index) : c.replace(/\s+$/, '');
-      c = `${body}\n\n${add}\n${m ? m[0].replace(/^\n/, '') : ''}`;
-    }
+    else if (a.type === 'append_text' || a.type === 'add_tag') c = appendToBody(c, a.type === 'add_tag' ? `#${a.value}` : a.text);
   }
   return c;
 }

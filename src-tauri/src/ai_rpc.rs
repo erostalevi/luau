@@ -76,6 +76,16 @@ pub async fn dispatch_async(
     let res = match method {
         "ai.status" => ok(core.ai_status().await),
         "ai.test" => core.ai_test().await.map_err(Into::into).and_then(ok),
+        "slack.latestMention" => {
+            let member: Option<String> = match opt(p, "member") {
+                Ok(m) => m,
+                Err(e) => return Some(Err(e)),
+            };
+            luau_core::integrations::service::slack_latest_mention(core, member.as_deref())
+                .await
+                .map_err(Into::into)
+                .and_then(ok)
+        }
         "ai.agent" => match de::<luau_core::ai::assist::AgentRequest>(p) {
             Ok(req) => core.ai_agent(req).await.map_err(Into::into).and_then(ok),
             Err(e) => Err(e),

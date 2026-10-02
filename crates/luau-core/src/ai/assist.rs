@@ -131,14 +131,14 @@ impl Core {
     pub async fn ai_transform(&self, req: TransformRequest) -> Result<TransformResult> {
         let instruction = req.instruction.trim();
         if instruction.is_empty() {
-            return Err(Error::invalid("say what to change"));
+            return Err(Error::Other("say what to change".into()));
         }
         if req.text.trim().is_empty() {
-            return Err(Error::invalid("nothing to change"));
+            return Err(Error::Other("nothing to change".into()));
         }
         if req.text.chars().count() > MAX_TRANSFORM_CHARS {
-            return Err(Error::invalid(
-                "the selection is too long; select less text",
+            return Err(Error::Other(
+                "the selection is too long; select less text".into(),
             ));
         }
         let instruction: String = instruction.chars().take(MAX_INSTRUCTION_CHARS).collect();
@@ -915,7 +915,7 @@ impl Core {
             .take(MAX_QUESTION_CHARS)
             .collect();
         if question.is_empty() {
-            return Err(Error::invalid("ask a question"));
+            return Err(Error::Other("ask a question".into()));
         }
         let cfg = self.ai_config();
         let r = llm::resolve(&cfg).await?;
@@ -985,7 +985,7 @@ impl Core {
             .take(MAX_QUESTION_CHARS)
             .collect();
         if message.is_empty() {
-            return Err(Error::invalid("say what you need"));
+            return Err(Error::Other("say what you need".into()));
         }
         let cfg = self.ai_config();
         let r = llm::resolve(&cfg).await?;

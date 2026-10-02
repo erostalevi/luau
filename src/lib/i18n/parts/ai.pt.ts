@@ -116,7 +116,7 @@ export default {
       toPortuguese: 'Traduza para o português do Brasil.',
     },
   },
-  commands: { ai: { change: 'Mudar com IA…', ask: 'Resumo rápido…', assistant: 'IA…' } },
+  commands: { ai: { change: 'Mudar com IA…', ask: 'Resumo rápido…', slackTask: 'Tarefa do Slack', assistant: 'IA…' } },
   assistant: {
     title: 'Assistente de IA',
     modes: { ask: 'Perguntar', agent: 'Assistente' },
@@ -181,5 +181,18 @@ export default {
       invalid: 'não é válido',
       too_many: 'mudanças demais de uma vez',
     },
+  },
+  slackTask: {
+    reading: 'Procurando sua última menção no Slack…',
+    none: 'Ninguém mencionou você no Slack nas últimas duas semanas.',
+    notConnected: 'Conecte o Slack primeiro (painel Conexões).',
+    scopes:
+      'O Slack não permitiu ler mensagens: o token precisa de search:read (token de usuário) ou channels:history e groups:history (token de bot), e o bot precisa estar no canal.',
+    failed: 'Não foi possível ler o Slack: {message}',
+    memberTitle: 'Seu ID de membro do Slack',
+    memberPrompt: 'Um bot não sabe quem você é. No Slack, abra seu perfil › ⋮ › Copiar ID de membro e cole aqui.',
+    memberInvalid: 'IDs de membro são como U012ABCDEF.',
+    source: 'Fonte',
+    message: 'mensagem do Slack',
   },
 };

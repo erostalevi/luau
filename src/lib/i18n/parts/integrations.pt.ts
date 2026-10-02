@@ -240,6 +240,10 @@ export default {
   },
   settings: {
     keys: {
+      'integrations.slackMemberId': {
+        label: 'Seu ID de membro do Slack',
+        desc: 'Usado por “Tarefa do Slack” com um token de bot para encontrar mensagens que mencionam você.',
+      },
       'integrations.allowPush': { label: 'Permitir enviar aos serviços', desc: 'Desativado, nada é enviado ao Jira, Trello ou Slack.' },
       'integrations.allowPull': {
         label: 'Permitir buscar dos serviços',

@@ -1,4 +1,4 @@
-// "Create card from clipboard": As is, or Let AI review it (local AI only).
+// "Create card from clipboard" (and Task from Slack via fromText): As is, or Let AI review it.
 // Rules live in ./clipboardCards.ts; the AI drafts come from the core
 // (`ai.cardsFromText`, validated there). Every insertion is one undo step:
 // one `batch` op on a board, one CodeMirror transaction in a document.
@@ -18,6 +18,7 @@ import { flash } from '$lib/board/boardUi.svelte';
 import { readClipboardText, tabBoard } from '$lib/app/helpers';
 import { ai } from '$lib/summaries/api';
 import { t } from '$lib/i18n/index.svelte';
+import { appendToBody } from '$lib/markdown/meta';
 import {
   acceptAiCards,
   asIsCard,
@@ -81,7 +82,7 @@ async function createCards(r: Resolved, contents: string[]) {
   });
 }
 
-async function aiDrafts(text: string) {
+async function aiDrafts(text: string, asIs: () => void) {
   const tid = toast.info(t('clipboard.reviewing'), { timeout: 0 });
   try {
     const r = await ai.cardsFromText(text);
@@ -90,7 +91,7 @@ async function aiDrafts(text: string) {
     return { cards, truncated: r.truncated };
   } catch (e) {
     toast.error(t('clipboard.aiFailed', { message: (e as Error).message }), {
-      action: { label: t('clipboard.asIs'), run: () => void fromClipboard('asIs') },
+      action: { label: t('clipboard.asIs'), run: asIs },
     });
     return null;
   } finally {
@@ -99,6 +100,20 @@ async function aiDrafts(text: string) {
 }
 
 export async function fromClipboard(preset?: Mode) {
+  if (!resolveTarget()) {
+    toast.warn(t(tabBoard() || ui.editor.open ? 'clipboard.noLane' : 'clipboard.noBoard'));
+    return;
+  }
+  return fromText(await readClipboardText(), { preset });
+}
+
+/**
+ * Turn `raw` into cards (or sections in an open document): as is, or drafted
+ * by the AI and confirmed. `footer` is appended to every card / section
+ * (e.g. a link back to where the text came from).
+ */
+export async function fromText(raw: string, opts: { preset?: Mode; footer?: string; title?: string } = {}) {
+  const { preset, footer } = opts;
   const r = resolveTarget();
   if (!r) {
     toast.warn(t(tabBoard() || ui.editor.open ? 'clipboard.noLane' : 'clipboard.noBoard'));
@@ -108,7 +123,7 @@ export async function fromClipboard(preset?: Mode) {
     toast.warn(t('clipboard.readOnly'));
     return;
   }
-  const text = cleanText(await readClipboardText());
+  const text = cleanText(raw);
   if (!text.trim()) {
     toast.warn(t('clipboard.empty'));
     return;
@@ -117,6 +132,7 @@ export async function fromClipboard(preset?: Mode) {
     toast.warn(t('clipboard.tooLong'));
     return;
   }
+  const withFooter = (md: string) => (footer ? appendToBody(md, footer) : md);
   const mode =
     preset ??
     (await pickOne<Mode>(
@@ -124,17 +140,17 @@ export async function fromClipboard(preset?: Mode) {
         { label: t('clipboard.asIs'), description: t('clipboard.asIsDesc'), value: 'asIs' },
         { label: t('clipboard.aiReview'), description: t('clipboard.aiReviewDesc'), value: 'ai' },
       ],
-      { title: t('commands.card.newFromClipboard'), placeholder: t('clipboard.how') },
+      { title: opts.title ?? t('commands.card.newFromClipboard'), placeholder: t('clipboard.how') },
     ));
   if (mode !== 'asIs' && mode !== 'ai') return;
 
   if (mode === 'asIs') {
-    if (r.target.kind === 'doc' && r.editor) insertIntoDoc(r.editor, [asIsSection(text) ?? '']);
-    else await createCards(r, [asIsCard(text) ?? '']);
+    if (r.target.kind === 'doc' && r.editor) insertIntoDoc(r.editor, [withFooter(asIsSection(text) ?? '')]);
+    else await createCards(r, [withFooter(asIsCard(text) ?? '')]);
     return;
   }
 
-  const drafts = await aiDrafts(text);
+  const drafts = await aiDrafts(text, () => void fromText(raw, { ...opts, preset: 'asIs' }));
   if (!drafts) return;
   const { cards, truncated } = drafts;
   const intoDoc = r.target.kind === 'doc' && !!r.editor;
@@ -148,12 +164,12 @@ export async function fromClipboard(preset?: Mode) {
   if (intoDoc && r.editor)
     insertIntoDoc(
       r.editor,
-      cards.map((c) => c.section),
+      cards.map((c) => withFooter(c.section)),
     );
   else
     await createCards(
       r,
-      cards.map((c) => c.markdown),
+      cards.map((c) => withFooter(c.markdown)),
     );
 }
 

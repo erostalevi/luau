@@ -318,6 +318,18 @@ export function register(methods: Methods, api: MockApi) {
           .join(', ')}`;
     return { answer, actions, rejected: [], confirm: actions.some((a) => a.risky) || actions.length > 10, provider: s.provider, model: s.model };
   };
+  methods['slack.latestMention'] = async (p) => {
+    if (!p.member) throw new RpcError('invalid', 'need_member_id');
+    await new Promise((r) => setTimeout(r, 300));
+    return {
+      channel: 'C01',
+      channelName: 'launch',
+      ts: '1700000000.0001',
+      author: 'ana',
+      text: '@you can you update the release notes and ping QA about the login regression before Friday?',
+      permalink: 'https://example.slack.com/archives/C01/p1700000000000100',
+    };
+  };
   methods['ai.slackSend'] = () => {
     throw new RpcError('notFound', 'Slack not connected');
   };

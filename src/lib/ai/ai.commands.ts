@@ -1,6 +1,6 @@
-// AI commands: Change with AI…, Quick summary…, AI… (assistant).
+// AI commands: Change with AI…, Quick summary…, AI… (assistant), Task from Slack.
 
-import { Wand2, MessageCircleQuestion, Sparkles } from '@lucide/svelte';
+import { Wand2, MessageCircleQuestion, Sparkles, AtSign } from '@lucide/svelte';
 import type { Command } from '$lib/commands/registry.svelte';
 
 export const commands: Command[] = [
@@ -26,4 +26,5 @@ export const commands: Command[] = [
     icon: Sparkles,
     run: async (args?: { message?: string }) => (await import('./assistant.svelte')).openAssistant('agent', args?.message),
   },
+  { id: 'ai.slackTask', title: 'commands.ai.slackTask', category: 'ai', icon: AtSign, run: async () => (await import('./slackTask')).taskFromSlack() },
 ];

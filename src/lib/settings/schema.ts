@@ -168,6 +168,7 @@ export const CORE_SETTINGS: SettingDef[] = [
   s('integrations.confirmPull', 'boolean', false, 'integrations'),
   s('integrations.watchIntervalSec', 'number', 60, 'integrations', { min: 30, max: 3600, step: 30 }),
   s('integrations.allowInsecure', 'boolean', false, 'integrations', { hidden: true }),
+  s('integrations.slackMemberId', 'string', '', 'integrations'),
 
   // keyboard
   s('keyboard.preset', 'enum', 'vscode', 'keyboard', { options: ['vscode', 'trello', 'vim', 'emacs'] }),

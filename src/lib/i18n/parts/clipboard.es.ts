@@ -1,17 +1,17 @@
-// Crear tarjeta desde el portapapeles (tal cual / revisión con IA local).
+// Crear tarjeta desde el portapapeles (tal cual / revisión con IA).
 export default {
   clipboard: {
     how: '¿Cómo convertir el portapapeles en tarjetas?',
     asIs: 'Tal cual',
     asIsDesc: 'Una tarjeta: la primera línea es el título y el resto queda igual',
     aiReview: 'Que la IA lo revise',
-    aiReviewDesc: 'La IA local lo divide en tarjetas con títulos, tareas, etiquetas y propiedades',
-    reviewing: 'La IA local está leyendo el portapapeles…',
-    aiFailed: 'La IA local no pudo crear tarjetas: {message}',
+    aiReviewDesc: 'La IA lo divide en tarjetas con títulos, tareas, etiquetas y propiedades',
+    reviewing: 'La IA está leyendo el texto…',
+    aiFailed: 'La IA no pudo crear tarjetas: {message}',
     noCards: 'no propuso ninguna tarjeta',
     confirmCards: { one: '¿Crear 1 tarjeta?', other: '¿Crear {count} tarjetas?' },
     confirmDoc: { one: '¿Insertar 1 sección?', other: '¿Insertar {count} secciones?' },
-    confirmHint: 'Escrito por la IA local en este computador. Puedes deshacerlo en un paso.',
+    confirmHint: 'Escrito por la IA. Puedes deshacerlo en un paso.',
     truncated: 'El texto era largo: solo se revisó la primera parte. Puedes deshacerlo en un paso.',
     create: { one: 'Crear tarjeta', other: 'Crear {count} tarjetas' },
     insert: { one: 'Insertar sección', other: 'Insertar {count} secciones' },

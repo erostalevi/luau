@@ -354,7 +354,7 @@ impl Core {
         let p = remote_provider(provider)?;
         let key = key.trim();
         if !llm::valid_api_key(key) {
-            return Err(Error::invalid("that doesn't look like an API key"));
+            return Err(Error::Other("that doesn't look like an API key".into()));
         }
         super::remote::forget_models(p);
         crate::integrations::secrets::set(
@@ -383,7 +383,7 @@ impl Core {
     /// Models a remote account can use.
     pub async fn ai_remote_models(&self, provider: &str) -> Result<Vec<String>> {
         let p = remote_provider(provider)?;
-        let key = remote_key(p).ok_or_else(|| Error::invalid("no API key"))?;
+        let key = remote_key(p).ok_or_else(|| Error::Other("no API key".into()))?;
         super::remote::list_models(p, &key).await
     }
 
@@ -506,7 +506,9 @@ impl Core {
     pub async fn ai_models(&self) -> Result<Vec<llm::ModelInfo>> {
         let cfg = self.ai_config();
         if cfg.provider.is_remote() {
-            let key = cfg.remote_key.ok_or_else(|| Error::invalid("no API key"))?;
+            let key = cfg
+                .remote_key
+                .ok_or_else(|| Error::Other("no API key".into()))?;
             return Ok(super::remote::list_models(cfg.provider, &key)
                 .await?
                 .into_iter()

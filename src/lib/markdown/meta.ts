@@ -108,6 +108,16 @@ export function setFooterFields(content: string, fields: [string, string][]): st
   return body;
 }
 
+/** Add a block at the end of the body, before the property footer if there is one. */
+export function appendToBody(content: string, block: string): string {
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  const footer = parseFooter(lines);
+  const end = footer.startLine ?? lines.length;
+  const body = lines.slice(0, end).join('\n').replace(/\s+$/, '');
+  const rest = footer.startLine !== null ? `\n\n${lines.slice(end).join('\n').replace(/\s+$/, '')}\n` : '\n';
+  return `${body}\n\n${block.replace(/\s+$/, '')}${rest}`;
+}
+
 export function setTitle(content: string, title: string): string {
   const t = title.replace(/[\r\n]+/g, ' ').trim();
   const nl = content.indexOf('\n');
