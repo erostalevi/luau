@@ -225,6 +225,102 @@ export function register(methods: Methods, api: MockApi) {
     while (j < b.length) push('ins', b[j++]);
     return { text: after, diff, provider: s.provider, model: s.model };
   };
+  // Quick summary / assistant: keyword matching over the mock boards.
+  const allCards = () =>
+    [...api.boards.keys()].flatMap((b) => {
+      const s: BoardSnapshot = api.snapshot(b);
+      return s.nodes.map((n) => ({
+        board: b,
+        boardName: s.header.name,
+        id: n.id,
+        title: n.title,
+        lane: s.lanes.find((l) => l.order.includes(n.id))?.name ?? '',
+      }));
+    });
+  const streamText = async (requestId: string, text: string) => {
+    for (const w of text.split(/(?<=\s)/)) {
+      api.emit({ type: 'custom', name: 'ai.chunk', payload: { requestId, text: w } } as never);
+      await new Promise((r) => setTimeout(r, 12));
+    }
+  };
+  methods['ai.ask'] = async (p) => {
+    const s = status();
+    if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');
+    const words = String(p.question ?? '')
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((w) => w.length > 3);
+    const hits = allCards().filter((c) => words.some((w) => c.title.toLowerCase().includes(w) || c.lane.toLowerCase().includes(w)));
+    const sources = (hits.length ? hits : allCards()).slice(0, 5);
+    const answer = `Here is what I found:\n\n${sources.map((c) => `- [[${c.id}]] is in **${c.lane || c.boardName}**`).join('\n')}`;
+    await streamText(p.requestId, answer);
+    return { answer, sources: sources.map(({ board, boardName, id, title }) => ({ board, boardName, id, title })), provider: s.provider, model: s.model };
+  };
+  methods['ai.agent'] = async (p) => {
+    const s = status();
+    if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');
+    await new Promise((r) => setTimeout(r, 400));
+    const msg = String(p.message ?? '');
+    const cards = allCards();
+    const find = (name: string) => cards.find((c) => c.title.toLowerCase().includes(name.trim().toLowerCase()));
+    const base = {
+      board: '',
+      boardName: '',
+      card: '',
+      cardTitle: '',
+      lane: '',
+      laneName: '',
+      title: '',
+      text: '',
+      key: '',
+      value: '',
+      channel: '',
+      risky: false,
+    };
+    const actions: Record<string, unknown>[] = [];
+    let m: RegExpExecArray | null;
+    if ((m = /move (.+?) to ([\p{L} ]+)/iu.exec(msg))) {
+      const c = find(m[1]);
+      if (c)
+        actions.push({
+          ...base,
+          type: 'move_card',
+          board: c.board,
+          boardName: c.boardName,
+          card: c.id,
+          cardTitle: c.title,
+          laneName: m[2].trim(),
+          because: m[0],
+        });
+    }
+    if ((m = /create (?:a )?card (?:called |named )?"?([^"]+?)"?(?: in ([\p{L} ]+))?$/iu.exec(msg))) {
+      const b = [...api.boards.keys()][0];
+      actions.push({
+        ...base,
+        type: 'create_card',
+        board: b,
+        boardName: api.snapshot(b).header.name,
+        title: m[1],
+        laneName: m[2]?.trim() ?? api.snapshot(b).lanes[0]?.name ?? '',
+        because: m[0],
+      });
+    }
+    if ((m = /archive (.+?)(?: and|$)/i.exec(msg))) {
+      const c = find(m[1]);
+      if (c) actions.push({ ...base, type: 'archive_card', board: c.board, boardName: c.boardName, card: c.id, cardTitle: c.title, because: m[0] });
+    }
+    if ((m = /tell #(\S+) (.+)/i.exec(msg))) actions.push({ ...base, type: 'slack_message', channel: `#${m[1]}`, text: m[2], risky: true, because: m[0] });
+    const answer = actions.length
+      ? 'Sure, here’s what I’ll do.'
+      : `I couldn’t find anything to change. Cards I know: ${cards
+          .slice(0, 3)
+          .map((c) => `[[${c.id}]]`)
+          .join(', ')}`;
+    return { answer, actions, rejected: [], confirm: actions.some((a) => a.risky) || actions.length > 10, provider: s.provider, model: s.model };
+  };
+  methods['ai.slackSend'] = () => {
+    throw new RpcError('notFound', 'Slack not connected');
+  };
   methods['ai.test'] = async () => {
     const s = status();
     if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');

@@ -306,7 +306,7 @@ fn card_view(st: &BoardState) -> BoardView {
     }
 }
 
-fn app_locale(settings: &Value, requested: &str) -> Locale {
+pub(crate) fn app_locale(settings: &Value, requested: &str) -> Locale {
     if !requested.trim().is_empty() {
         return Locale::parse(requested);
     }
@@ -427,7 +427,7 @@ impl Core {
 
     // --- facts ----------------------------------------------------------------
 
-    fn summary_boards(&self, boards: &[String]) -> Vec<String> {
+    pub(crate) fn summary_boards(&self, boards: &[String]) -> Vec<String> {
         if !boards.is_empty() {
             return boards.iter().take(500).cloned().collect();
         }
@@ -439,7 +439,7 @@ impl Core {
             .collect()
     }
 
-    fn board_view(&self, id: &str) -> Option<BoardView> {
+    pub(crate) fn board_view(&self, id: &str) -> Option<BoardView> {
         if let Ok(b) = self.board(id) {
             return Some(card_view(&b.lock().state));
         }

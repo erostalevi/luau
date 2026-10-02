@@ -222,7 +222,23 @@ export async function apply(board: string, op: Op, label?: string, coalesce?: st
   }
 }
 
+/** Last AI assistant run that changed several boards: ⌘Z undoes all of it at once. */
+let aiRun: { label: string; boards: string[] } | null = null;
+
+export function rememberAiRun(label: string, ids: string[]) {
+  aiRun = ids.length > 1 ? { label, boards: ids } : null;
+}
+
 export async function undo(board: string): Promise<UndoResult | null> {
+  const run = aiRun;
+  if (run && run.boards.includes(board) && boards.get(board)?.undo.undoLabel === run.label) {
+    aiRun = null;
+    // Undo the run on every board whose newest step is still that run.
+    const others = run.boards.filter((b) => b !== board && boards.get(b)?.undo.undoLabel === run.label);
+    const first = await rpc<UndoResult>('board.undo', { board }).catch((e: Error) => (toast.warn(t('errors.undoFailed', { message: e.message })), null));
+    for (const b of others) await rpc<UndoResult>('board.undo', { board: b }).catch(() => null);
+    return first;
+  }
   try {
     return await rpc<UndoResult>('board.undo', { board });
   } catch (e) {

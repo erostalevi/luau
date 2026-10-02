@@ -76,6 +76,14 @@ pub async fn dispatch_async(
     let res = match method {
         "ai.status" => ok(core.ai_status().await),
         "ai.test" => core.ai_test().await.map_err(Into::into).and_then(ok),
+        "ai.agent" => match de::<luau_core::ai::assist::AgentRequest>(p) {
+            Ok(req) => core.ai_agent(req).await.map_err(Into::into).and_then(ok),
+            Err(e) => Err(e),
+        },
+        "ai.ask" => match de::<luau_core::ai::assist::AskRequest>(p) {
+            Ok(req) => core.ai_ask(req).await.map_err(Into::into).and_then(ok),
+            Err(e) => Err(e),
+        },
         "ai.transform" => match de::<luau_core::ai::assist::TransformRequest>(p) {
             Ok(req) => core
                 .ai_transform(req)
@@ -273,6 +281,17 @@ pub fn dispatch_sync(
                 ok(luau_core::fsutil::atomic_write(&path, markdown.as_bytes())?)
             }
             "ai.remoteState" => ok(core.ai_remote_state()),
+            "ai.slackSend" => {
+                let channel: String = arg(p, "channel")?;
+                let text: String = arg(p, "text")?;
+                if text.trim().is_empty() || text.len() > 40_000 {
+                    return Err(RpcError {
+                        code: "invalid".into(),
+                        message: "empty or too long".into(),
+                    });
+                }
+                ok(luau_core::ai::send_to_slack(&channel, &text)?)
+            }
             "ai.setupCancel" => {
                 luau_core::ai::setup::cancel();
                 ok(())
