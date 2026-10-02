@@ -101,8 +101,8 @@ export default {
     remoteWarning: 'Esta dirección no está en este equipo: tus notas se enviarán allí.',
     test: 'Probar conexión',
     testing: 'Probando…',
-    connected: 'La IA local está lista ({model})',
-    notConnected: 'La IA local no está disponible: {message}',
+    connected: 'La IA está lista ({model})',
+    notConnected: 'La IA no está disponible: {message}',
     pull: 'Descargar modelo',
     pullPrompt: 'Modelo a descargar (p. ej. llama3.2:3b)',
     pulling: 'Descargando {name}… {pct}',
@@ -140,7 +140,7 @@ export default {
       yesterday: '¿Qué hice ayer?',
     },
     card: { summarize: 'Resumir tarjeta' },
-    ai: { testConnection: 'Probar conexión con la IA local', pullModel: 'Descargar modelo de IA local…' },
+    ai: { testConnection: 'Probar conexión con la IA', pullModel: 'Descargar modelo de IA local…' },
   },
   settings: {
     keys: {

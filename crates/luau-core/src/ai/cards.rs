@@ -447,7 +447,7 @@ fn draft(v: &Value, src: Source) -> Option<CardDraft> {
 
 /// Extract the JSON value from a model answer (tolerates code fences and
 /// prose around it).
-fn json_of(raw: &str) -> Option<Value> {
+pub(crate) fn json_of(raw: &str) -> Option<Value> {
     let raw = raw.trim();
     if let Ok(v) = serde_json::from_str::<Value>(raw) {
         return Some(v);

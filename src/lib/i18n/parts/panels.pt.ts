@@ -63,6 +63,17 @@ export default {
     reorderPinnedOnly: 'Quadros fixados só podem ser reordenados entre fixados.',
   },
   searchPanel: {
+    suggest: {
+      label: 'Sugestões',
+      today: 'Hoje',
+      overdue: 'Atrasadas',
+      next7: 'Próximos 7 dias',
+      next30: 'Próximos 30 dias',
+      last7: 'Últimos 7 dias',
+      last30: 'Últimos 30 dias',
+      before: 'Antes de hoje',
+      after: 'Depois de hoje',
+    },
     placeholder: 'Pesquisar…',
     results: { one: '{count} resultado', other: '{count} resultados' },
     noResults: 'Nada corresponde a esta pesquisa.',

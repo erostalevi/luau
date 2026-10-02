@@ -14,7 +14,7 @@ export interface ModelInfo {
 export type AppleState = 'available' | 'appleIntelligenceNotEnabled' | 'deviceNotEligible' | 'modelNotReady' | 'unsupportedOs' | 'missing' | 'unknown';
 
 export interface AiStatus {
-  /** `apple` | `ollama` | `openai` | `off` | `none` (nothing found). */
+  /** `apple` | `ollama` | `openai` | a remote service | `off` | `none` (nothing found). */
   provider: string;
   endpoint: string;
   available: boolean;
@@ -26,6 +26,25 @@ export interface AiStatus {
   apple?: { status: AppleState; contextSize: number };
   /** Context window in tokens, when known (Apple). */
   contextSize?: number;
+}
+
+/** Remote AI services (card text leaves the computer). */
+export const REMOTE_PROVIDERS = ['anthropic', 'chatgpt', 'gemini', 'openrouter'] as const;
+export type RemoteProvider = (typeof REMOTE_PROVIDERS)[number];
+export const isRemote = (p: string): p is RemoteProvider => (REMOTE_PROVIDERS as readonly string[]).includes(p);
+
+/** Key / consent state of a remote service (never the key itself). */
+export interface RemoteState {
+  provider: RemoteProvider;
+  hasKey: boolean;
+  consent: boolean;
+}
+
+export interface AiTestResult {
+  provider: string;
+  model: string;
+  ms: number;
+  reply: string;
 }
 
 /** One card proposed by "Create card from clipboard → Let AI review it" (validated by the core). */
@@ -206,6 +225,14 @@ export const ai = {
   getSaved: (id: string) => rpc<SavedSummary>('summaries.get', { id }),
   deleteSaved: (id: string) => rpc<void>('summaries.delete', { id }),
   slackConnected: () => rpc<boolean>('ai.slackConnected').catch(() => false),
+  test: () => rpc<AiTestResult>('ai.test'),
+  remoteState: () => rpc<RemoteState[]>('ai.remoteState'),
+  remoteModels: (provider: RemoteProvider) => rpc<string[]>('ai.remoteModels', { provider }),
+  setKey: (provider: RemoteProvider, key: string) => rpc<{ persisted: boolean }>('ai.setKey', { provider, key }),
+  deleteKey: (provider: RemoteProvider) => rpc<void>('ai.deleteKey', { provider }),
+  /** Granting shows a native confirmation (rejects with `cancelled`). */
+  consent: (provider: RemoteProvider, granted: boolean, text?: { service: string; title: string; message: string; confirm: string; cancel: string }) =>
+    rpc<void>('ai.consent', { provider, granted, ...(text ?? {}) }),
 };
 
 /** Subscribe to a feature event (`summary.chunk`, `summary.progress`, `ai.pull`, `schedules.ran`). */

@@ -1,11 +1,15 @@
-//! Local LLM client: Apple's on-device model (through [`super::apple`]),
-//! Ollama (`/api/chat`, `/api/tags`, `/api/pull`) and any OpenAI-compatible
-//! server (`/v1/chat/completions`, `/v1/models`: LM Studio, llama.cpp, vLLM,
-//! LocalAI…). Localhost by default; plain HTTP is accepted
-//! only for loopback hosts, anything else must be HTTPS (card data would leave
-//! the machine, so the UI also flags `remote`).
+//! LLM client for three kinds of source:
+//! - **native**: Apple's on-device model (through [`super::apple`]);
+//! - **local**: Ollama (`/api/chat`, `/api/tags`, `/api/pull`) and any
+//!   OpenAI-compatible server (`/v1/chat/completions`, `/v1/models`: LM Studio,
+//!   llama.cpp, vLLM, LocalAI…). Localhost by default; plain HTTP is accepted
+//!   only for loopback hosts, anything else must be HTTPS;
+//! - **remote**: Anthropic (Claude), OpenAI (ChatGPT), Google (Gemini) and
+//!   OpenRouter, with an API key from the OS keychain. Remote services are only
+//!   used when picked explicitly *and* the user consented (card text leaves the
+//!   computer); `auto` never chooses one.
 //!
-//! Never logs prompts or model output; only endpoints' hosts and HTTP statuses.
+//! Never logs prompts, model output or keys; only hosts and HTTP statuses.
 
 use std::time::Duration;
 
@@ -34,10 +38,29 @@ pub enum Provider {
     /// Apple's on-device model (FoundationModels, macOS 26+).
     Apple,
     Ollama,
+    /// Local OpenAI-compatible server (LM Studio, llama.cpp…).
     #[serde(rename = "openai")]
     OpenAi,
+    /// Remote: Anthropic Messages API.
+    Anthropic,
+    /// Remote: OpenAI's own API.
+    #[serde(rename = "chatgpt")]
+    ChatGpt,
+    /// Remote: Google Gemini (OpenAI-compatible endpoint).
+    Gemini,
+    /// Remote: OpenRouter (OpenAI-compatible).
+    #[serde(rename = "openrouter")]
+    OpenRouter,
     Off,
 }
+
+/// The remote services, in the order the settings list them.
+pub const REMOTE_PROVIDERS: [Provider; 4] = [
+    Provider::Anthropic,
+    Provider::ChatGpt,
+    Provider::Gemini,
+    Provider::OpenRouter,
+];
 
 impl Provider {
     pub fn parse(s: &str) -> Provider {
@@ -45,6 +68,10 @@ impl Provider {
             "apple" | "apple-on-device" | "foundationmodels" => Provider::Apple,
             "ollama" => Provider::Ollama,
             "openai" | "openai-compatible" | "lmstudio" => Provider::OpenAi,
+            "anthropic" | "claude" => Provider::Anthropic,
+            "chatgpt" | "openai-cloud" => Provider::ChatGpt,
+            "gemini" | "google" => Provider::Gemini,
+            "openrouter" => Provider::OpenRouter,
             "off" | "none" | "disabled" => Provider::Off,
             _ => Provider::Auto,
         }
@@ -55,9 +82,45 @@ impl Provider {
             Provider::Apple => "apple",
             Provider::Ollama => "ollama",
             Provider::OpenAi => "openai",
+            Provider::Anthropic => "anthropic",
+            Provider::ChatGpt => "chatgpt",
+            Provider::Gemini => "gemini",
+            Provider::OpenRouter => "openrouter",
             Provider::Off => "off",
         }
     }
+
+    /// Card text leaves this computer.
+    pub fn is_remote(self) -> bool {
+        REMOTE_PROVIDERS.contains(&self)
+    }
+
+    /// Fixed HTTPS base of a remote service (OpenAI-compatible ones end where
+    /// `/chat/completions` and `/models` hang off).
+    pub fn remote_base(self) -> Option<&'static str> {
+        match self {
+            Provider::Anthropic => Some("https://api.anthropic.com"),
+            Provider::ChatGpt => Some("https://api.openai.com/v1"),
+            Provider::Gemini => Some("https://generativelanguage.googleapis.com/v1beta/openai"),
+            Provider::OpenRouter => Some("https://openrouter.ai/api/v1"),
+            _ => None,
+        }
+    }
+}
+
+/// An API key. `Debug` is redacted so it can never end up in a log line.
+#[derive(Clone, PartialEq, Eq)]
+pub struct ApiKey(pub String);
+
+impl std::fmt::Debug for ApiKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ApiKey(<redacted>)")
+    }
+}
+
+/// Plausible API key: printable ASCII, no spaces, sane length.
+pub fn valid_api_key(k: &str) -> bool {
+    (16..=512).contains(&k.len()) && k.chars().all(|c| c.is_ascii_graphic())
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -68,6 +131,12 @@ pub struct AiConfig {
     pub temperature: f32,
     /// Whole-request timeout for a generation.
     pub timeout: Duration,
+    /// Model for the remote service (`None` = a sensible default).
+    pub remote_model: Option<String>,
+    /// Filled by the app from the keychain, never from settings.
+    pub remote_key: Option<ApiKey>,
+    /// The user agreed to send card text to this remote service.
+    pub remote_consent: bool,
 }
 
 impl Default for AiConfig {
@@ -78,6 +147,9 @@ impl Default for AiConfig {
             model: None,
             temperature: 0.3,
             timeout: Duration::from_secs(180),
+            remote_model: None,
+            remote_key: None,
+            remote_consent: false,
         }
     }
 }
@@ -110,6 +182,9 @@ impl AiConfig {
                 .and_then(Value::as_u64)
                 .map(|s| Duration::from_secs(s.clamp(10, 1800)))
                 .unwrap_or(d.timeout),
+            remote_model: str_of("ai.remoteModel").map(str::to_string),
+            remote_key: None,
+            remote_consent: false,
         }
     }
 }
@@ -215,6 +290,8 @@ pub struct Resolved {
     /// Context window in tokens when it is small and known (Apple on-device);
     /// prompts are trimmed to fit it. `None` = no trimming.
     pub context: Option<u32>,
+    /// Remote services only.
+    pub key: Option<ApiKey>,
 }
 
 impl Resolved {
@@ -382,6 +459,9 @@ pub fn apple_first(cfg: &AiConfig) -> bool {
 /// Find a reachable provider according to the config. `auto` prefers the
 /// Apple on-device model, then a running Ollama / LM Studio / llama.cpp.
 pub async fn status(cfg: &AiConfig) -> AiStatus {
+    if cfg.provider.is_remote() {
+        return remote_status(cfg);
+    }
     if cfg.provider == Provider::Off {
         return AiStatus {
             endpoint: cfg.endpoint.clone(),
@@ -406,6 +486,33 @@ pub async fn status(cfg: &AiConfig) -> AiStatus {
         st.apple = Some(a);
     }
     st
+}
+
+/// A remote service is ready once it has a key and the user's consent; this
+/// does not touch the network (use the connection test for that).
+pub fn remote_status(cfg: &AiConfig) -> AiStatus {
+    let base = cfg.provider.remote_base().unwrap_or_default();
+    let error = if !cfg.remote_consent {
+        Some("consent needed before card text is sent to this service".to_string())
+    } else if cfg.remote_key.is_none() {
+        Some("no API key".to_string())
+    } else {
+        None
+    };
+    AiStatus {
+        provider: cfg.provider.as_str().into(),
+        available: error.is_none(),
+        endpoint: base.into(),
+        model: cfg
+            .remote_model
+            .clone()
+            .or_else(|| super::remote::choose_model(cfg.provider, &[])),
+        models: vec![],
+        remote: true,
+        error,
+        apple: None,
+        context_size: None,
+    }
 }
 
 async fn http_status(cfg: &AiConfig) -> AiStatus {
@@ -449,6 +556,32 @@ async fn http_status(cfg: &AiConfig) -> AiStatus {
 }
 
 pub async fn resolve(cfg: &AiConfig) -> Result<Resolved> {
+    if cfg.provider.is_remote() {
+        let st = remote_status(cfg);
+        if let Some(e) = st.error {
+            return Err(Error::Other(e));
+        }
+        let key = cfg.remote_key.clone().expect("checked by remote_status");
+        let model = match &cfg.remote_model {
+            Some(m) => m.clone(),
+            None => {
+                let models = super::remote::list_models(cfg.provider, &key).await?;
+                super::remote::choose_model(cfg.provider, &models).ok_or_else(|| {
+                    Error::Other("no chat model available for this account".into())
+                })?
+            }
+        };
+        return Ok(Resolved {
+            provider: cfg.provider,
+            endpoint: Endpoint {
+                base: st.endpoint,
+                remote: true,
+            },
+            model,
+            context: None,
+            key: Some(key),
+        });
+    }
     let st = status(cfg).await;
     if !st.available {
         return Err(Error::Other(
@@ -465,6 +598,7 @@ pub async fn resolve(cfg: &AiConfig) -> Result<Resolved> {
             },
             model: APPLE_MODEL.into(),
             context: st.context_size,
+            key: None,
         });
     }
     Ok(Resolved {
@@ -472,6 +606,7 @@ pub async fn resolve(cfg: &AiConfig) -> Result<Resolved> {
         endpoint: parse_endpoint(&st.endpoint)?,
         model: st.model.unwrap_or_default(),
         context: None,
+        key: None,
     })
 }
 
@@ -522,6 +657,11 @@ pub async fn chat_json(
     temperature: f32,
     timeout: Duration,
 ) -> Result<String> {
+    if r.provider.is_remote() {
+        return tokio::time::timeout(timeout, super::remote::chat_json(r, messages, schema))
+            .await
+            .map_err(|_| Error::Other("the AI service did not answer in time".into()))?;
+    }
     if r.provider == Provider::Apple {
         return apple_chat(
             r,
@@ -622,6 +762,14 @@ pub async fn chat(
     max_tokens: Option<u32>,
     on_chunk: &mut (dyn FnMut(&str) + Send),
 ) -> Result<String> {
+    if r.provider.is_remote() {
+        return tokio::time::timeout(
+            timeout,
+            super::remote::chat(r, messages, max_tokens, on_chunk),
+        )
+        .await
+        .map_err(|_| Error::Other("the AI service did not answer in time".into()))?;
+    }
     if r.provider == Provider::Apple {
         return apple_chat(
             r,
@@ -881,6 +1029,44 @@ mod tests {
             },
         ]);
         assert_eq!((i.as_str(), p.as_str()), ("S", "U1\n\nU2"));
+    }
+
+    #[test]
+    fn remote_needs_consent_and_key_and_is_never_auto() {
+        assert!(
+            REMOTE_PROVIDERS
+                .iter()
+                .all(|p| p.is_remote() && p.remote_base().unwrap().starts_with("https://"))
+        );
+        assert!(!Provider::Auto.is_remote() && !Provider::OpenAi.is_remote());
+        assert_eq!(Provider::parse("claude"), Provider::Anthropic);
+        assert_eq!(Provider::parse("chatgpt"), Provider::ChatGpt);
+        let mut c = AiConfig {
+            provider: Provider::Anthropic,
+            ..Default::default()
+        };
+        let st = remote_status(&c);
+        assert!(!st.available && st.error.unwrap().contains("consent"));
+        c.remote_consent = true;
+        assert!(remote_status(&c).error.unwrap().contains("API key"));
+        c.remote_key = Some(ApiKey("sk-ant-0123456789abcdef".into()));
+        let st = remote_status(&c);
+        assert!(st.available && st.remote);
+        assert_eq!(st.model.as_deref(), Some("claude-opus-5-5"));
+        assert!(
+            !format!("{c:?}").contains("0123456789"),
+            "keys never show in Debug"
+        );
+        // Settings can't smuggle a key or consent in.
+        let s = AiConfig::from_settings(
+            &json!({"ai.provider": "anthropic", "ai.remoteKey": "x", "ai.remoteConsent": true}),
+        );
+        assert!(s.remote_key.is_none() && !s.remote_consent);
+        assert!(
+            valid_api_key("sk-ant-api03-abcdefghijk")
+                && !valid_api_key("short")
+                && !valid_api_key("has space in it ok ok")
+        );
     }
 
     #[test]

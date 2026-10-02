@@ -30,8 +30,9 @@
   import { openMenu, openMenuAt } from '$lib/state/menu.svelte';
   import { tip } from '$lib/components/tooltip';
   import Segmented from '$lib/components/Segmented.svelte';
+  import QuerySuggest from '$lib/components/QuerySuggest.svelte';
   import { t, relTime } from '$lib/i18n/index.svelte';
-  import { parse, removeFilter, highlightTerms, isEmpty } from './query';
+  import { parse, removeFilter, highlightTerms, isEmpty, KEYS } from './query';
   import { effectiveCase, effectiveText, rewrite } from './sync';
   import { search, loadSaved, runSearch, groupByBoard, groupByLane, navOrder, snippetSegments, highlightSegments, type Segment } from './searchState.svelte';
   import { FILTER_KINDS, filterMenu, activeCount, chipLabel, type FilterKind } from './filterMenus';
@@ -231,6 +232,7 @@
       oninput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
       onkeydown={onKeydown}
     />
+    <QuerySuggest {input} config={{ keys: KEYS, tagStyle: 'key' }} onapply={setText} />
     {#if busy}<Loader size={13} class="spin busy" />{/if}
     {#if search.q}
       <button

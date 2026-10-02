@@ -58,6 +58,8 @@ pub const KEYS: &[&str] = &[
     "assignee",
     "mention",
     "due",
+    "start",
+    "started",
     "updated",
     "created",
     "links",

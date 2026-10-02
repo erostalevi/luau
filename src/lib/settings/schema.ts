@@ -15,6 +15,8 @@ export interface SettingDef {
   step?: number;
   /** Hidden from the UI (managed elsewhere). */
   hidden?: boolean;
+  /** Edited by a custom panel in its category (searchable, but no generic row). */
+  panel?: boolean;
   /** Requires restart. */
   restart?: boolean;
   /** Source: core or an extension id. */
@@ -150,9 +152,14 @@ export const CORE_SETTINGS: SettingDef[] = [
   s('history.maxMb', 'number', 50, 'history', { min: 5, max: 2000, step: 5 }),
 
   // ai
-  s('ai.provider', 'enum', 'auto', 'ai', { options: ['auto', 'apple', 'ollama', 'openai', 'off'] }),
-  s('ai.endpoint', 'string', 'http://localhost:11434', 'ai'),
-  s('ai.model', 'string', '', 'ai'),
+  // Source, address and models are edited in the AI source panel (AiSourcePanel).
+  s('ai.provider', 'enum', 'auto', 'ai', {
+    options: ['auto', 'apple', 'ollama', 'openai', 'anthropic', 'chatgpt', 'gemini', 'openrouter', 'off'],
+    panel: true,
+  }),
+  s('ai.endpoint', 'string', 'http://localhost:11434', 'ai', { panel: true }),
+  s('ai.model', 'string', '', 'ai', { panel: true }),
+  s('ai.remoteModel', 'string', '', 'ai', { panel: true }),
   s('ai.temperature', 'number', 0.3, 'ai', { min: 0, max: 1.5, step: 0.05 }),
   s('summaries.schedules', 'list', [], 'ai', { hidden: true }),
 
@@ -161,6 +168,7 @@ export const CORE_SETTINGS: SettingDef[] = [
   s('integrations.confirmPull', 'boolean', false, 'integrations'),
   s('integrations.watchIntervalSec', 'number', 60, 'integrations', { min: 30, max: 3600, step: 30 }),
   s('integrations.allowInsecure', 'boolean', false, 'integrations', { hidden: true }),
+  s('integrations.slackMemberId', 'string', '', 'integrations'),
 
   // keyboard
   s('keyboard.preset', 'enum', 'vscode', 'keyboard', { options: ['vscode', 'trello', 'vim', 'emacs'] }),

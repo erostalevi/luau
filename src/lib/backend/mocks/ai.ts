@@ -86,16 +86,259 @@ export function register(methods: Methods, api: MockApi) {
     return out.join('\n');
   }
 
-  methods['ai.status'] = () => ({
-    provider: 'none',
-    available: false,
-    endpoint: 'http://localhost:11434',
-    model: null,
-    models: [],
-    remote: false,
-    error: 'mock: no local AI in the browser',
-    apple: { status: 'missing', contextSize: 0 },
-  });
+  // Remote services: keys and consent live in localStorage (the app uses the
+  // OS keychain and a native consent prompt).
+  const REMOTE = ['anthropic', 'chatgpt', 'gemini', 'openrouter'];
+  const MODELS: Record<string, string[]> = {
+    anthropic: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5'],
+    chatgpt: ['gpt-5', 'gpt-5-mini'],
+    gemini: ['gemini-2.5-pro', 'gemini-2.5-flash'],
+    openrouter: ['anthropic/claude-opus-5-5', 'openai/gpt-5', 'google/gemini-2.5-pro'],
+  };
+  const keys = () => load<Record<string, boolean>>('ai.keys', {});
+  const consents = () => load<Record<string, boolean>>('ai.consent', {});
+  const cfg = () => load<Record<string, any>>('settings', {});
+  const remoteCheck = (p: unknown) => {
+    if (!REMOTE.includes(String(p))) throw new RpcError('invalid', 'not a remote AI service');
+    return String(p);
+  };
+  function status() {
+    const provider = String(cfg()['ai.provider'] ?? 'auto');
+    if (REMOTE.includes(provider)) {
+      const error = !consents()[provider] ? 'consent needed before card text is sent to this service' : !keys()[provider] ? 'no API key' : undefined;
+      return {
+        provider,
+        available: !error,
+        endpoint: `https://${provider}.example`,
+        model: cfg()['ai.remoteModel'] || MODELS[provider][0],
+        models: [],
+        remote: true,
+        error,
+      };
+    }
+    if (provider === 'off') return { provider: 'off', available: false, endpoint: '', model: null, models: [], remote: false };
+    return {
+      provider: 'none',
+      available: false,
+      endpoint: String(cfg()['ai.endpoint'] || 'http://localhost:11434'),
+      model: null,
+      models: [],
+      remote: false,
+      error: 'mock: no local AI in the browser',
+      apple: { status: 'missing', contextSize: 0 },
+    };
+  }
+  methods['ai.status'] = () => status();
+  methods['ai.remoteState'] = () => REMOTE.map((provider) => ({ provider, hasKey: !!keys()[provider], consent: !!consents()[provider] }));
+  methods['ai.setKey'] = (p) => {
+    const pr = remoteCheck(p.provider);
+    const k = String(p.key ?? '').trim();
+    if (k.length < 16 || /\s/.test(k)) throw new RpcError('invalid', "that doesn't look like an API key");
+    save('ai.keys', { ...keys(), [pr]: true });
+    return { persisted: true };
+  };
+  methods['ai.deleteKey'] = (p) => {
+    const pr = remoteCheck(p.provider);
+    const k = keys();
+    delete k[pr];
+    save('ai.keys', k);
+  };
+  methods['ai.consent'] = (p) => {
+    const pr = remoteCheck(p.provider);
+    if (p.granted !== false && !window.confirm(`${p.service ?? pr}\n\n${p.message ?? ''}`)) throw new RpcError('cancelled', '');
+    save('ai.consent', { ...consents(), [pr]: p.granted !== false });
+  };
+  methods['ai.remoteModels'] = (p) => {
+    const pr = remoteCheck(p.provider);
+    if (!keys()[pr]) throw new RpcError('invalid', 'no API key');
+    return MODELS[pr];
+  };
+  let setupCancelled = false;
+  methods['ai.setupCancel'] = () => {
+    setupCancelled = true;
+  };
+  methods['ai.setupLocal'] = async (p) => {
+    setupCancelled = false;
+    const ev = (payload: Record<string, unknown>) => api.emit({ type: 'custom', name: 'ai.setup', payload } as never);
+    const total = 180 * 1024 ** 2;
+    for (const step of ['check', 'start']) {
+      ev({ step });
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    for (let done = 0; done <= total; done += total / 6) {
+      if (setupCancelled) throw new RpcError('other', 'cancelled');
+      ev({ step: 'download', completed: done, total });
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    for (const step of ['verify', 'install', 'connect']) {
+      ev({ step });
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    if (p.model) ev({ step: 'model', detail: p.model, completed: 1, total: 1 });
+    ev({ step: 'done' });
+    return { endpoint: 'http://localhost:11434', model: p.model ?? null, installed: true };
+  };
+  // Change with AI: a deterministic stand-in (streams, then diffs by words).
+  methods['ai.transform'] = async (p) => {
+    const s = status();
+    if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');
+    const before = String(p.text ?? '');
+    const instr = String(p.instruction ?? '').toLowerCase();
+    let after: string;
+    if (/short/.test(instr)) after = before.split(/(?<=[.!?])\s+/)[0] ?? before;
+    else if (/checklist/.test(instr))
+      after = before
+        .split(/[.\n]+/)
+        .filter((x) => x.trim())
+        .map((x) => `- [ ] ${x.trim().replace(/^[-*]\s*(\[.\]\s*)?/, '')}`)
+        .join('\n');
+    else
+      after = before
+        .replace(/\bteh\b/g, 'the')
+        .replace(/\s+([,.])/g, '$1')
+        .replace(/^./, (c) => c.toUpperCase());
+    for (const word of after.split(/(?<=\s)/)) {
+      api.emit({ type: 'custom', name: 'ai.chunk', payload: { requestId: p.requestId, text: word } } as never);
+      await new Promise((r) => setTimeout(r, 15));
+    }
+    const tok = (x: string) => x.split(/(\s+)/).filter(Boolean);
+    const a = tok(before);
+    const b = tok(after);
+    // LCS word diff (fine for mock-sized texts).
+    const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+    for (let i = a.length - 1; i >= 0; i--)
+      for (let j = b.length - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    const diff: { op: string; text: string }[] = [];
+    const push = (op: string, text: string) =>
+      diff.length && diff[diff.length - 1].op === op ? (diff[diff.length - 1].text += text) : diff.push({ op, text });
+    let i = 0;
+    let j = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) {
+        push('eq', a[i]);
+        i++;
+        j++;
+      } else if (dp[i + 1][j] >= dp[i][j + 1]) push('del', a[i++]);
+      else push('ins', b[j++]);
+    }
+    while (i < a.length) push('del', a[i++]);
+    while (j < b.length) push('ins', b[j++]);
+    return { text: after, diff, provider: s.provider, model: s.model };
+  };
+  // Quick summary / assistant: keyword matching over the mock boards.
+  const allCards = () =>
+    [...api.boards.keys()].flatMap((b) => {
+      const s: BoardSnapshot = api.snapshot(b);
+      return s.nodes.map((n) => ({
+        board: b,
+        boardName: s.header.name,
+        id: n.id,
+        title: n.title,
+        lane: s.lanes.find((l) => l.order.includes(n.id))?.name ?? '',
+      }));
+    });
+  const streamText = async (requestId: string, text: string) => {
+    for (const w of text.split(/(?<=\s)/)) {
+      api.emit({ type: 'custom', name: 'ai.chunk', payload: { requestId, text: w } } as never);
+      await new Promise((r) => setTimeout(r, 12));
+    }
+  };
+  methods['ai.ask'] = async (p) => {
+    const s = status();
+    if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');
+    const words = String(p.question ?? '')
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((w) => w.length > 3);
+    const hits = allCards().filter((c) => words.some((w) => c.title.toLowerCase().includes(w) || c.lane.toLowerCase().includes(w)));
+    const sources = (hits.length ? hits : allCards()).slice(0, 5);
+    const answer = `Here is what I found:\n\n${sources.map((c) => `- [[${c.id}]] is in **${c.lane || c.boardName}**`).join('\n')}`;
+    await streamText(p.requestId, answer);
+    return { answer, sources: sources.map(({ board, boardName, id, title }) => ({ board, boardName, id, title })), provider: s.provider, model: s.model };
+  };
+  methods['ai.agent'] = async (p) => {
+    const s = status();
+    if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');
+    await new Promise((r) => setTimeout(r, 400));
+    const msg = String(p.message ?? '');
+    const cards = allCards();
+    const find = (name: string) => cards.find((c) => c.title.toLowerCase().includes(name.trim().toLowerCase()));
+    const base = {
+      board: '',
+      boardName: '',
+      card: '',
+      cardTitle: '',
+      lane: '',
+      laneName: '',
+      title: '',
+      text: '',
+      key: '',
+      value: '',
+      channel: '',
+      risky: false,
+    };
+    const actions: Record<string, unknown>[] = [];
+    let m: RegExpExecArray | null;
+    if ((m = /move (.+?) to ([\p{L} ]+)/iu.exec(msg))) {
+      const c = find(m[1]);
+      if (c)
+        actions.push({
+          ...base,
+          type: 'move_card',
+          board: c.board,
+          boardName: c.boardName,
+          card: c.id,
+          cardTitle: c.title,
+          laneName: m[2].trim(),
+          because: m[0],
+        });
+    }
+    if ((m = /create (?:a )?card (?:called |named )?"?([^"]+?)"?(?: in ([\p{L} ]+))?$/iu.exec(msg))) {
+      const b = [...api.boards.keys()][0];
+      actions.push({
+        ...base,
+        type: 'create_card',
+        board: b,
+        boardName: api.snapshot(b).header.name,
+        title: m[1],
+        laneName: m[2]?.trim() ?? api.snapshot(b).lanes[0]?.name ?? '',
+        because: m[0],
+      });
+    }
+    if ((m = /archive (.+?)(?: and|$)/i.exec(msg))) {
+      const c = find(m[1]);
+      if (c) actions.push({ ...base, type: 'archive_card', board: c.board, boardName: c.boardName, card: c.id, cardTitle: c.title, because: m[0] });
+    }
+    if ((m = /tell #(\S+) (.+)/i.exec(msg))) actions.push({ ...base, type: 'slack_message', channel: `#${m[1]}`, text: m[2], risky: true, because: m[0] });
+    const answer = actions.length
+      ? 'Sure, here’s what I’ll do.'
+      : `I couldn’t find anything to change. Cards I know: ${cards
+          .slice(0, 3)
+          .map((c) => `[[${c.id}]]`)
+          .join(', ')}`;
+    return { answer, actions, rejected: [], confirm: actions.some((a) => a.risky) || actions.length > 10, provider: s.provider, model: s.model };
+  };
+  methods['slack.latestMention'] = async (p) => {
+    if (!p.member) throw new RpcError('invalid', 'need_member_id');
+    await new Promise((r) => setTimeout(r, 300));
+    return {
+      channel: 'C01',
+      channelName: 'launch',
+      ts: '1700000000.0001',
+      author: 'ana',
+      text: '@you can you update the release notes and ping QA about the login regression before Friday?',
+      permalink: 'https://example.slack.com/archives/C01/p1700000000000100',
+    };
+  };
+  methods['ai.slackSend'] = () => {
+    throw new RpcError('notFound', 'Slack not connected');
+  };
+  methods['ai.test'] = async () => {
+    const s = status();
+    if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');
+    await new Promise((r) => setTimeout(r, 400));
+    return { provider: s.provider, model: s.model, ms: 412, reply: 'OK' };
+  };
   // Clipboard → cards: a deterministic stand-in for the local AI (one card per
   // list item, else one card), so the flow can be exercised in `pnpm dev:web`.
   methods['ai.cardsFromText'] = (p) => {

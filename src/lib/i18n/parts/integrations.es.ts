@@ -240,6 +240,10 @@ export default {
   },
   settings: {
     keys: {
+      'integrations.slackMemberId': {
+        label: 'Tu ID de miembro de Slack',
+        desc: 'Lo usa «Tarea desde Slack» con un token de bot para encontrar los mensajes que te mencionan.',
+      },
       'integrations.allowPush': { label: 'Permitir enviar a servicios', desc: 'Si está desactivado, nunca se envía nada a Jira, Trello ni Slack.' },
       'integrations.allowPull': {
         label: 'Permitir traer de servicios',

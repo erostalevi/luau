@@ -9,13 +9,24 @@ import { confirm } from '$lib/state/dialogs.svelte';
 import { inputBox, BACK } from '$lib/quickinput/qi.svelte';
 import { activeCard, copyText } from '$lib/app/helpers';
 import { t } from '$lib/i18n/index.svelte';
-import { ai, onAiEvent, type PullProgress } from './api';
+import { ai, isRemote, onAiEvent, type PullProgress } from './api';
 
 const openSummary = (payload: Record<string, unknown>) => openSingleton('summary', { ...payload, nonce: Date.now() });
 
 export async function testConnection(): Promise<boolean> {
   const s = await ai.status().catch((e: Error) => ({ available: false, model: null, error: e.message, provider: 'none' }) as const);
   if (s.available && s.model) {
+    // Remote services are only "ready" on paper until a request goes through.
+    if (isRemote(s.provider)) {
+      try {
+        const r = await ai.test();
+        toast.success(t('ai.connected', { model: r.model }));
+        return true;
+      } catch (e) {
+        toast.warn(t('ai.notConnected', { message: (e as Error).message }));
+        return false;
+      }
+    }
     toast.success(t('ai.connected', { model: s.model }));
     return true;
   }

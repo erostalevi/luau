@@ -4,6 +4,7 @@
 //! <data>/summaries/schedules.json      scheduled summaries
 //! <data>/summaries/saved/<id>.json     generated summaries (history, capped)
 //! <data>/code-trust.json               boards allowed to run code cells
+//! <data>/ai-consent.json                remote AI services the user agreed to send card text to
 //! <data>/cache/code/<sha>.json         last output per code cell
 //! <data>/cache/previews/<sha>.json     link previews
 //! ```
@@ -228,6 +229,31 @@ impl AiStore {
         write_json(&self.trust_path(), &v)
     }
 
+    // --- remote AI consent -------------------------------------------------------
+    // Kept here (app data), not in settings, so an imported settings bundle
+    // can never turn on sending card text to a remote service.
+
+    fn consent_path(&self) -> PathBuf {
+        self.data.join("ai-consent.json")
+    }
+
+    pub fn remote_consents(&self) -> Vec<String> {
+        read_json(&self.consent_path()).unwrap_or_default()
+    }
+
+    pub fn has_remote_consent(&self, provider: &str) -> bool {
+        self.remote_consents().iter().any(|p| p == provider)
+    }
+
+    pub fn set_remote_consent(&self, provider: &str, granted: bool) -> Result<()> {
+        let mut v = self.remote_consents();
+        v.retain(|p| p != provider);
+        if granted {
+            v.push(provider.to_string());
+        }
+        write_json(&self.consent_path(), &v)
+    }
+
     // --- caches ------------------------------------------------------------------
 
     pub fn cache_path(&self, kind: &str, hash: &str) -> PathBuf {
@@ -275,6 +301,11 @@ mod tests {
         assert!(st.is_trusted("b1"));
         st.set_trusted("b1", false).unwrap();
         assert!(!st.is_trusted("b1"));
+        assert!(!st.has_remote_consent("anthropic"));
+        st.set_remote_consent("anthropic", true).unwrap();
+        assert!(st.has_remote_consent("anthropic") && !st.has_remote_consent("gemini"));
+        st.set_remote_consent("anthropic", false).unwrap();
+        assert!(!st.has_remote_consent("anthropic"));
         assert!(st.schedules().is_empty());
         st.save_schedules(&[Schedule {
             id: "x".into(),

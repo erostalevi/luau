@@ -67,11 +67,15 @@
   `"exact phrase"` `-tag:wip`…). The filter UI stays in sync with the query, and searches can be saved and opened
   as boards.
 - **History** timeline with a word-level diff and *restore this version*, plus **Trash** and **Archive** views.
-- **Activity summaries** ("what did I do yesterday?") written by a **local** model — Apple's built-in on-device
-  model on Apple Silicon Macs with Apple Intelligence (zero setup), Ollama, LM Studio… — or a built-in basic
-  writer. They can be scheduled, with delivery by notification or Slack.
-- **Create card from clipboard**: paste text as one card, or let the local AI split it into cards with tasks,
-  tags, due dates and assignees.
+- **AI that stays local by default**: Apple's built-in on-device model (zero setup), Ollama or LM Studio (*Set up
+  local AI…* installs and verifies Ollama for you), or — only if you choose and allow it — Claude, ChatGPT, Gemini
+  or OpenRouter with your own key, kept in the keychain.
+- **Activity summaries** ("what did I do yesterday?"), scheduled or on demand, delivered by notification or Slack.
+- **Change with AI…** rewrites a selection by your instruction with a before/after preview; **Quick summary…**
+  answers questions from your boards and history; **AI…** is an assistant that can also make changes (it asks
+  first for Jira / Trello / Slack, deletes and big changes, and one ⌘Z undoes a run).
+- **Create card from clipboard** or **Task from Slack** (your latest @mention): one card as is, or AI-drafted cards
+  with tasks, tags, due dates and assignees.
 
 <p align="center">
   <img src="docs/screenshots/summary-light.jpg" alt="Activity summary view with period presets, detail slider and the history timeline" width="430">

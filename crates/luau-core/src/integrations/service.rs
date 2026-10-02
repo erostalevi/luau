@@ -1759,6 +1759,41 @@ pub fn unlink(core: &Core, board: &str, card: &str) -> Result<()> {
 /// Lets scheduled AI summaries post to Slack through the first connected Slack
 /// account. Scheduled delivery is configured explicitly by the user, so it
 /// skips the interactive confirmation but still honours the push toggle.
+/// "Task from Slack": the newest message that @mentions you. User tokens use
+/// Slack search (falling back to history); bot tokens read the recent history
+/// of their channels and need your member id (`member`), since a bot can't
+/// know who "you" are.
+pub async fn slack_latest_mention(
+    core: &Core,
+    member: Option<&str>,
+) -> Result<Option<super::slack::Mention>> {
+    ensure_allowed(core, Direction::Pull)?;
+    let account = super::accounts::load(&core.paths.config)
+        .into_iter()
+        .find(|a| a.provider == super::types::ProviderKind::Slack)
+        .ok_or_else(|| Error::NotFound("slack account".into()))?;
+    let user_token = super::secrets::get(&account.id)
+        .map(|s| s.token.starts_with("xoxp-"))
+        .unwrap_or(false);
+    let (_, client) = provider::slack(&core.paths.config, &account.id)?;
+    let oldest = chrono::Utc::now().timestamp() - 14 * 86_400;
+    if user_token {
+        let me = client.whoami().await?;
+        return match client.search_mention(&me).await {
+            Ok(m) => Ok(m),
+            Err(e) if e.to_string().starts_with("slack:missing_scope") => {
+                client.scan_mention(&me, oldest).await
+            }
+            Err(e) => Err(e),
+        };
+    }
+    let me = member
+        .map(str::trim)
+        .filter(|m| !m.is_empty() && m.len() <= 24 && m.chars().all(|c| c.is_ascii_alphanumeric()))
+        .ok_or_else(|| Error::invalid("need_member_id"))?;
+    client.scan_mention(me, oldest).await
+}
+
 pub fn register_slack_sender(core: &Arc<Core>) {
     let weak = Arc::downgrade(core);
     crate::ai::set_slack_sender(Box::new(move |channel: &str, text: &str| {
@@ -1778,7 +1813,11 @@ pub fn register_slack_sender(core: &Arc<Core>) {
                 .enable_all()
                 .build()
                 .map_err(|e| Error::Other(e.to_string()))?;
-            rt.block_on(client.post(&channel, &text))
+            rt.block_on(async {
+                // `#name` (as people write it) → channel id.
+                let id = client.channel_id(&channel).await?;
+                client.post(&id, &text).await
+            })
         })
         .join()
         .map_err(|_| Error::Other("slack sender panicked".into()))?

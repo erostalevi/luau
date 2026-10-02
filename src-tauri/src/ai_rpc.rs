@@ -75,6 +75,57 @@ pub async fn dispatch_async(
 ) -> Option<R> {
     let res = match method {
         "ai.status" => ok(core.ai_status().await),
+        "ai.test" => core.ai_test().await.map_err(Into::into).and_then(ok),
+        "slack.latestMention" => {
+            let member: Option<String> = match opt(p, "member") {
+                Ok(m) => m,
+                Err(e) => return Some(Err(e)),
+            };
+            luau_core::integrations::service::slack_latest_mention(core, member.as_deref())
+                .await
+                .map_err(Into::into)
+                .and_then(ok)
+        }
+        "ai.agent" => match de::<luau_core::ai::assist::AgentRequest>(p) {
+            Ok(req) => core.ai_agent(req).await.map_err(Into::into).and_then(ok),
+            Err(e) => Err(e),
+        },
+        "ai.ask" => match de::<luau_core::ai::assist::AskRequest>(p) {
+            Ok(req) => core.ai_ask(req).await.map_err(Into::into).and_then(ok),
+            Err(e) => Err(e),
+        },
+        "ai.transform" => match de::<luau_core::ai::assist::TransformRequest>(p) {
+            Ok(req) => core
+                .ai_transform(req)
+                .await
+                .map_err(Into::into)
+                .and_then(ok),
+            Err(e) => Err(e),
+        },
+        "ai.setupLocal" => {
+            let req = match de::<luau_core::ai::setup::SetupRequest>(p) {
+                Ok(r) => r,
+                Err(e) => return Some(Err(e)),
+            };
+            let text: luau_core::ai::service::SetupTexts = p
+                .get("texts")
+                .cloned()
+                .and_then(|v| serde_json::from_value(v).ok())
+                .unwrap_or_default();
+            let n = notifier(app);
+            core.ai_setup_local(req, Some(&n), &text)
+                .await
+                .map_err(Into::into)
+                .and_then(ok)
+        }
+        "ai.remoteModels" => match arg::<String>(p, "provider") {
+            Ok(pr) => core
+                .ai_remote_models(&pr)
+                .await
+                .map_err(Into::into)
+                .and_then(ok),
+            Err(e) => Err(e),
+        },
         "ai.models" => core.ai_models().await.map_err(Into::into).and_then(ok),
         "ai.pullModel" => {
             let name: String = match arg(p, "name") {
@@ -238,6 +289,59 @@ pub fn dispatch_sync(
                     });
                 }
                 ok(luau_core::fsutil::atomic_write(&path, markdown.as_bytes())?)
+            }
+            "ai.remoteState" => ok(core.ai_remote_state()),
+            "ai.slackSend" => {
+                let channel: String = arg(p, "channel")?;
+                let text: String = arg(p, "text")?;
+                if text.trim().is_empty() || text.len() > 40_000 {
+                    return Err(RpcError {
+                        code: "invalid".into(),
+                        message: "empty or too long".into(),
+                    });
+                }
+                ok(luau_core::ai::send_to_slack(&channel, &text)?)
+            }
+            "ai.setupCancel" => {
+                luau_core::ai::setup::cancel();
+                ok(())
+            }
+            "ai.setKey" => {
+                let persisted =
+                    core.ai_set_key(&arg::<String>(p, "provider")?, &arg::<String>(p, "key")?)?;
+                ok(json!({ "persisted": persisted }))
+            }
+            "ai.deleteKey" => ok(core.ai_delete_key(&arg::<String>(p, "provider")?)?),
+            "ai.consent" => {
+                let provider: String = arg(p, "provider")?;
+                let granted: bool = opt(p, "granted")?.unwrap_or(true);
+                if granted {
+                    // Consent comes from a native prompt the page cannot fake
+                    // or click; it names the service the text will go to.
+                    let service: String = opt(p, "service")?.unwrap_or_else(|| provider.clone());
+                    let title: String =
+                        opt(p, "title")?.unwrap_or_else(|| "Send card text to a remote AI?".into());
+                    let message: String = opt(p, "message")?.unwrap_or_default();
+                    let confirm: String = opt(p, "confirm")?.unwrap_or_else(|| "Allow".into());
+                    let cancel: String = opt(p, "cancel")?.unwrap_or_else(|| "Cancel".into());
+                    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+                    let mut d = app
+                        .dialog()
+                        .message(format!("{service}\n\n{message}"))
+                        .title(title)
+                        .kind(MessageDialogKind::Warning)
+                        .buttons(MessageDialogButtons::OkCancelCustom(confirm, cancel));
+                    if let Some(w) = tauri::Manager::get_webview_window(app, window) {
+                        d = d.parent(&w);
+                    }
+                    if !d.blocking_show() {
+                        return Err(crate::rpc::RpcError {
+                            code: "cancelled".into(),
+                            message: String::new(),
+                        });
+                    }
+                }
+                ok(core.ai_set_consent(&provider, granted)?)
             }
             "ai.slackConnected" => ok(luau_core::ai::slack_connected()
                 && luau_core::integrations::accounts::load(&core.paths.config)

@@ -57,6 +57,7 @@ export default {
     properties: 'Propriedades (prioridade, vencimento…)',
   },
   callouts: { note: 'Nota', tip: 'Dica', info: 'Informação', warning: 'Aviso', danger: 'Perigo', question: 'Pergunta' },
+  propertyMenu: { clear: 'Remover', editText: 'Editar propriedades como texto', overdue: 'Atrasada' },
   properties: {
     priority: 'Prioridade',
     due: 'Vencimento',

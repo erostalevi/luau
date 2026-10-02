@@ -63,6 +63,17 @@ export default {
     reorderPinnedOnly: 'Pinned boards can only be reordered among pinned boards.',
   },
   searchPanel: {
+    suggest: {
+      label: 'Suggestions',
+      today: 'Today',
+      overdue: 'Overdue',
+      next7: 'Next 7 days',
+      next30: 'Next 30 days',
+      last7: 'Last 7 days',
+      last30: 'Last 30 days',
+      before: 'Before today',
+      after: 'After today',
+    },
     placeholder: 'Search…',
     results: { one: '{count} result', other: '{count} results' },
     noResults: 'Nothing matches this search.',

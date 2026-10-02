@@ -240,6 +240,7 @@ export default {
   },
   settings: {
     keys: {
+      'integrations.slackMemberId': { label: 'Your Slack member ID', desc: 'Used by “Task from Slack” with a bot token, to find messages that mention you.' },
       'integrations.allowPush': { label: 'Allow pushing to services', desc: 'When off, nothing is ever sent to Jira, Trello or Slack.' },
       'integrations.allowPull': { label: 'Allow pulling from services', desc: 'When off, mirrors and linked cards are not updated from the services.' },
     },

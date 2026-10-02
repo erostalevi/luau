@@ -83,6 +83,8 @@ export const BASE: Keybinding[] = [
   B('mod+shift+x', 'editor.strike', 'editorFocus'),
   B('mod+k', 'editor.insertLink', 'editorFocus'),
   B('mod+shift+k', 'editor.insertCardLink', 'editorFocus'),
+  B('mod+shift+i', 'ai.change', 'editorFocus'),
+  B('mod+alt+i', 'ai.assistant'),
   B('mod+alt+c', 'editor.toggleChecklist', 'editorFocus'),
   B('mod+enter', 'editor.toggleTask', 'editorFocus'),
   // ⌘[ / ⌘] indent and ⌥⇧↑/↓ copy lines inside the editor: only outside it.

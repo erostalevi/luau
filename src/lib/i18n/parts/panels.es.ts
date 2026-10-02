@@ -63,6 +63,17 @@ export default {
     reorderPinnedOnly: 'Los tableros fijados solo se pueden reordenar entre fijados.',
   },
   searchPanel: {
+    suggest: {
+      label: 'Sugerencias',
+      today: 'Hoy',
+      overdue: 'Vencidas',
+      next7: 'Próximos 7 días',
+      next30: 'Próximos 30 días',
+      last7: 'Últimos 7 días',
+      last30: 'Últimos 30 días',
+      before: 'Antes de hoy',
+      after: 'Después de hoy',
+    },
     placeholder: 'Buscar…',
     results: { one: '{count} resultado', other: '{count} resultados' },
     noResults: 'Nada coincide con esta búsqueda.',

@@ -1,17 +1,17 @@
-// Criar cartão a partir da área de transferência (como está / revisão com IA local).
+// Criar cartão a partir da área de transferência (como está / revisão com IA).
 export default {
   clipboard: {
     how: 'Como transformar a área de transferência em cartões?',
     asIs: 'Como está',
     asIsDesc: 'Um cartão: a primeira linha é o título e o resto fica igual',
     aiReview: 'Deixar a IA revisar',
-    aiReviewDesc: 'A IA local divide em cartões com títulos, tarefas, tags e propriedades',
-    reviewing: 'A IA local está lendo a área de transferência…',
-    aiFailed: 'A IA local não conseguiu criar cartões: {message}',
+    aiReviewDesc: 'A IA divide em cartões com títulos, tarefas, tags e propriedades',
+    reviewing: 'A IA está lendo o texto…',
+    aiFailed: 'A IA não conseguiu criar cartões: {message}',
     noCards: 'nenhum cartão foi proposto',
     confirmCards: { one: 'Criar 1 cartão?', other: 'Criar {count} cartões?' },
     confirmDoc: { one: 'Inserir 1 seção?', other: 'Inserir {count} seções?' },
-    confirmHint: 'Escrito pela IA local neste computador. Você pode desfazer em um passo.',
+    confirmHint: 'Escrito pela IA. Você pode desfazer em um passo.',
     truncated: 'O texto era longo: só a primeira parte foi revisada. Você pode desfazer em um passo.',
     create: { one: 'Criar cartão', other: 'Criar {count} cartões' },
     insert: { one: 'Inserir seção', other: 'Inserir {count} seções' },

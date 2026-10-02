@@ -18,7 +18,7 @@ use crate::markdown::ParsedCard;
 use crate::model::{AttachmentKind, BoardKind, BoardState, Parent};
 pub use query::{Cmp, Filter, Query, Term};
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -40,6 +40,8 @@ pub struct IndexDoc {
     pub has_image: bool,
     pub has_attachment: bool,
     pub due: Option<String>,
+    /// `start:` from the property footer.
+    pub start: Option<String>,
     pub priority: Option<String>,
     pub assignees: Vec<String>,
     pub mentions: Vec<String>,
@@ -135,7 +137,7 @@ impl SearchIndex {
                     is_group INT NOT NULL DEFAULT 0, archived INT NOT NULL DEFAULT 0, kind TEXT NOT NULL DEFAULT 'card',
                     tasks_total INT NOT NULL DEFAULT 0, tasks_done INT NOT NULL DEFAULT 0,
                     has_image INT NOT NULL DEFAULT 0, has_attachment INT NOT NULL DEFAULT 0,
-                    due TEXT, priority TEXT, assignees TEXT NOT NULL DEFAULT '', mentions TEXT NOT NULL DEFAULT '',
+                    due TEXT, start TEXT, priority TEXT, assignees TEXT NOT NULL DEFAULT '', mentions TEXT NOT NULL DEFAULT '',
                     links TEXT NOT NULL DEFAULT '', status TEXT, status_cat TEXT, remote_key TEXT,
                     mtime INT NOT NULL DEFAULT 0, hash TEXT NOT NULL DEFAULT '', UNIQUE(board, id));
                  CREATE INDEX cards_id ON cards(id);
@@ -191,14 +193,14 @@ impl SearchIndex {
             let mut st = tx
                 .prepare_cached(
                     "INSERT INTO cards(board, id, title, body, tags, labels, lane, lane_name, parent, is_group, archived, kind,
-                        tasks_total, tasks_done, has_image, has_attachment, due, priority, assignees, mentions, links,
+                        tasks_total, tasks_done, has_image, has_attachment, due, start, priority, assignees, mentions, links,
                         status, status_cat, remote_key, mtime, hash)
-                     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26)
+                     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27)
                      ON CONFLICT(board, id) DO UPDATE SET title=excluded.title, body=excluded.body, tags=excluded.tags,
                         labels=excluded.labels, lane=excluded.lane, lane_name=excluded.lane_name, parent=excluded.parent,
                         is_group=excluded.is_group, archived=excluded.archived, kind=excluded.kind,
                         tasks_total=excluded.tasks_total, tasks_done=excluded.tasks_done, has_image=excluded.has_image,
-                        has_attachment=excluded.has_attachment, due=excluded.due, priority=excluded.priority,
+                        has_attachment=excluded.has_attachment, due=excluded.due, start=excluded.start, priority=excluded.priority,
                         assignees=excluded.assignees, mentions=excluded.mentions, links=excluded.links,
                         status=excluded.status, status_cat=excluded.status_cat, remote_key=excluded.remote_key,
                         mtime=excluded.mtime, hash=excluded.hash",
@@ -223,6 +225,7 @@ impl SearchIndex {
                     d.has_image as i64,
                     d.has_attachment as i64,
                     d.due,
+                    d.start,
                     d.priority,
                     join_tokens(&d.assignees),
                     join_tokens(&d.mentions),
@@ -458,11 +461,16 @@ impl SearchIndex {
                     "tasks" | "checklist" => ("c.tasks_total > 0".into(), vec![]),
                     "link" | "links" => ("c.links != ''".into(), vec![]),
                     "due" => ("c.due IS NOT NULL".into(), vec![]),
+                    "start" => ("c.start IS NOT NULL".into(), vec![]),
                     "tag" | "tags" => ("(c.tags || c.labels) != ''".into(), vec![]),
                     _ => continue,
                 },
-                "due" | "updated" | "created" => {
-                    let col = if f.key == "due" { "c.due" } else { "date(c.mtime / 1000, 'unixepoch', 'localtime')" };
+                "due" | "start" | "started" | "updated" | "created" => {
+                    let col = match f.key.as_str() {
+                        "due" => "c.due",
+                        "start" | "started" => "c.start",
+                        _ => "date(c.mtime / 1000, 'unixepoch', 'localtime')",
+                    };
                     let (cmp, val) = match v.as_str() {
                         "overdue" => (Cmp::Lt, today.clone()),
                         "today" => (Cmp::Eq, today.clone()),
@@ -639,6 +647,7 @@ pub fn doc_from(
             .due
             .clone()
             .or_else(|| meta.dates.first().cloned()),
+        start: meta.footer.start.clone(),
         priority: meta.footer.priority.clone(),
         assignees: meta.footer.assignees.clone(),
         mentions: meta.mentions.clone(),
@@ -666,6 +675,30 @@ mod tests {
             hash: "h".into(),
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn started_filters_on_the_footer_start_date() {
+        let idx = SearchIndex::in_memory().unwrap();
+        idx.set_board("b1", "B", "kanban").unwrap();
+        let mut a = doc("c1", "Early", "", &[]);
+        a.start = Some("2026-09-01".into());
+        let mut b = doc("c2", "Late", "", &[]);
+        b.start = Some("2026-10-05".into());
+        idx.upsert(&[a, b, doc("c3", "Never", "", &[])]).unwrap();
+        let hits = |q: &str| {
+            let mut v = idx
+                .search(q, &SearchOptions::default())
+                .unwrap()
+                .into_iter()
+                .map(|h| h.id)
+                .collect::<Vec<_>>();
+            v.sort();
+            v
+        };
+        assert_eq!(hits("started:<2026-10-01"), vec!["c1"]);
+        assert_eq!(hits("start:>=2026-10-01"), vec!["c2"]);
+        assert_eq!(hits("has:start"), vec!["c1", "c2"]);
     }
 
     #[test]

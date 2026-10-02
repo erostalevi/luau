@@ -31,15 +31,16 @@ import { selection, select, selectMany, clearSelection } from '$lib/state/select
 import { ui, openEditor } from '$lib/state/ui.svelte';
 import { activeTab, openDocTab, openBoardTab } from '$lib/state/workspace.svelte';
 import { registry } from '$lib/state/registry.svelte';
-import { quickPick, pickOne, inputBox, steps, BACK, type QuickItem } from '$lib/quickinput/qi.svelte';
+import { pickOne, inputBox, steps, type QuickItem } from '$lib/quickinput/qi.svelte';
 import { settings } from '$lib/settings/store.svelte';
 import { tabBoard, activeCard, copyText } from '$lib/app/helpers';
 import { openCard } from '$lib/app/open';
 import { toast } from '$lib/state/toasts.svelte';
-import { t, fmtDate } from '$lib/i18n/index.svelte';
+import { t } from '$lib/i18n/index.svelte';
 import { boardUi, listKey, flash } from './boardUi.svelte';
 import { createCard, trashCards, setArchived, duplicateCard, addTag, setFooterField, readCard } from './cardActions';
 import { CARD_TEMPLATES } from './templates';
+import { pickTag, pickDate, pickPerson } from './pickers';
 
 // --- helpers ---------------------------------------------------------------
 
@@ -284,54 +285,6 @@ async function moveTo() {
     await rpc('board.moveAcross', { from: src.id, ids, to: boardId, parent, before });
     toast.success(t('toasts.movedToBoard', { count: ids.length, board: target.header.name }));
   }
-}
-
-async function pickTag(): Promise<string | undefined> {
-  const tags = await rpc<[string, number][]>('search.tags', { boards: [] }).catch(() => []);
-  const r = await quickPick(
-    tags.map(([tag, n]) => ({ label: `#${tag}`, value: tag, description: String(n) })),
-    {
-      title: t('cards.addTag'),
-      placeholder: t('cards.tagPlaceholder'),
-      allowCustom: (text) => {
-        const clean = text.replace(/^#/, '').trim().replace(/\s+/g, '-');
-        return clean ? { label: t('cards.createTag', { tag: clean }), value: clean } : null;
-      },
-    },
-  );
-  return typeof r === 'string' ? r : undefined;
-}
-
-function isoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-async function pickDate(title: string): Promise<string | null | undefined> {
-  const today = new Date();
-  const add = (n: number) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + n);
-    return isoDate(d);
-  };
-  const nextMonday = add((8 - today.getDay()) % 7 || 7);
-  const items: QuickItem<string>[] = [
-    { label: t('dates.today'), description: fmtDate(add(0), { weekday: 'short', month: 'short', day: 'numeric' }), value: add(0) },
-    { label: t('dates.tomorrow'), description: fmtDate(add(1), { weekday: 'short', month: 'short', day: 'numeric' }), value: add(1) },
-    { label: t('dates.nextMonday'), description: fmtDate(nextMonday, { weekday: 'short', month: 'short', day: 'numeric' }), value: nextMonday },
-    { label: t('dates.inAWeek'), description: fmtDate(add(7), { weekday: 'short', month: 'short', day: 'numeric' }), value: add(7) },
-    { label: t('dates.custom'), value: 'custom' },
-    { label: t('dates.clear'), value: '' },
-  ];
-  const r = await pickOne(items, { title });
-  if (r === undefined || r === BACK) return undefined;
-  if (r !== 'custom') return r;
-  const v = await inputBox({
-    title,
-    placeholder: 'YYYY-MM-DD',
-    value: add(0),
-    validate: (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s)) ? null : t('validation.date')),
-  });
-  return typeof v === 'string' ? v : undefined;
 }
 
 async function forEachTarget(fn: (b: BoardModel, id: string) => Promise<unknown>) {
@@ -593,15 +546,8 @@ export const boardCardCommands: Command[] = [
     category: 'card',
     icon: UserPlus,
     run: async () => {
-      const people = await rpc<string[]>('search.people').catch(() => []);
-      const who = await quickPick(
-        people.map((p) => ({ label: `@${p}`, value: p })),
-        {
-          title: t('cards.assign'),
-          allowCustom: (s) => (s.trim() ? { label: t('cards.assignNew', { name: s.trim().replace(/^@/, '') }), value: s.trim().replace(/^@/, '') } : null),
-        },
-      );
-      if (typeof who !== 'string') return;
+      const who = await pickPerson();
+      if (!who) return;
       await forEachTarget(async (b, id) => {
         const n = b.node(id);
         const list = [...new Set([...(n?.footer.assignees ?? []), who])];

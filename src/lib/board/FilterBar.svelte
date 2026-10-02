@@ -3,12 +3,14 @@
   import { ui } from '$lib/state/ui.svelte';
   import { select } from '$lib/state/selection.svelte';
   import { boards } from '$lib/state/boards.svelte';
-  import { compileFilter } from './filter';
+  import { compileFilter, FILTER_KEYS } from './filter';
+  import QuerySuggest from '$lib/components/QuerySuggest.svelte';
   import { t } from '$lib/i18n/index.svelte';
 
   let { boardId, count }: { boardId: string; count: number } = $props();
   const fs = $derived(ui.filter[boardId] ?? { open: true, text: '' });
   let cursor = $state(-1);
+  let input: HTMLInputElement | undefined = $state();
 
   function setText(v: string) {
     ui.filter[boardId] = { open: true, text: v };
@@ -44,6 +46,7 @@
 <div class="board-filter">
   <Search size={15} class="muted" />
   <input
+    bind:this={input}
     value={fs.text}
     placeholder={t('board.filterPlaceholder')}
     spellcheck="false"
@@ -54,6 +57,7 @@
       if (e.key === 'Enter') jump(e.shiftKey ? -1 : 1);
     }}
   />
+  <QuerySuggest {input} config={{ keys: FILTER_KEYS, tagStyle: 'hash' }} onapply={setText} />
   {#if fs.text}
     <span class="count">{t('board.matches', { count })}</span>
     <button class="icon-btn sm" onclick={() => jump(-1)} aria-label="prev"><ChevronUp size={14} /></button>

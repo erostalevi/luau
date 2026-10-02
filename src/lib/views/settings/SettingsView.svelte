@@ -18,7 +18,7 @@
   import { prefsUi } from './prefsState.svelte';
   import SettingRow from './SettingRow.svelte';
   import { keepScroll } from '$lib/components/keepScroll';
-  import AiStatusCard from './AiStatusCard.svelte';
+  import AiSourcePanel from './AiSourcePanel.svelte';
 
   let { initial }: { initial?: string } = $props();
 
@@ -217,8 +217,8 @@
                 <ArrowRight size={15} />
               </button>
             {/if}
-            {#if g.id === 'ai'}<AiStatusCard />{/if}
-            {#each g.items as d (d.key)}
+            {#if g.id === 'ai'}<AiSourcePanel />{/if}
+            {#each g.items.filter((d) => !d.panel) as d (d.key)}
               <SettingRow def={d} showKey={filtering} />
             {/each}
           </section>

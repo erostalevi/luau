@@ -71,6 +71,20 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
+      # Without the updater key, still build the installers (no signed update
+      # artifacts / latest.json) instead of failing the whole release.
+      - name: Updater signing key check
+        id: sign
+        shell: bash
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/nosign.json"
+            echo "args=--config $RUNNER_TEMP/nosign.json" >> "$GITHUB_OUTPUT"
+            echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set: installers are built without signed updater artifacts"
+          fi
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -82,4 +96,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
-          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} ${{ steps.sign.outputs.args }}

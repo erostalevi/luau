@@ -30,6 +30,12 @@ export function dismiss(id: number) {
   if (i >= 0) toasts.list.splice(i, 1);
 }
 
+/** Change a toast's text in place (progress); no-op when it is gone. */
+export function updateToast(id: number, message: string) {
+  const it = toasts.list.find((t) => t.id === id);
+  if (it) it.message = message;
+}
+
 export const toast = {
   info: (m: string, o?: { action?: ToastAction; timeout?: number }) => push('info', m, o),
   success: (m: string, o?: { action?: ToastAction; timeout?: number }) => push('success', m, o),

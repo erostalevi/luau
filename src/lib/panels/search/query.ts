@@ -2,7 +2,7 @@
 // so the filter UI can stay in two-way sync with the query text.
 //
 //   login "exact phrase" -draft tag:backend -tag:wip board:"Project Alpha"
-//   lane:Doing is:open has:image due:<2026-10-10 updated:>=2026-09-01
+//   lane:Doing is:open has:image due:<2026-10-10 started:>=2026-09-01 updated:>=2026-09-01
 //   links:c1a2b3c linkedfrom:c1a2b3c case:yes in:title @ana
 //
 // `@person` is UI sugar for `mention:person` (serialized back as `@person`;
@@ -43,6 +43,8 @@ export const KEYS = [
   'assignee',
   'mention',
   'due',
+  'start',
+  'started',
   'updated',
   'created',
   'links',

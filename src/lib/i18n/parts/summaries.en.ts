@@ -101,8 +101,8 @@ export default {
     remoteWarning: 'This address is not on this computer: your notes will be sent there.',
     test: 'Test connection',
     testing: 'Testing…',
-    connected: 'Local AI is ready ({model})',
-    notConnected: 'Local AI is not available: {message}',
+    connected: 'AI is ready ({model})',
+    notConnected: 'AI is not available: {message}',
     pull: 'Download model',
     pullPrompt: 'Model to download (e.g. llama3.2:3b)',
     pulling: 'Downloading {name}… {pct}',
@@ -140,7 +140,7 @@ export default {
       yesterday: 'What did I do yesterday?',
     },
     card: { summarize: 'Summarize card' },
-    ai: { testConnection: 'Test local AI connection', pullModel: 'Download local AI model…' },
+    ai: { testConnection: 'Test AI connection', pullModel: 'Download local AI model…' },
   },
   settings: {
     keys: {
