@@ -9,6 +9,7 @@
   import ContextMenu from '$lib/components/ContextMenu.svelte';
   import Toasts from '$lib/components/Toasts.svelte';
   import Dialogs from '$lib/components/Dialogs.svelte';
+  import AiChangePreview from '$lib/ai/AiChangePreview.svelte';
   import ColorDialog from '$lib/components/ColorDialog.svelte';
   import CardEditorHost from '$lib/editor/CardEditorHost.svelte';
   import Cheatsheet from '$lib/views/Cheatsheet.svelte';
@@ -64,6 +65,7 @@
 <QuickInput />
 <ContextMenu />
 <Dialogs />
+<AiChangePreview />
 <ColorDialog />
 <Toasts />
 <Cheatsheet />

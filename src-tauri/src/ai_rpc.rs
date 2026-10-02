@@ -76,6 +76,14 @@ pub async fn dispatch_async(
     let res = match method {
         "ai.status" => ok(core.ai_status().await),
         "ai.test" => core.ai_test().await.map_err(Into::into).and_then(ok),
+        "ai.transform" => match de::<luau_core::ai::assist::TransformRequest>(p) {
+            Ok(req) => core
+                .ai_transform(req)
+                .await
+                .map_err(Into::into)
+                .and_then(ok),
+            Err(e) => Err(e),
+        },
         "ai.setupLocal" => {
             let req = match de::<luau_core::ai::setup::SetupRequest>(p) {
                 Ok(r) => r,

@@ -15,6 +15,7 @@
 //! [`set_slack_sender`]; scheduled summaries call it when present.
 
 pub mod apple;
+pub mod assist;
 pub mod cards;
 pub mod code;
 pub mod facts;

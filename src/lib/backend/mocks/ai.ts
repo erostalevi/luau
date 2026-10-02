@@ -178,6 +178,53 @@ export function register(methods: Methods, api: MockApi) {
     ev({ step: 'done' });
     return { endpoint: 'http://localhost:11434', model: p.model ?? null, installed: true };
   };
+  // Change with AI: a deterministic stand-in (streams, then diffs by words).
+  methods['ai.transform'] = async (p) => {
+    const s = status();
+    if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');
+    const before = String(p.text ?? '');
+    const instr = String(p.instruction ?? '').toLowerCase();
+    let after: string;
+    if (/short/.test(instr)) after = before.split(/(?<=[.!?])\s+/)[0] ?? before;
+    else if (/checklist/.test(instr))
+      after = before
+        .split(/[.\n]+/)
+        .filter((x) => x.trim())
+        .map((x) => `- [ ] ${x.trim().replace(/^[-*]\s*(\[.\]\s*)?/, '')}`)
+        .join('\n');
+    else
+      after = before
+        .replace(/\bteh\b/g, 'the')
+        .replace(/\s+([,.])/g, '$1')
+        .replace(/^./, (c) => c.toUpperCase());
+    for (const word of after.split(/(?<=\s)/)) {
+      api.emit({ type: 'custom', name: 'ai.chunk', payload: { requestId: p.requestId, text: word } } as never);
+      await new Promise((r) => setTimeout(r, 15));
+    }
+    const tok = (x: string) => x.split(/(\s+)/).filter(Boolean);
+    const a = tok(before);
+    const b = tok(after);
+    // LCS word diff (fine for mock-sized texts).
+    const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+    for (let i = a.length - 1; i >= 0; i--)
+      for (let j = b.length - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    const diff: { op: string; text: string }[] = [];
+    const push = (op: string, text: string) =>
+      diff.length && diff[diff.length - 1].op === op ? (diff[diff.length - 1].text += text) : diff.push({ op, text });
+    let i = 0;
+    let j = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) {
+        push('eq', a[i]);
+        i++;
+        j++;
+      } else if (dp[i + 1][j] >= dp[i][j + 1]) push('del', a[i++]);
+      else push('ins', b[j++]);
+    }
+    while (i < a.length) push('del', a[i++]);
+    while (j < b.length) push('ins', b[j++]);
+    return { text: after, diff, provider: s.provider, model: s.model };
+  };
   methods['ai.test'] = async () => {
     const s = status();
     if (!s.available) throw new RpcError('other', s.error ?? 'AI unavailable');

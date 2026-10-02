@@ -413,6 +413,11 @@ impl Core {
         })
     }
 
+    /// Emit a feature event to the page.
+    pub(crate) fn emit(&self, name: &str, payload: Value) {
+        self.emit_custom(name, payload);
+    }
+
     fn emit_custom(&self, name: &str, payload: Value) {
         self.sink.emit(CoreEvent::Custom {
             name: name.into(),
