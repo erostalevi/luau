@@ -7,7 +7,7 @@ Luau is a calm, local-first **kanban + Markdown notes** desktop app for macOS, W
 - **Your data are plain files.** Every card is a Markdown file and every board is a folder. They stay readable
   and editable without the app, and work well with git, Dropbox or iCloud.
 - **Luau adds the rest:** a polished board, an Obsidian/Notion-style live-preview editor, a VS Code-style command
-  palette, full history, local AI summaries, and optional Jira / Trello / Slack integrations.
+  palette, full history, AI summaries and assistant (local by default), and optional Jira / Trello / Slack integrations.
 
 ---
 
@@ -235,23 +235,45 @@ CodeMirror 6 with **live preview** (Obsidian/Notion-like). Markdown stays the so
     2 MiB each). Card text can use `{{card:N}}` (the id of the N-th template card) and `{{asset:NAME}}` (the
     file name of that card's attachment); the core fills both in before writing.
 
-## 9. Local AI and automation
+## 9. AI and automation
 
 - **Activity summaries** over a period and set of boards:
   - A detail slider (1–5) and a custom prompt.
   - Stage inference from lane names (en/es/pt), copy as Markdown, plain text or Slack, and export.
   - Past summaries are kept.
-- **Models:** provider **auto** (default) uses **Apple's on-device model** (FoundationModels, macOS 26+ on Apple
-  Silicon with Apple Intelligence on: no download, no setup) when available, else a running **Ollama** or any
-  **OpenAI-compatible local** endpoint (LM Studio, llama.cpp), else the *basic* writer. Ollama models can be
-  pulled from the app.
+- **Sources** (Settings › AI, a source panel with status, *Test connection*, keys and models):
+  - **Auto** (default): **Apple's on-device model** (FoundationModels, macOS 26+ on Apple Silicon with Apple
+    Intelligence on: no download, no setup) when available, else a running **Ollama** or **OpenAI-compatible
+    local** server (LM Studio, llama.cpp), else the *basic* writer. Auto **never** picks a remote service.
+  - **On this Mac** (Apple), **Local models** (Ollama / OpenAI-compatible; address and model; models can be pulled),
+    **Remote** (Anthropic Claude, OpenAI ChatGPT, Google Gemini, OpenRouter) or **Off**.
+  - Remote services need an **API key**, stored in the OS keychain (never returned to the page), and **consent**
+    given in a native prompt naming the service; consent lives in app data, so an imported settings bundle can't
+    grant it, and the core refuses remote calls without it. Claude uses the Messages API (streaming, structured
+    JSON output, server-side refusal fallback); the others their OpenAI-compatible endpoints.
   - Apple's model is reached through a bundled helper (`apple-llm`, JSON over stdin/stdout, one process per
     request, timeout, prompts never logged). Its small context window (4k–8k tokens) is respected: facts are
     trimmed to fit and the answer length is capped.
-  - Settings › AI shows the writer in use and why (e.g. "turn on Apple Intelligence").
   - Without a model, a deterministic *basic* writer is used.
+- **Set up local AI…**: pick Ollama or LM Studio and a model. For Ollama the app downloads the latest official
+  release from `github.com/ollama/ollama` only, checks its published SHA-256 (and on macOS the code signature and
+  Gatekeeper notarization) before installing, starts it, pulls the model with progress and notifies at the end.
+  LM Studio: opens its download page and connects to `localhost:1234`.
+- **Change with AI…** (⌘⇧I in a card): an instruction (presets: fix spelling, shorter, clearer, tone, checklist,
+  bullets, translate) applied to the selection, or the whole body without a selection. The answer streams, then a
+  word diff previews it; *Replace* / *Insert below* apply it as one undo step.
+- **Quick summary…**: any question answered from the boards (lanes and cards), the cards that match it (search
+  index) and the last two weeks of history, citing cards as `[[links]]` and listing its sources.
+- **AI…** (⌘⌥I): an assistant that answers and proposes changes (create, move, rename, add text, set properties,
+  tag, archive, delete, Jira / Trello comment and transition, Slack message) as a plan the core validates against
+  real boards, cards and lanes. Each action must quote the words of the user's own message that asked for it, so
+  text inside cards can't trigger actions. Jira / Trello / Slack actions, deleting, and plans touching more than
+  10 cards ask first. Board changes are one batch per board; ⌘Z undoes the whole run, across boards.
+- **Task from Slack**: the newest message that @mentions you (Slack search with a user token; recent channel
+  history and your member ID with a bot token) becomes one or more drafted cards, each linking back to the message.
+- Card text is always passed to models as delimited content they are told not to obey.
 - **Create card from clipboard** (command): *As is* (first line → `# Title`, rest verbatim) or *Let AI review it*
-  (local AI only: one or several cards with title, description, tasks, `#tags` and a property footer; strict JSON
+  (one or several cards with title, description, tasks, `#tags` and a property footer; strict JSON
   schema, validated and capped in the core, preview with the card count before inserting). Kanban → the active
   lane after the selection; files board with a document open → Markdown sections at the cursor. One undo step.
 - **Scheduled summaries:** several schedules, each with days, time, period, boards, prompt and detail level. They
